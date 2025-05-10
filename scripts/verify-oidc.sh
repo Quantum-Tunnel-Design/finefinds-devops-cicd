@@ -18,7 +18,7 @@ create_iam_role() {
             "Condition": {
                 "StringEquals": {
                     "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
-                    "token.actions.githubusercontent.com:sub": "repo:${GITHUB_REPOSITORY}:environment:${ENV_NAME}"
+                    "token.actions.githubusercontent.com:sub": "repo:${REPO_NAMESITORY}:environment:${ENV_NAME}"
                 }
             }
         }
@@ -117,7 +117,7 @@ else
     NEEDS_UPDATE=true
   fi
   
-  if ! echo "$TRUST_POLICY" | grep -q "repo:${GITHUB_REPOSITORY}:environment:${ENV_NAME}"; then
+  if ! echo "$TRUST_POLICY" | grep -q "repo:${REPO_NAMESITORY}:environment:${ENV_NAME}"; then
     echo "⚠️ Trust policy has incorrect repository or environment"
     NEEDS_UPDATE=true
   fi

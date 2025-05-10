@@ -45,29 +45,17 @@ All scripts include validation to ensure:
 
 2. **AWS OIDC Setup**
    ```bash
-   export AWS_ACCOUNT_ID="your-aws-account-id"
-   export GITHUB_ORG="your-github-org"
-   export GITHUB_REPO="finefinds-devops-cicd"
-   ./scripts/setup-aws-oidc.sh
+   update ENVs.
+   Coordinate with dev-ops team for credential access
    ```
 
 3. **GitHub Secrets Setup**
    ```bash
    # Set SonarQube credentials
-   export SONAR_TOKEN="your-sonar-token"
-   export SONAR_HOST_URL="your-sonar-url"
+   Coordinate with dev-ops team for credential access
 
    # Set AWS credentials for each environment
-   export AWS_PROD_ACCESS_KEY="your-prod-access-key"
-   export AWS_PROD_SECRET_KEY="your-prod-secret-key"
-   export AWS_STAGING_ACCESS_KEY="your-staging-access-key"
-   export AWS_STAGING_SECRET_KEY="your-staging-secret-key"
-   export AWS_DEV_ACCESS_KEY="your-dev-access-key"
-   export AWS_DEV_SECRET_KEY="your-dev-secret-key"
-   export AWS_QA_ACCESS_KEY="your-qa-access-key"
-   export AWS_QA_SECRET_KEY="your-qa-secret-key"
-   export AWS_SANDBOX_ACCESS_KEY="your-sandbox-access-key"
-   export AWS_SANDBOX_SECRET_KEY="your-sandbox-secret-key"
+   Coordinate with dev-ops team for credential access
 
    ./scripts/setup-github-secrets.sh
    ```

@@ -60,7 +60,6 @@ module "rds" {
 
   ecs_security_group_id = module.ecs.ecs_tasks_security_group_id
   db_username          = var.db_username
-  db_password          = var.db_password
 
   # Development uses minimal resources
   instance_class      = "db.t3.micro"
@@ -93,7 +92,6 @@ module "secrets" {
   database_url = var.database_url
   mongodb_uri  = var.mongodb_uri
   jwt_secret   = var.jwt_secret
-  cognito_client_secret = var.cognito_client_secret
 }
 
 # MongoDB Module
@@ -113,13 +111,12 @@ module "mongodb" {
 module "sonarqube" {
   source = "../../modules/sonarqube"
 
-  environment         = var.environment
-  vpc_id             = module.vpc.vpc_id
-  aws_region         = var.aws_region
+  project     = var.project
+  environment = var.environment
+  vpc_id      = module.vpc.vpc_id
+  aws_region  = var.aws_region
   db_instance_class  = "db.t3.small"
   db_username        = var.sonarqube_db_username
-  db_password        = var.sonarqube_db_password
-  db_password_arn    = var.sonarqube_db_password_arn
   db_subnet_group_name = module.rds.db_subnet_group_name
   alb_security_group_id = module.alb.alb_security_group_id
 }
@@ -193,12 +190,6 @@ variable "jwt_secret" {
   sensitive   = true
 }
 
-variable "cognito_client_secret" {
-  description = "Cognito client secret"
-  type        = string
-  sensitive   = true
-}
-
 variable "alb_security_group_id" {
   description = "Security group ID of the ALB"
   type        = string
@@ -210,25 +201,8 @@ variable "db_username" {
   type        = string
 }
 
-variable "db_password" {
-  description = "Master password for RDS"
-  type        = string
-  sensitive   = true
-}
-
 variable "sonarqube_db_username" {
   description = "Master username for SonarQube"
-  type        = string
-}
-
-variable "sonarqube_db_password" {
-  description = "Master password for SonarQube"
-  type        = string
-  sensitive   = true
-}
-
-variable "sonarqube_db_password_arn" {
-  description = "ARN of the SonarQube database password"
   type        = string
 }
 
@@ -266,4 +240,22 @@ output "mongodb_endpoint" {
 output "cloudwatch_dashboard" {
   description = "Name of the CloudWatch dashboard"
   value       = module.monitoring.dashboard_name
+}
+
+output "rds_password_arn" {
+  description = "ARN of the RDS password in Secrets Manager"
+  value       = module.rds.db_password_arn
+  sensitive   = true
+}
+
+output "mongodb_password_arn" {
+  description = "ARN of the MongoDB password in Secrets Manager"
+  value       = module.mongodb.mongodb_password_arn
+  sensitive   = true
+}
+
+output "sonarqube_password_arn" {
+  description = "ARN of the SonarQube password in Secrets Manager"
+  value       = module.sonarqube.sonarqube_password_arn
+  sensitive   = true
 } 

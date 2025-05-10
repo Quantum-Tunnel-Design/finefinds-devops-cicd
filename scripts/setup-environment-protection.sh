@@ -6,21 +6,16 @@ if ! command -v gh &> /dev/null; then
     exit 1
 fi
 
-# Define environment mapping
-declare -A ENV_MAPPING=(
-    ["main"]="prod"
-    ["dev"]="dev"
-    ["qa"]="qa"
-    ["staging"]="staging"
-    ["sandbox"]="sandbox"
-)
+# Define environment mapping using indexed arrays
+BRANCHES=("main" "dev" "qa" "staging" "sandbox")
+ENVIRONMENTS=("prod" "dev" "qa" "staging" "sandbox")
 
 # Function to validate environment names
 validate_environments() {
     local valid_envs=("main" "dev" "qa" "staging" "sandbox")
-    for env in "${!ENV_MAPPING[@]}"; do
-        if [[ ! " ${valid_envs[@]} " =~ " ${env} " ]]; then
-            echo "Error: Invalid branch name: $env"
+    for i in "${!BRANCHES[@]}"; do
+        if [[ ! " ${valid_envs[@]} " =~ " ${BRANCHES[$i]} " ]]; then
+            echo "Error: Invalid branch name: ${BRANCHES[$i]}"
             exit 1
         fi
     done
@@ -29,9 +24,9 @@ validate_environments() {
 # Function to create or update environment protection rules
 setup_environment_protection() {
     local branch=$1
-    local env=${ENV_MAPPING[$branch]}
-    local wait_timer=$2
-    local required_reviewers=$3
+    local env=$2
+    local wait_timer=$3
+    local required_reviewers=$4
 
     echo "Setting up protection rules for branch '$branch' (environment: $env)"
     
@@ -50,18 +45,18 @@ validate_environments
 
 # Set up protection rules for each environment
 # Production (main branch)
-setup_environment_protection "main" 30 2
+setup_environment_protection "main" "prod" 30 2
 
 # Staging
-setup_environment_protection "staging" 15 1
+setup_environment_protection "staging" "staging" 15 1
 
 # Development
-setup_environment_protection "dev" 0 0
+setup_environment_protection "dev" "dev" 0 0
 
 # QA
-setup_environment_protection "qa" 0 0
+setup_environment_protection "qa" "qa" 0 0
 
 # Sandbox
-setup_environment_protection "sandbox" 0 0
+setup_environment_protection "sandbox" "sandbox" 0 0
 
 echo "Environment protection rules setup completed!" 

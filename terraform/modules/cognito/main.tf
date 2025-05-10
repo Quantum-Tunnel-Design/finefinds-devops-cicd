@@ -134,7 +134,7 @@ output "client_id" {
   value       = aws_cognito_user_pool_client.main.id
 }
 
-output "client_secret" {
+output "cognito_client_secret" {
   description = "The client secret of the Cognito User Pool Client"
   value       = aws_cognito_user_pool_client.main.client_secret
   sensitive   = true
