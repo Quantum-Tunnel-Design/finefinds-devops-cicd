@@ -55,7 +55,7 @@ module "rds" {
   # QA uses moderate resources
   instance_class      = "db.t3.small"
   allocated_storage   = 50
-  skip_final_snapshot = false
+  skip_final_snapshot = true
 }
 
 # Cognito Module
@@ -74,12 +74,15 @@ module "s3" {
   environment = var.environment
 }
 
-# Secrets Manager Module
+# Secrets Module
 module "secrets" {
   source = "../../modules/secrets"
 
   project     = var.project
   environment = var.environment
+  secret_suffix = var.secret_suffix
+  use_existing_secrets = false
+  tags = local.common_tags
 }
 
 # MongoDB Module
@@ -92,7 +95,7 @@ module "mongodb" {
   subnet_ids  = module.vpc.private_subnet_ids
 
   # QA uses moderate resources
-  instance_type = "t3.medium"
+  instance_type = "t3.small"
 }
 
 # Monitoring Module
@@ -172,6 +175,12 @@ variable "db_password" {
   sensitive   = true
 }
 
+variable "secret_suffix" {
+  description = "Suffix for secret names"
+  type        = string
+  default     = formatdate("YYYYMMDDHHmmss", timestamp())
+}
+
 # Outputs
 output "vpc_id" {
   description = "ID of the VPC"
@@ -228,69 +237,75 @@ module "networking" {
 
 module "security" {
   source            = "../../modules/security"
-  name_prefix       = local.name_prefix
+  name_prefix       = "${var.project}-${var.environment}"
   tags              = local.common_tags
-  callback_urls     = ["https://qa.finefinds.com/callback"]
-  logout_urls       = ["https://qa.finefinds.com/logout"]
+  callback_urls     = ["https://${var.environment}.finefinds.com/callback"]
+  logout_urls       = ["https://${var.environment}.finefinds.com/logout"]
   certificate_arn   = var.certificate_arn
   db_username       = var.db_username
   db_password       = var.db_password
   mongodb_username  = var.mongodb_username
   mongodb_password  = var.mongodb_password
   sonar_token       = var.sonar_token
+  depends_on        = [module.secrets]
 }
 
 module "storage" {
   source                = "../../modules/storage"
-  name_prefix           = local.name_prefix
+  name_prefix           = "${var.project}-${var.environment}"
   environment           = var.environment
-  vpc_id                = module.networking.vpc_id
-  private_subnet_ids    = module.networking.private_subnet_ids
+  vpc_id                = module.vpc.vpc_id
+  private_subnet_ids    = module.vpc.private_subnet_ids
   ecs_security_group_id = module.compute.ecs_security_group_id
-  db_instance_class     = local.env_config.db_instance_class
+  db_instance_class     = "db.t3.small"
   db_name               = var.db_name
   db_username           = var.db_username
   db_password           = var.db_password
   use_existing_cluster  = false
   mongodb_ami           = var.mongodb_ami
-  mongodb_instance_type = local.env_config.instance_type
+  mongodb_instance_type = "t3.small"
+  allocated_storage     = 50
+  skip_final_snapshot   = true
   tags                  = local.common_tags
+  depends_on            = [module.vpc, module.security]
 }
 
 module "compute" {
   source                   = "../../modules/compute"
-  name_prefix              = local.name_prefix
+  name_prefix              = "${var.project}-${var.environment}"
   environment              = var.environment
   aws_region               = var.aws_region
-  vpc_id                   = module.networking.vpc_id
-  public_subnet_ids        = module.networking.public_subnet_ids
-  private_subnet_ids       = module.networking.private_subnet_ids
+  vpc_id                   = module.vpc.vpc_id
+  public_subnet_ids        = module.vpc.public_subnet_ids
+  private_subnet_ids       = module.vpc.private_subnet_ids
   certificate_arn          = var.certificate_arn
-  task_cpu                 = 256
-  task_memory              = 512
+  task_cpu                 = 512
+  task_memory              = 1024
   task_execution_role_arn  = module.security.ecs_task_execution_role_arn
   task_role_arn            = module.security.ecs_task_role_arn
   container_image          = module.cicd.ecr_repository_url
   container_port           = var.container_port
   container_environment    = []
-  service_desired_count    = 1
+  service_desired_count    = 2
   rds_secret_arn           = module.security.rds_secret_arn
   mongodb_secret_arn       = module.security.mongodb_secret_arn
   tags                     = local.common_tags
+  depends_on               = [module.vpc, module.security, module.storage]
 }
 
 module "cicd" {
   source            = "../../modules/cicd"
-  name_prefix       = local.name_prefix
+  name_prefix       = "${var.project}-${var.environment}"
   environment       = var.environment
   repository_url    = var.repository_url
   source_token      = var.source_token
   api_url           = module.compute.alb_dns_name
   cognito_domain    = module.security.cognito_domain
   cognito_client_id = module.security.cognito_user_pool_client_id
-  cognito_redirect_uri = "https://qa.finefinds.com/callback"
-  domain_name       = "qa.finefinds.com"
+  cognito_redirect_uri = "https://${var.environment}.finefinds.com/callback"
+  domain_name       = "${var.environment}.finefinds.com"
   tags              = local.common_tags
+  depends_on        = [module.compute]
 }
 
 module "monitoring" {
