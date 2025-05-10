@@ -89,7 +89,7 @@ container_port = 3000
 image_tag      = "latest"
 
 # Alert configuration
-alert_email = "devops@yourcompany.com"  # Change this to your email
+alert_email = "amal.c.gamage@gmail.com"  # Change this to your email
 EOL
 
 print_message "Infrastructure setup completed!" "$GREEN"
