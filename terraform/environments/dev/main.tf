@@ -125,6 +125,22 @@ module "monitoring" {
   alert_email = var.alert_email
 }
 
+# Amplify Module
+module "amplify" {
+  source = "../../modules/amplify"
+
+  project     = var.project
+  environment = var.environment
+
+  client_repository = var.client_repository
+  admin_repository  = var.admin_repository
+  github_token      = var.github_token
+  sonar_token       = var.sonar_token
+
+  graphql_endpoint = "https://api.${var.environment}.finefinds.com/graphql"
+  sonarqube_url    = module.sonarqube.sonarqube_url
+}
+
 # Variables
 variable "project" {
   description = "Project name"
@@ -198,6 +214,18 @@ variable "mongodb_admin_username" {
   default     = "admin"
 }
 
+variable "github_token" {
+  description = "GitHub personal access token for repository access"
+  type        = string
+  sensitive   = true
+}
+
+variable "sonar_token" {
+  description = "SonarQube authentication token"
+  type        = string
+  sensitive   = true
+}
+
 # Outputs
 output "ecs_service_name" {
   description = "Name of the ECS service"
@@ -250,4 +278,24 @@ output "sonarqube_password_arn" {
   description = "ARN of the SonarQube password in Secrets Manager"
   value       = module.sonarqube.sonarqube_password_arn
   sensitive   = true
+}
+
+output "client_app_domain" {
+  description = "Domain of the client Amplify app"
+  value       = module.amplify.client_domain
+}
+
+output "admin_app_domain" {
+  description = "Domain of the admin Amplify app"
+  value       = module.amplify.admin_domain
+}
+
+output "client_branch_urls" {
+  description = "URLs for each branch of the client app"
+  value       = module.amplify.client_branch_urls
+}
+
+output "admin_branch_urls" {
+  description = "URLs for each branch of the admin app"
+  value       = module.amplify.admin_branch_urls
 } 

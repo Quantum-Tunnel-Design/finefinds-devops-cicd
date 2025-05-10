@@ -24,29 +24,22 @@ module "alb" {
   environment = var.environment
   vpc_id      = module.vpc.vpc_id
   subnet_ids  = module.vpc.public_subnet_ids
+  target_group_arn = module.ecs.target_group_arn
 }
 
 # ECS Module
 module "ecs" {
   source = "../../modules/ecs"
 
-  project     = var.project
-  environment = var.environment
-  vpc_id      = module.vpc.vpc_id
-  subnet_ids  = module.vpc.private_subnet_ids
-
-  # Production uses full resources
-  task_cpu            = 1024
-  task_memory         = 2048
-  service_desired_count = 3
-  container_name      = var.container_name
-  container_port      = var.container_port
-  ecr_repository_url  = var.ecr_repository_url
-  image_tag           = var.image_tag
-  database_url_arn    = var.database_url_arn
-  mongodb_uri_arn     = var.mongodb_uri_arn
-  alb_security_group_id = module.alb.alb_security_group_id
-  aws_region          = var.aws_region
+  project            = var.project
+  environment        = var.environment
+  vpc_id            = module.vpc.vpc_id
+  subnet_ids        = module.vpc.private_subnet_ids
+  container_name    = var.container_name
+  container_port    = var.container_port
+  ecr_repository_url = var.ecr_repository_url
+  image_tag         = var.image_tag
+  alb_security_group_id = module.alb.security_group_id
 }
 
 # RDS Module
@@ -57,15 +50,12 @@ module "rds" {
   environment = var.environment
   vpc_id      = module.vpc.vpc_id
   subnet_ids  = module.vpc.private_subnet_ids
-
-  ecs_security_group_id = module.ecs.ecs_tasks_security_group_id
-  db_username          = var.db_username
-  db_password          = var.db_password
-
-  # Production uses maximum resources
-  instance_class      = "db.t3.medium"
-  allocated_storage   = 100
+  ecs_security_group_id = module.ecs.security_group_id
+  db_username = var.db_username
+  db_instance_class = "db.t3.small"
+  allocated_storage = 50
   skip_final_snapshot = false
+  db_name = "finefinds"
 }
 
 # Cognito Module
@@ -100,9 +90,8 @@ module "mongodb" {
   environment = var.environment
   vpc_id      = module.vpc.vpc_id
   subnet_ids  = module.vpc.private_subnet_ids
-
-  # Production uses maximum resources
-  instance_type = "t3.large"
+  ecs_security_group_id = module.ecs.security_group_id
+  admin_username = var.mongodb_admin_username
 }
 
 # Monitoring Module
@@ -118,15 +107,28 @@ module "monitoring" {
 module "sonarqube" {
   source = "../../modules/sonarqube"
 
-  environment         = var.environment
-  vpc_id             = module.vpc.vpc_id
-  aws_region         = var.aws_region
-  db_instance_class  = "db.t3.large"
-  db_username        = var.sonarqube_db_username
-  db_password        = var.sonarqube_db_password
-  db_password_arn    = var.sonarqube_db_password_arn
-  db_subnet_group_name = module.rds.db_subnet_group_name
-  alb_security_group_id = module.alb.alb_security_group_id
+  project     = var.project
+  environment = var.environment
+  vpc_id      = module.vpc.vpc_id
+  subnet_ids  = module.vpc.private_subnet_ids
+  aws_region  = var.aws_region
+  db_instance_class = "db.t3.small"
+  db_username = var.sonarqube_db_username
+  alb_security_group_id = module.alb.security_group_id
+  alb_dns_name = module.alb.dns_name
+  db_endpoint = module.rds.endpoint
+}
+
+# Amplify Module
+module "amplify" {
+  source = "../../modules/amplify"
+
+  project     = var.project
+  environment = var.environment
+  github_token = var.github_token
+  client_repository = var.client_repository
+  admin_repository = var.admin_repository
+  sonar_token = var.sonar_token
 }
 
 # Variables
@@ -196,6 +198,31 @@ variable "db_password" {
   description = "Master password for RDS"
   type        = string
   sensitive   = true
+}
+
+variable "mongodb_admin_username" {
+  description = "Admin username for MongoDB"
+  type        = string
+}
+
+variable "github_token" {
+  description = "GitHub token for Amplify"
+  type        = string
+}
+
+variable "client_repository" {
+  description = "Client repository for Amplify"
+  type        = string
+}
+
+variable "admin_repository" {
+  description = "Admin repository for Amplify"
+  type        = string
+}
+
+variable "sonar_token" {
+  description = "SonarQube token for Amplify"
+  type        = string
 }
 
 # Outputs
