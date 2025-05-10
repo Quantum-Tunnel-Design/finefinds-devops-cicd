@@ -20,10 +20,6 @@ set_environment_secrets() {
     local env=$1
     echo "Setting secrets for environment: $env"
     
-    # Set SonarQube secrets
-    gh secret set SONAR_TOKEN -b"$SONAR_TOKEN" --env "$env"
-    gh secret set SONAR_HOST_URL -b"$SONAR_HOST_URL" --env "$env"
-    
     # Set AWS Account ID and Region (common for all environments)
     gh secret set AWS_ACCOUNT_ID -b"$AWS_ACCOUNT_ID" --env "$env"
     gh secret set AWS_REGION -b"$AWS_REGION" --env "$env"
@@ -85,13 +81,15 @@ set_repo_secrets() {
     # Set GitHub token
     gh secret set GITHUB_TOKEN --body "$TF_VAR_github_token" --repo "$repo"
     
-    # Set SonarQube token
-    gh secret set SONAR_TOKEN --body "$TF_VAR_sonar_token" --repo "$repo"
-    
     # Set environment-specific variables
     gh secret set VITE_GRAPHQL_ENDPOINT --body "https://api.${TF_VAR_environment}.finefinds.com/graphql" --repo "$repo"
     gh secret set VITE_ENVIRONMENT --body "$TF_VAR_environment" --repo "$repo"
-    gh secret set VITE_SONARQUBE_URL --body "https://sonarqube.${TF_VAR_environment}.finefinds.com" --repo "$repo"
+    
+    # Only set SonarQube secrets for non-devops repositories
+    if [[ "$repo" != *"finefinds-devops-cicd"* ]]; then
+        gh secret set SONAR_TOKEN --body "$TF_VAR_sonar_token" --repo "$repo"
+        gh secret set VITE_SONARQUBE_URL --body "https://sonarqube.${TF_VAR_environment}.finefinds.com" --repo "$repo"
+    fi
 }
 
 # Set secrets for client web app
