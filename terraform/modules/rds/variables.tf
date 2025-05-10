@@ -51,4 +51,10 @@ variable "db_name" {
   description = "Database name"
   type        = string
   default     = "finefinds"
+}
+
+variable "db_password" {
+  description = "Password for the RDS instance"
+  type        = string
+  sensitive   = true
 } 

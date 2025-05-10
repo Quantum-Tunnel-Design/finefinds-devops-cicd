@@ -25,28 +25,6 @@ resource "aws_security_group" "mongodb" {
   }
 }
 
-# Generate random password for MongoDB
-resource "random_password" "mongodb_password" {
-  length           = 16
-  special          = true
-  override_special = "!#$%&*()-_=+[]{}<>:?"
-}
-
-# Store the password in Secrets Manager
-resource "aws_secretsmanager_secret" "mongodb_password" {
-  name = "${var.project}-${var.environment}-mongodb-password"
-  description = "MongoDB password for ${var.environment} environment"
-
-  lifecycle {
-    ignore_changes = [name]
-  }
-}
-
-resource "aws_secretsmanager_secret_version" "mongodb_password" {
-  secret_id     = aws_secretsmanager_secret.mongodb_password.id
-  secret_string = random_password.mongodb_password.result
-}
-
 # DocumentDB Subnet Group
 resource "aws_docdb_subnet_group" "main" {
   name       = "${var.project}-${var.environment}-docdb-subnet-group"
@@ -68,7 +46,7 @@ resource "aws_docdb_cluster" "main" {
   cluster_identifier = "${var.project}-${var.environment}-mongodb"
   engine            = "docdb"
   master_username   = var.admin_username != "admin" ? var.admin_username : "mongoadmin"
-  master_password   = random_password.mongodb_password.result
+  master_password   = var.mongodb_password
 
   db_subnet_group_name   = aws_docdb_subnet_group.main.name
   vpc_security_group_ids = [aws_security_group.mongodb.id]
@@ -123,7 +101,7 @@ resource "aws_instance" "mongodb" {
                 db = db.getSiblingDB("admin");
                 db.createUser({
                   user: "${var.admin_username}",
-                  pwd: "${random_password.mongodb_password.result}",
+                  pwd: "${var.mongodb_password}",
                   roles: [ { role: "userAdminAnyDatabase", db: "admin" } ]
                 });
               '
@@ -208,26 +186,26 @@ variable "data_volume_size" {
 }
 
 variable "admin_username" {
-  description = "MongoDB admin username"
+  description = "Admin username for MongoDB"
   type        = string
   default     = "admin"
 }
 
+variable "mongodb_password" {
+  description = "Password for MongoDB admin user"
+  type        = string
+  sensitive   = true
+}
+
 # Outputs
 output "endpoint" {
-  description = "MongoDB endpoint"
+  description = "Endpoint of the MongoDB instance"
   value       = aws_instance.mongodb.private_ip
 }
 
 output "security_group_id" {
-  description = "Security group ID of the MongoDB instance"
+  description = "ID of the MongoDB security group"
   value       = aws_security_group.mongodb.id
-}
-
-output "mongodb_password_arn" {
-  description = "ARN of the MongoDB password in Secrets Manager"
-  value       = aws_secretsmanager_secret.mongodb_password.arn
-  sensitive   = true
 }
 
 # IAM Roles

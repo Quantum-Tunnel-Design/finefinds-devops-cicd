@@ -5,6 +5,18 @@ resource "random_password" "jwt_secret" {
   override_special = "!#$%&*()-_=+[]{}<>:?"
 }
 
+resource "random_password" "database_password" {
+  length           = 32
+  special          = true
+  override_special = "!#$%&*()-_=+[]{}<>:?"
+}
+
+resource "random_password" "mongodb_password" {
+  length           = 32
+  special          = true
+  override_special = "!#$%&*()-_=+[]{}<>:?"
+}
+
 # JWT Secret
 resource "aws_secretsmanager_secret" "jwt_secret" {
   name = "${var.project}-${var.environment}-jwt-secret"
@@ -26,22 +38,46 @@ resource "aws_secretsmanager_secret_version" "jwt_secret" {
   secret_string = random_password.jwt_secret.result
 }
 
-# Database URL Secret
-data "aws_secretsmanager_secret" "database_url" {
+# Database Password Secret
+resource "aws_secretsmanager_secret" "database_url" {
   name = "${var.project}-${var.environment}-db-password"
+  description = "Database password for ${var.environment} environment"
+
+  tags = {
+    Environment = var.environment
+    Project     = var.project
+    Terraform   = "true"
+  }
+
+  lifecycle {
+    ignore_changes = [name]
+  }
 }
 
-data "aws_secretsmanager_secret_version" "database_url" {
-  secret_id = data.aws_secretsmanager_secret.database_url.id
+resource "aws_secretsmanager_secret_version" "database_url" {
+  secret_id     = aws_secretsmanager_secret.database_url.id
+  secret_string = random_password.database_password.result
 }
 
 # MongoDB Password Secret
-data "aws_secretsmanager_secret" "mongodb_password" {
+resource "aws_secretsmanager_secret" "mongodb_password" {
   name = "${var.project}-${var.environment}-mongodb-password"
+  description = "MongoDB password for ${var.environment} environment"
+
+  tags = {
+    Environment = var.environment
+    Project     = var.project
+    Terraform   = "true"
+  }
+
+  lifecycle {
+    ignore_changes = [name]
+  }
 }
 
-data "aws_secretsmanager_secret_version" "mongodb_password" {
-  secret_id = data.aws_secretsmanager_secret.mongodb_password.id
+resource "aws_secretsmanager_secret_version" "mongodb_password" {
+  secret_id     = aws_secretsmanager_secret.mongodb_password.id
+  secret_string = random_password.mongodb_password.result
 }
 
 # Variables
@@ -58,18 +94,30 @@ variable "environment" {
 # Outputs
 output "database_url_arn" {
   description = "ARN of the database password in Secrets Manager"
-  value       = data.aws_secretsmanager_secret.database_url.arn
+  value       = aws_secretsmanager_secret.database_url.arn
   sensitive   = true
 }
 
 output "mongodb_uri_arn" {
   description = "ARN of the MongoDB password in Secrets Manager"
-  value       = data.aws_secretsmanager_secret.mongodb_password.arn
+  value       = aws_secretsmanager_secret.mongodb_password.arn
   sensitive   = true
 }
 
 output "jwt_secret_arn" {
   description = "ARN of the JWT secret in Secrets Manager"
   value       = aws_secretsmanager_secret.jwt_secret.arn
+  sensitive   = true
+}
+
+output "database_password" {
+  description = "Generated database password"
+  value       = random_password.database_password.result
+  sensitive   = true
+}
+
+output "mongodb_password" {
+  description = "Generated MongoDB password"
+  value       = random_password.mongodb_password.result
   sensitive   = true
 } 
