@@ -125,7 +125,7 @@ resource "aws_instance" "mongodb" {
                 db = db.getSiblingDB("admin");
                 db.createUser({
                   user: "${var.admin_username}",
-                  pwd: "${var.mongodb_password}",
+                  pwd: "${local.mongodb_password}",
                   roles: [ { role: "userAdminAnyDatabase", db: "admin" } ]
                 });
               '
@@ -166,112 +166,14 @@ locals {
   cluster_endpoint = var.use_existing_cluster ? var.existing_cluster_endpoint : (var.use_existing_instance ? data.aws_instance.existing_mongodb[0].private_ip : (length(aws_docdb_cluster.main) > 0 ? aws_docdb_cluster.main[0].endpoint : aws_instance.mongodb[0].private_ip))
 }
 
-# Variables
-variable "project" {
-  description = "Project name"
-  type        = string
-}
-
-variable "environment" {
-  description = "Environment name"
-  type        = string
-}
-
-variable "vpc_id" {
-  description = "VPC ID where resources will be created"
-  type        = string
-}
-
-variable "subnet_ids" {
-  description = "List of subnet IDs for the MongoDB instance"
-  type        = list(string)
-}
-
-variable "ecs_security_group_id" {
-  description = "Security group ID of the ECS tasks"
-  type        = string
-}
-
-variable "use_existing_cluster" {
-  description = "Whether to use an existing DocumentDB cluster"
-  type        = bool
-  default     = false
-}
-
-variable "use_existing_instance" {
-  description = "Whether to use an existing EC2 instance for MongoDB"
-  type        = bool
-  default     = false
-}
-
-variable "existing_security_group_id" {
-  description = "Security group ID of the existing DocumentDB cluster"
-  type        = string
-  default     = ""
-}
-
-variable "existing_instance_security_group_id" {
-  description = "Security group ID of the existing EC2 instance"
-  type        = string
-  default     = ""
-}
-
-variable "use_existing_subnet_group" {
-  description = "Whether to use an existing subnet group"
-  type        = bool
-  default     = false
-}
-
-variable "ami_id" {
-  description = "AMI ID for the MongoDB instance"
-  type        = string
-  default     = "ami-0c7217cdde317cfec" # Ubuntu 20.04 LTS
-}
-
-variable "instance_type" {
-  description = "Instance type for the MongoDB instance"
-  type        = string
-  default     = "t3.medium"
-}
-
-variable "volume_size" {
-  description = "Size of the root volume in GB"
-  type        = number
-  default     = 20
-}
-
-variable "data_volume_size" {
-  description = "Size of the data volume in GB"
-  type        = number
-  default     = 100
-}
-
-variable "admin_username" {
-  description = "Admin username for MongoDB"
-  type        = string
-  default     = "admin"
-}
-
-variable "mongodb_password" {
-  description = "Password for MongoDB admin user"
-  type        = string
-  sensitive   = true
-}
-
-variable "existing_cluster_endpoint" {
-  description = "Endpoint of the existing DocumentDB cluster"
-  type        = string
-  default     = ""
-}
-
 # Outputs
 output "endpoint" {
-  description = "Endpoint of the MongoDB cluster/instance"
+  description = "MongoDB endpoint"
   value       = local.cluster_endpoint
 }
 
 output "security_group_id" {
-  description = "Security group ID of the MongoDB cluster/instance"
+  description = "Security group ID of the MongoDB instance"
   value       = local.security_group_id
 }
 
