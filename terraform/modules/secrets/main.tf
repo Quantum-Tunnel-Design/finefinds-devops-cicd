@@ -14,65 +14,64 @@ resource "random_password" "mongodb_password" {
   special = true
 }
 
-# Create JWT secret
+# JWT Secret
 resource "aws_secretsmanager_secret" "jwt_secret" {
-  name        = "${var.project}-${var.environment}-jwt-secret-20250510212247"
-  description = "JWT secret for ${var.project} ${var.environment} environment"
+  count = var.use_existing_secrets ? 0 : 1
+  name  = "${var.project}-${var.environment}-jwt-secret-${var.secret_suffix}"
+
+  tags = {
+    Environment = var.environment
+    Project     = var.project
+    Terraform   = "true"
+  }
 
   lifecycle {
     ignore_changes = [name]
-    prevent_destroy = true
   }
 }
 
-resource "aws_secretsmanager_secret_version" "jwt_secret" {
-  secret_id     = aws_secretsmanager_secret.jwt_secret.id
-  secret_string = random_password.jwt_secret.result
-
-  lifecycle {
-    ignore_changes = [secret_string]
-  }
-}
-
-# Create database URL secret
+# Database Password Secret
 resource "aws_secretsmanager_secret" "database_url" {
-  name        = "${var.project}-${var.environment}-db-password-20250510212247"
-  description = "Database password for ${var.project} ${var.environment} environment"
+  count = var.use_existing_secrets ? 0 : 1
+  name  = "${var.project}-${var.environment}-db-password-${var.secret_suffix}"
+
+  tags = {
+    Environment = var.environment
+    Project     = var.project
+    Terraform   = "true"
+  }
 
   lifecycle {
     ignore_changes = [name]
-    prevent_destroy = true
   }
 }
 
-resource "aws_secretsmanager_secret_version" "database_url" {
-  secret_id     = aws_secretsmanager_secret.database_url.id
-  secret_string = random_password.database_password.result
-
-  lifecycle {
-    ignore_changes = [secret_string]
-  }
-}
-
-# Create MongoDB password secret
+# MongoDB Password Secret
 resource "aws_secretsmanager_secret" "mongodb_password" {
-  name        = "${var.project}-${var.environment}-mongodb-password-20250510212247"
-  description = "MongoDB password for ${var.project} ${var.environment} environment"
+  count = var.use_existing_secrets ? 0 : 1
+  name  = "${var.project}-${var.environment}-mongodb-password-${var.secret_suffix}"
+
+  tags = {
+    Environment = var.environment
+    Project     = var.project
+    Terraform   = "true"
+  }
 
   lifecycle {
     ignore_changes = [name]
-    prevent_destroy = true
   }
 }
 
-resource "aws_secretsmanager_secret_version" "mongodb_password" {
-  secret_id     = aws_secretsmanager_secret.mongodb_password.id
-  secret_string = random_password.mongodb_password.result
-
-  lifecycle {
-    ignore_changes = [secret_string]
-  }
+# Use existing or new secrets
+locals {
+  jwt_secret_arn      = var.use_existing_secrets ? "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${var.project}-${var.environment}-jwt-secret-${var.secret_suffix}" : aws_secretsmanager_secret.jwt_secret[0].arn
+  db_password_arn     = var.use_existing_secrets ? "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${var.project}-${var.environment}-db-password-${var.secret_suffix}" : aws_secretsmanager_secret.database_url[0].arn
+  mongodb_password_arn = var.use_existing_secrets ? "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${var.project}-${var.environment}-mongodb-password-${var.secret_suffix}" : aws_secretsmanager_secret.mongodb_password[0].arn
 }
+
+# Get current AWS account ID and region
+data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
 
 # Variables
 variable "project" {
@@ -85,19 +84,30 @@ variable "environment" {
   type        = string
 }
 
+variable "use_existing_secrets" {
+  description = "Whether to use existing secrets"
+  type        = bool
+  default     = true
+}
+
+variable "secret_suffix" {
+  description = "Secret suffix"
+  type        = string
+}
+
 # Outputs
 output "jwt_secret_arn" {
-  value       = aws_secretsmanager_secret.jwt_secret.arn
+  value       = local.jwt_secret_arn
   description = "ARN of the JWT secret"
 }
 
 output "database_url_arn" {
-  value       = aws_secretsmanager_secret.database_url.arn
+  value       = local.db_password_arn
   description = "ARN of the database URL secret"
 }
 
 output "mongodb_uri_arn" {
-  value       = aws_secretsmanager_secret.mongodb_password.arn
+  value       = local.mongodb_password_arn
   description = "ARN of the MongoDB password secret"
 }
 
@@ -117,4 +127,88 @@ output "mongodb_password" {
   value       = random_password.mongodb_password.result
   description = "Generated MongoDB password"
   sensitive   = true
+}
+
+# Secrets Manager Secret for Database Credentials
+resource "aws_secretsmanager_secret" "database" {
+  name = "${var.project}-${var.environment}-database-credentials"
+  description = "Database credentials for ${var.project} ${var.environment} environment"
+
+  tags = {
+    Environment = var.environment
+    Project     = var.project
+    Terraform   = "true"
+  }
+}
+
+resource "aws_secretsmanager_secret_version" "database" {
+  secret_id = aws_secretsmanager_secret.database.id
+  secret_string = jsonencode({
+    username = var.db_username
+    password = var.db_password
+    host     = var.db_host
+    port     = var.db_port
+    database = var.db_name
+  })
+}
+
+# Secrets Manager Secret for MongoDB Credentials
+resource "aws_secretsmanager_secret" "mongodb" {
+  name = "${var.project}-${var.environment}-mongodb-credentials"
+  description = "MongoDB credentials for ${var.project} ${var.environment} environment"
+
+  tags = {
+    Environment = var.environment
+    Project     = var.project
+    Terraform   = "true"
+  }
+}
+
+resource "aws_secretsmanager_secret_version" "mongodb" {
+  secret_id = aws_secretsmanager_secret.mongodb.id
+  secret_string = jsonencode({
+    username = var.mongodb_username
+    password = var.mongodb_password
+    host     = var.mongodb_host
+    port     = var.mongodb_port
+    database = var.mongodb_database
+  })
+}
+
+# Secrets Manager Secret for API Keys
+resource "aws_secretsmanager_secret" "api_keys" {
+  name = "${var.project}-${var.environment}-api-keys"
+  description = "API keys for ${var.project} ${var.environment} environment"
+
+  tags = {
+    Environment = var.environment
+    Project     = var.project
+    Terraform   = "true"
+  }
+}
+
+resource "aws_secretsmanager_secret_version" "api_keys" {
+  secret_id = aws_secretsmanager_secret.api_keys.id
+  secret_string = jsonencode({
+    stripe_secret_key = var.stripe_secret_key
+    stripe_publishable_key = var.stripe_publishable_key
+    aws_access_key_id = var.aws_access_key_id
+    aws_secret_access_key = var.aws_secret_access_key
+  })
+}
+
+# Outputs
+output "database_secret_arn" {
+  description = "ARN of the database credentials secret"
+  value       = aws_secretsmanager_secret.database.arn
+}
+
+output "mongodb_secret_arn" {
+  description = "ARN of the MongoDB credentials secret"
+  value       = aws_secretsmanager_secret.mongodb.arn
+}
+
+output "api_keys_secret_arn" {
+  description = "ARN of the API keys secret"
+  value       = aws_secretsmanager_secret.api_keys.arn
 } 

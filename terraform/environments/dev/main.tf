@@ -2,67 +2,120 @@ provider "aws" {
   region = var.aws_region
 }
 
-# VPC Module
+# Flatten shared inputs via locals
+locals {
+  vpc_id          = module.vpc.vpc_id
+  private_subnets = module.vpc.private_subnet_ids
+  public_subnets  = module.vpc.public_subnet_ids
+  
+  # Shared security group CIDR blocks
+  vpc_cidr = "10.0.0.0/16"
+  
+  # Shared subnet group names
+  db_subnet_group_name = "${var.project}-${var.environment}-db-subnet-group"
+  
+  # Shared tags
+  common_tags = {
+    Environment = var.environment
+    Project     = var.project
+    Terraform   = "true"
+  }
+}
+
+# VPC Module - Foundation for all other modules
 module "vpc" {
   source = "../../modules/vpc"
 
   project     = var.project
   environment = var.environment
-
-  # Dev uses minimal resources but requires 2 AZs for AWS services
-  vpc_cidr             = "10.0.0.0/16"
-  availability_zones   = ["${var.aws_region}a", "${var.aws_region}b"]
+  vpc_cidr    = local.vpc_cidr
+  availability_zones = ["us-east-1a", "us-east-1b"]
   private_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24"]
   public_subnet_cidrs  = ["10.0.101.0/24", "10.0.102.0/24"]
 }
 
-# ALB Module
+# ALB Module - Depends only on VPC
 module "alb" {
   source = "../../modules/alb"
 
   project     = var.project
   environment = var.environment
-  vpc_id      = module.vpc.vpc_id
-  subnet_ids  = module.vpc.public_subnet_ids
-  target_group_arn = module.ecs.target_group_arn
+  vpc_id      = local.vpc_id
+  subnet_ids  = local.public_subnets
+  container_port = var.container_port
+
+  depends_on = [module.vpc]
 }
 
-# ECS Module
-module "ecs" {
-  source = "../../modules/ecs"
-
-  project            = var.project
-  environment        = var.environment
-  vpc_id            = module.vpc.vpc_id
-  subnet_ids        = module.vpc.private_subnet_ids
-  container_name    = var.container_name
-  container_port    = var.container_port
-  ecr_repository_url = var.ecr_repository_url
-  image_tag         = var.image_tag
-  alb_security_group_id = module.alb.security_group_id
-  database_url_arn  = module.secrets.database_url_arn
-  mongodb_uri_arn   = module.secrets.mongodb_uri_arn
-  aws_region        = var.aws_region
-}
-
-# RDS Module
+# RDS Module - Depends only on VPC
 module "rds" {
   source = "../../modules/rds"
 
   project     = var.project
   environment = var.environment
-  vpc_id      = module.vpc.vpc_id
-  subnet_ids  = module.vpc.private_subnet_ids
-  ecs_security_group_id = module.ecs.security_group_id
-  db_username = var.db_username
+  vpc_id      = local.vpc_id
+  subnet_ids  = local.private_subnets
+  vpc_cidr    = local.vpc_cidr
+  subnet_group_name = local.db_subnet_group_name
+
+  depends_on = [module.vpc]
+}
+
+# MongoDB Module - Depends only on VPC
+module "mongodb" {
+  source = "../../modules/mongodb"
+
+  project     = var.project
+  environment = var.environment
+  vpc_id      = local.vpc_id
+  subnet_ids  = local.private_subnets
+  vpc_cidr    = local.vpc_cidr
+
+  depends_on = [module.vpc]
+}
+
+# ECS Module - Depends on VPC and ALB
+module "ecs" {
+  source = "../../modules/ecs"
+
+  project     = var.project
+  environment = var.environment
+  vpc_id      = local.vpc_id
+  private_subnet_ids = local.private_subnets
+  alb_target_group_arn = module.alb.target_group_arn
+
+  depends_on = [module.vpc, module.alb]
+}
+
+# Update ALB target group with ECS service
+resource "aws_lb_target_group_attachment" "ecs" {
+  target_group_arn = module.alb.target_group_arn
+  target_id        = module.ecs.service_id
+  port             = var.container_port
+
+  depends_on = [module.alb, module.ecs]
+}
+
+# SonarQube Module - Depends on VPC and RDS
+module "sonarqube" {
+  source = "../../modules/sonarqube"
+
+  project     = var.project
+  environment = var.environment
+  vpc_id      = local.vpc_id
+  subnet_ids  = local.private_subnets
+  aws_region  = var.aws_region
+  db_endpoint = module.rds.endpoint
+  db_subnet_group_name = local.db_subnet_group_name
+  db_username = var.sonarqube_db_username
   db_instance_class = "db.t3.micro"
   allocated_storage = 20
   skip_final_snapshot = true
-  db_name = "finefinds"
-  db_password = module.secrets.database_password
+
+  depends_on = [module.vpc, module.rds]
 }
 
-# Cognito Module
+# Cognito Module - No VPC dependencies
 module "cognito" {
   source = "../../modules/cognito"
 
@@ -70,7 +123,7 @@ module "cognito" {
   environment = var.environment
 }
 
-# S3 Module
+# S3 Module - No VPC dependencies
 module "s3" {
   source = "../../modules/s3"
 
@@ -78,28 +131,17 @@ module "s3" {
   environment = var.environment
 }
 
-# Secrets Manager Module
+# Secrets Manager Module - No VPC dependencies
 module "secrets" {
   source = "../../modules/secrets"
 
-  project     = var.project
-  environment = var.environment
+  project        = var.project
+  environment    = var.environment
+  secret_suffix  = var.secret_suffix
+  use_existing_secrets = true
 }
 
-# MongoDB Module
-module "mongodb" {
-  source = "../../modules/mongodb"
-
-  project     = var.project
-  environment = var.environment
-  vpc_id      = module.vpc.vpc_id
-  subnet_ids  = module.vpc.private_subnet_ids
-  ecs_security_group_id = module.ecs.security_group_id
-  admin_username = var.mongodb_admin_username
-  mongodb_password = module.secrets.mongodb_password
-}
-
-# Monitoring Module
+# Monitoring Module - No VPC dependencies
 module "monitoring" {
   source = "../../modules/monitoring"
 
@@ -109,24 +151,7 @@ module "monitoring" {
   alert_email = var.alert_email
 }
 
-# SonarQube Module
-module "sonarqube" {
-  source = "../../modules/sonarqube"
-
-  project     = var.project
-  environment = var.environment
-  vpc_id      = module.vpc.vpc_id
-  subnet_ids  = module.vpc.private_subnet_ids
-  aws_region  = var.aws_region
-  db_instance_class = "db.t3.micro"
-  db_username = var.sonarqube_db_username
-  alb_security_group_id = module.alb.security_group_id
-  alb_dns_name = module.alb.dns_name
-  db_endpoint = module.rds.endpoint
-  db_subnet_group_name = module.rds.db_subnet_group_name
-}
-
-# Amplify Module
+# Amplify Module - No VPC dependencies
 module "amplify" {
   source = "../../modules/amplify"
 
@@ -140,10 +165,29 @@ module "amplify" {
   sonarqube_url = module.sonarqube.sonarqube_url
 }
 
+# Variables
+variable "db_password" {
+  description = "Password for the main database"
+  type        = string
+  sensitive   = true
+}
+
+variable "sonarqube_db_password" {
+  description = "Password for the SonarQube database"
+  type        = string
+  sensitive   = true
+}
+
+variable "secret_suffix" {
+  description = "Suffix for secret names"
+  type        = string
+  default     = "20250510212247"
+}
+
 # Outputs
 output "vpc_id" {
   description = "ID of the VPC"
-  value       = module.vpc.vpc_id
+  value       = local.vpc_id
 }
 
 output "ecs_cluster_name" {

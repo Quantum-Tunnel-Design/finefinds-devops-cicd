@@ -23,6 +23,24 @@ variable "ecs_security_group_id" {
   type        = string
 }
 
+variable "use_existing_instance" {
+  description = "Whether to use an existing RDS instance"
+  type        = bool
+  default     = false
+}
+
+variable "existing_security_group_id" {
+  description = "Security group ID of the existing RDS instance"
+  type        = string
+  default     = ""
+}
+
+variable "use_existing_subnet_group" {
+  description = "Whether to use an existing subnet group"
+  type        = bool
+  default     = false
+}
+
 variable "db_username" {
   description = "Master username for RDS"
   type        = string
@@ -30,7 +48,7 @@ variable "db_username" {
 }
 
 variable "db_instance_class" {
-  description = "RDS instance class"
+  description = "Instance class for the RDS instance"
   type        = string
   default     = "db.t3.micro"
 }
@@ -42,19 +60,19 @@ variable "allocated_storage" {
 }
 
 variable "skip_final_snapshot" {
-  description = "Skip final snapshot when destroying"
+  description = "Whether to skip the final snapshot when destroying the instance"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "db_name" {
-  description = "Database name"
+  description = "Name of the database to create"
   type        = string
   default     = "finefinds"
 }
 
 variable "db_password" {
-  description = "Password for the RDS instance"
+  description = "Password for the database master user"
   type        = string
   sensitive   = true
 } 

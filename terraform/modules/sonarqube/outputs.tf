@@ -1,6 +1,12 @@
+output "sonarqube_password" {
+  description = "SonarQube database password"
+  value       = random_password.sonarqube_password.result
+  sensitive   = true
+}
+
 output "sonarqube_url" {
-  description = "URL of the SonarQube server"
-  value       = "https://sonarqube.${var.environment}.finefinds.com"
+  description = "URL of the SonarQube instance"
+  value       = "http://${aws_lb.sonarqube.dns_name}:9000"
 }
 
 output "sonarqube_initial_password" {

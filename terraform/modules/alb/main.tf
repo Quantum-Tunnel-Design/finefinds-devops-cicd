@@ -31,7 +31,8 @@ resource "aws_security_group" "alb" {
   }
 
   lifecycle {
-    prevent_destroy = true
+    ignore_changes = [name]
+    create_before_destroy = true
   }
 }
 
@@ -52,7 +53,7 @@ resource "aws_lb" "main" {
 
   lifecycle {
     ignore_changes = [name]
-    prevent_destroy = true
+    create_before_destroy = true
   }
 }
 
@@ -63,10 +64,36 @@ resource "aws_lb_listener" "http" {
 
   default_action {
     type             = "forward"
-    target_group_arn = var.target_group_arn
+    target_group_arn = aws_lb_target_group.app.arn
   }
 
   lifecycle {
-    prevent_destroy = true
+    create_before_destroy = true
+  }
+}
+
+resource "aws_lb_target_group" "app" {
+  name        = "${var.project}-${var.environment}-tg"
+  port        = 80
+  protocol    = "HTTP"
+  vpc_id      = var.vpc_id
+  target_type = "ip"
+
+  health_check {
+    path                = "/health"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+  }
+
+  tags = {
+    Name        = "${var.project}-${var.environment}-tg"
+    Environment = var.environment
+    Project     = var.project
+  }
+
+  lifecycle {
+    create_before_destroy = true
   }
 } 

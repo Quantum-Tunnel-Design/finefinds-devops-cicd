@@ -1,3 +1,9 @@
+# Data source for existing Grafana role
+data "aws_iam_role" "existing_grafana" {
+  count = var.use_existing_roles ? 1 : 0
+  name  = "${var.project}-${var.environment}-grafana"
+}
+
 # CloudWatch Log Group
 resource "aws_cloudwatch_log_group" "ecs" {
   name              = "/ecs/${var.project}-${var.environment}"
@@ -73,7 +79,7 @@ resource "aws_grafana_workspace" "main" {
   account_access_type      = "CURRENT_ACCOUNT"
   authentication_providers = ["AWS_SSO"]
   permission_type         = "SERVICE_MANAGED"
-  role_arn                = aws_iam_role.grafana.arn
+  role_arn                = var.use_existing_roles ? data.aws_iam_role.existing_grafana[0].arn : aws_iam_role.grafana[0].arn
 
   data_sources = ["PROMETHEUS", "CLOUDWATCH"]
 
@@ -84,7 +90,8 @@ resource "aws_grafana_workspace" "main" {
 
 # IAM Role for Grafana
 resource "aws_iam_role" "grafana" {
-  name = "${var.project}-${var.environment}-grafana"
+  count = var.use_existing_roles ? 0 : 1
+  name  = "${var.project}-${var.environment}-grafana"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -112,8 +119,9 @@ resource "aws_iam_role" "grafana" {
 
 # IAM Policy for Grafana
 resource "aws_iam_role_policy" "grafana" {
-  name = "grafana-${var.environment}"
-  role = aws_iam_role.grafana.id
+  count = var.use_existing_roles ? 0 : 1
+  name  = "grafana-${var.environment}"
+  role  = var.use_existing_roles ? data.aws_iam_role.existing_grafana[0].id : aws_iam_role.grafana[0].id
 
   policy = jsonencode({
     Version = "2012-10-17"

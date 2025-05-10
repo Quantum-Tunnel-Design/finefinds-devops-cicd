@@ -1,14 +1,24 @@
+# Data source for existing EC2 instance
+data "aws_instance" "existing_mongodb" {
+  count = var.use_existing_instance ? 1 : 0
+  filter {
+    name   = "tag:Name"
+    values = ["${var.project}-${var.environment}-mongodb"]
+  }
+}
+
 # Security Group
 resource "aws_security_group" "mongodb" {
+  count       = (var.use_existing_cluster || var.use_existing_instance) ? 0 : 1
   name        = "${var.project}-${var.environment}-mongodb-sg"
   description = "Security group for MongoDB instance"
   vpc_id      = var.vpc_id
 
   ingress {
-    from_port       = 27017
-    to_port         = 27017
-    protocol        = "tcp"
-    security_groups = [var.ecs_security_group_id]
+    from_port   = 27017
+    to_port     = 27017
+    protocol    = "tcp"
+    cidr_blocks = ["10.0.0.0/8"]  # Allow from VPC CIDR
   }
 
   egress {
@@ -23,10 +33,15 @@ resource "aws_security_group" "mongodb" {
     Project     = var.project
     Terraform   = "true"
   }
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 # DocumentDB Subnet Group
 resource "aws_docdb_subnet_group" "main" {
+  count      = var.use_existing_subnet_group ? 0 : 1
   name       = "${var.project}-${var.environment}-docdb-subnet-group"
   subnet_ids = var.subnet_ids
 
@@ -38,46 +53,47 @@ resource "aws_docdb_subnet_group" "main" {
 
   lifecycle {
     ignore_changes = [name]
-    create_before_destroy = true
     prevent_destroy = true
   }
 }
 
-# MongoDB Instance
+# Use existing or new subnet group
+locals {
+  subnet_group_name = var.use_existing_subnet_group ? "${var.project}-${var.environment}-docdb-subnet-group" : aws_docdb_subnet_group.main[0].name
+  security_group_id = var.use_existing_cluster ? var.existing_security_group_id : (var.use_existing_instance ? var.existing_instance_security_group_id : aws_security_group.mongodb[0].id)
+}
+
+# MongoDB Instance (DocumentDB)
 resource "aws_docdb_cluster" "main" {
-  cluster_identifier = "${var.project}-${var.environment}-mongodb"
+  count              = (var.use_existing_cluster || var.use_existing_instance) ? 0 : 1
+  cluster_identifier = "${var.project}-${var.environment}-docdb"
   engine            = "docdb"
-  master_username   = var.admin_username != "admin" ? var.admin_username : "mongoadmin"
+  master_username   = var.admin_username
   master_password   = var.mongodb_password
-
-  db_subnet_group_name   = aws_docdb_subnet_group.main.name
-  vpc_security_group_ids = [aws_security_group.mongodb.id]
-
   skip_final_snapshot = true
 
+  vpc_security_group_ids = [aws_security_group.mongodb[0].id]
+  db_subnet_group_name   = aws_docdb_subnet_group.main[0].name
+
   tags = {
+    Name        = "${var.project}-${var.environment}-docdb"
     Environment = var.environment
     Project     = var.project
-    Terraform   = "true"
   }
 
   lifecycle {
-    ignore_changes = [
-      cluster_identifier,
-      master_username,
-      master_password,
-      engine_version
-    ]
+    create_before_destroy = true
   }
 }
 
-# EC2 Instance
+# EC2 Instance for MongoDB
 resource "aws_instance" "mongodb" {
+  count         = (var.use_existing_cluster || var.use_existing_instance) ? 0 : 1
   ami           = var.ami_id
   instance_type = var.instance_type
   subnet_id     = var.subnet_ids[0]
 
-  vpc_security_group_ids = [aws_security_group.mongodb.id]
+  vpc_security_group_ids = [local.security_group_id]
 
   root_block_device {
     volume_size = var.volume_size
@@ -119,7 +135,8 @@ resource "aws_instance" "mongodb" {
 
 # EBS Volume for Data
 resource "aws_ebs_volume" "mongodb_data" {
-  availability_zone = aws_instance.mongodb.availability_zone
+  count             = (var.use_existing_cluster || var.use_existing_instance) ? 0 : 1
+  availability_zone = aws_instance.mongodb[0].availability_zone
   size             = var.data_volume_size
   type             = "gp3"
 
@@ -132,9 +149,15 @@ resource "aws_ebs_volume" "mongodb_data" {
 }
 
 resource "aws_volume_attachment" "mongodb_data" {
-  device_name = "/dev/sdf"
-  volume_id   = aws_ebs_volume.mongodb_data.id
-  instance_id = aws_instance.mongodb.id
+  count        = (var.use_existing_cluster || var.use_existing_instance) ? 0 : 1
+  device_name  = "/dev/sdf"
+  volume_id    = aws_ebs_volume.mongodb_data[0].id
+  instance_id  = aws_instance.mongodb[0].id
+}
+
+# Use existing or new cluster/instance
+locals {
+  cluster_endpoint = var.use_existing_cluster ? var.existing_cluster_endpoint : (var.use_existing_instance ? data.aws_instance.existing_mongodb[0].private_ip : (length(aws_docdb_cluster.main) > 0 ? aws_docdb_cluster.main[0].endpoint : aws_instance.mongodb[0].private_ip))
 }
 
 # Variables
@@ -161,6 +184,36 @@ variable "subnet_ids" {
 variable "ecs_security_group_id" {
   description = "Security group ID of the ECS tasks"
   type        = string
+}
+
+variable "use_existing_cluster" {
+  description = "Whether to use an existing DocumentDB cluster"
+  type        = bool
+  default     = false
+}
+
+variable "use_existing_instance" {
+  description = "Whether to use an existing EC2 instance for MongoDB"
+  type        = bool
+  default     = false
+}
+
+variable "existing_security_group_id" {
+  description = "Security group ID of the existing DocumentDB cluster"
+  type        = string
+  default     = ""
+}
+
+variable "existing_instance_security_group_id" {
+  description = "Security group ID of the existing EC2 instance"
+  type        = string
+  default     = ""
+}
+
+variable "use_existing_subnet_group" {
+  description = "Whether to use an existing subnet group"
+  type        = bool
+  default     = false
 }
 
 variable "ami_id" {
@@ -199,15 +252,21 @@ variable "mongodb_password" {
   sensitive   = true
 }
 
+variable "existing_cluster_endpoint" {
+  description = "Endpoint of the existing DocumentDB cluster"
+  type        = string
+  default     = ""
+}
+
 # Outputs
 output "endpoint" {
-  description = "Endpoint of the MongoDB instance"
-  value       = aws_instance.mongodb.private_ip
+  description = "Endpoint of the MongoDB cluster/instance"
+  value       = local.cluster_endpoint
 }
 
 output "security_group_id" {
-  description = "ID of the MongoDB security group"
-  value       = aws_security_group.mongodb.id
+  description = "Security group ID of the MongoDB cluster/instance"
+  value       = local.security_group_id
 }
 
 # IAM Roles

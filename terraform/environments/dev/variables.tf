@@ -85,3 +85,98 @@ variable "sonar_token" {
   type        = string
   sensitive   = true
 }
+
+variable "use_existing_rds_subnet_group" {
+  description = "Whether to use an existing RDS subnet group"
+  type        = bool
+  default     = false
+}
+
+variable "use_existing_cluster" {
+  description = "Whether to use an existing MongoDB cluster"
+  type        = bool
+  default     = false
+}
+
+variable "use_existing_instance" {
+  description = "Whether to use an existing RDS instance"
+  type        = bool
+  default     = false
+}
+
+variable "use_existing_subnet_group" {
+  description = "Whether to use an existing subnet group"
+  type        = bool
+  default     = false
+}
+
+variable "use_existing_roles" {
+  description = "Whether to use existing IAM roles"
+  type        = bool
+  default     = false
+}
+
+variable "use_existing_secrets" {
+  description = "Whether to use existing secrets"
+  type        = bool
+  default     = false
+}
+
+variable "private_subnet_ids" {
+  description = "List of private subnet IDs"
+  type        = list(string)
+  default     = []
+}
+
+variable "ecs_security_group_id" {
+  description = "Security group ID for ECS tasks"
+  type        = string
+  default     = ""
+}
+
+variable "alb_target_group_arn" {
+  description = "ARN of the ALB target group"
+  type        = string
+  default     = ""
+}
+
+variable "allocated_storage" {
+  description = "Allocated storage for RDS instance in GB"
+  type        = number
+  default     = 20
+}
+
+variable "use_existing_rds_instance" {
+  description = "Whether to use an existing RDS instance"
+  type        = bool
+  default     = false
+}
+
+variable "existing_instance_security_group_id" {
+  description = "Security group ID of the existing instance"
+  type        = string
+  default     = ""
+}
+
+variable "existing_security_group_id" {
+  description = "Security group ID of the existing resource"
+  type        = string
+  default     = ""
+}
+
+variable "existing_cluster_security_group_id" {
+  description = "Security group ID of the existing cluster"
+  type        = string
+  default     = ""
+}
+
+variable "vpc_id" {
+  description = "VPC ID where resources will be created"
+  type        = string
+}
+
+variable "subnet_ids" {
+  description = "List of subnet IDs for resources"
+  type        = list(string)
+  default     = []
+}

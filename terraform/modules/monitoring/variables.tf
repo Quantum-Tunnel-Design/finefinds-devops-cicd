@@ -46,4 +46,10 @@ variable "treat_missing_data" {
   description = "How to handle missing data points"
   type        = string
   default     = "missing"
+}
+
+variable "use_existing_roles" {
+  description = "Whether to use existing IAM roles"
+  type        = bool
+  default     = false
 } 

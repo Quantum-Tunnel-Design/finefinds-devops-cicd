@@ -5,7 +5,7 @@ resource "aws_ecs_task_definition" "sonarqube" {
   network_mode            = "awsvpc"
   cpu                     = var.task_cpu
   memory                  = var.task_memory
-  execution_role_arn      = aws_iam_role.ecs_execution_role.arn
+  execution_role_arn      = local.execution_role_arn
   task_role_arn           = aws_iam_role.ecs_task_role.arn
 
   container_definitions = jsonencode([
@@ -57,7 +57,7 @@ resource "aws_ecs_task_definition" "sonarqube" {
   volume {
     name = "sonarqube_data"
     efs_volume_configuration {
-      file_system_id          = aws_efs_file_system.sonarqube.id
+      file_system_id          = local.efs_id
       root_directory          = "/"
       transit_encryption      = "ENABLED"
       authorization_config {
@@ -68,26 +68,47 @@ resource "aws_ecs_task_definition" "sonarqube" {
   }
 }
 
-# EFS for SonarQube data persistence
+# Data source for existing EFS
+data "aws_efs_file_system" "existing" {
+  count = var.use_existing_efs ? 1 : 0
+  tags = {
+    Name = "${var.project}-${var.environment}-sonarqube"
+  }
+}
+
+# Data source for existing IAM role
+data "aws_iam_role" "existing_sonarqube_execution_role" {
+  count = var.use_existing_roles ? 1 : 0
+  name  = "${var.project}-${var.environment}-sonarqube-execution-role"
+}
+
+# EFS File System
 resource "aws_efs_file_system" "sonarqube" {
+  count = var.use_existing_efs ? 0 : 1
   creation_token = "sonarqube-${var.environment}"
-  encrypted      = true
+
+  performance_mode = "generalPurpose"
+  throughput_mode  = "bursting"
+  encrypted        = true
 
   tags = {
     Name        = "${var.project}-${var.environment}-sonarqube"
     Environment = var.environment
     Project     = var.project
-    Terraform   = "true"
   }
 
   lifecycle {
-    ignore_changes = [creation_token]
     prevent_destroy = true
   }
 }
 
+# Use existing or new EFS
+locals {
+  efs_id = var.use_existing_efs ? data.aws_efs_file_system.existing[0].id : aws_efs_file_system.sonarqube[0].id
+}
+
 resource "aws_efs_access_point" "sonarqube" {
-  file_system_id = aws_efs_file_system.sonarqube.id
+  file_system_id = local.efs_id
 
   root_directory {
     path = "/sonarqube"
@@ -135,89 +156,17 @@ resource "aws_secretsmanager_secret_version" "sonarqube_password" {
   }
 }
 
-# RDS Instance for SonarQube
-resource "aws_db_instance" "sonarqube" {
-  identifier = "${var.project}-${var.environment}-sonarqube"
-
-  engine         = "postgres"
-  engine_version = "17.5"
-  instance_class = var.db_instance_class
-
-  allocated_storage     = 20
-  storage_type         = "gp2"
-  storage_encrypted    = true
-
-  db_name  = "sonarqube"
-  username = "sonarqube_admin"
-  password = random_password.sonarqube_password.result
-
-  vpc_security_group_ids = [aws_security_group.sonarqube_db.id]
-  db_subnet_group_name   = var.db_subnet_group_name
-
-  backup_retention_period = 7
-  skip_final_snapshot    = true
-
-  tags = {
-    Environment = var.environment
-    Project     = var.project
-    Terraform   = "true"
-  }
-
-  lifecycle {
-    ignore_changes = [
-      identifier,
-      engine_version,
-      password,
-      db_name,
-      username,
-      allocated_storage,
-      instance_class
-    ]
-    prevent_destroy = true
-  }
-}
-
-# Output the password ARN
-output "sonarqube_password_arn" {
-  description = "ARN of the SonarQube password in Secrets Manager"
-  value       = aws_secretsmanager_secret.sonarqube_password.arn
-  sensitive   = true
-}
-
-# Security group for SonarQube database
-resource "aws_security_group" "sonarqube_db" {
-  name        = "sonarqube-db-${var.environment}"
-  description = "Security group for SonarQube database"
-  vpc_id      = var.vpc_id
-
-  ingress {
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    security_groups = [aws_security_group.sonarqube.id]
-  }
-
-  tags = {
-    Name        = "sonarqube-db-${var.environment}"
-    Environment = var.environment
-  }
-
-  lifecycle {
-    prevent_destroy = true
-  }
-}
-
-# Security group for SonarQube application
+# Security Group for SonarQube
 resource "aws_security_group" "sonarqube" {
-  name        = "sonarqube-${var.environment}"
-  description = "Security group for SonarQube application"
+  name        = "${var.project}-${var.environment}-sonarqube"
+  description = "Security group for SonarQube"
   vpc_id      = var.vpc_id
 
   ingress {
-    from_port       = 9000
-    to_port         = 9000
-    protocol        = "tcp"
-    security_groups = [var.alb_security_group_id]
+    from_port   = 9000
+    to_port     = 9000
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
@@ -228,16 +177,17 @@ resource "aws_security_group" "sonarqube" {
   }
 
   tags = {
-    Name        = "sonarqube-${var.environment}"
+    Name        = "${var.project}-${var.environment}-sonarqube"
     Environment = var.environment
+    Project     = var.project
   }
 
   lifecycle {
-    prevent_destroy = true
+    create_before_destroy = true
   }
 }
 
-# IAM Roles
+# IAM Role for ECS Task Execution
 resource "aws_iam_role" "ecs_execution_role" {
   name = "${var.project}-${var.environment}-sonarqube-execution-role"
 
@@ -257,24 +207,20 @@ resource "aws_iam_role" "ecs_execution_role" {
   tags = {
     Environment = var.environment
     Project     = var.project
-    Terraform   = "true"
   }
+}
 
-  lifecycle {
-    ignore_changes = [name]
-    prevent_destroy = true
-  }
+# Use existing or new execution role
+locals {
+  execution_role_arn = var.use_existing_roles ? data.aws_iam_role.existing_sonarqube_execution_role[0].arn : aws_iam_role.ecs_execution_role.arn
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
   role       = aws_iam_role.ecs_execution_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
+# IAM Role for ECS Task
 resource "aws_iam_role" "ecs_task_role" {
   name = "${var.project}-${var.environment}-sonarqube-task-role"
 
@@ -294,17 +240,17 @@ resource "aws_iam_role" "ecs_task_role" {
   tags = {
     Environment = var.environment
     Project     = var.project
-    Terraform   = "true"
-  }
-
-  lifecycle {
-    ignore_changes = [name]
-    prevent_destroy = true
   }
 }
 
+# Outputs
 output "sonarqube_password" {
   description = "SonarQube database password"
   value       = random_password.sonarqube_password.result
   sensitive   = true
+}
+
+output "sonarqube_url" {
+  description = "URL of the SonarQube instance"
+  value       = "http://${aws_lb.sonarqube.dns_name}:9000"
 } 
