@@ -1,191 +1,190 @@
-# FineFinds DevOps Setup
+# FineFinds DevOps & CI/CD
 
-This repository contains the infrastructure and CI/CD configuration for the FineFinds project. It includes Terraform configurations, GitHub Actions workflows, and scripts for managing environments and secrets.
+This repository contains the infrastructure and CI/CD configuration for FineFinds.
 
 ## Prerequisites
 
-- [GitHub CLI](https://cli.github.com/) (`gh`)
-- [AWS CLI](https://aws.amazon.com/cli/)
-- [Terraform](https://www.terraform.io/) (v1.0.0 or later)
-- [Node.js](https://nodejs.org/) (v18 or later)
-- [npm](https://www.npmjs.com/) (v8 or later)
+- GitHub CLI (`gh`)
+- AWS CLI
+- Terraform
+- Node.js and npm
 
 ## Environment Setup
 
-The project uses multiple environments:
-- `main` (Production)
-- `staging`
-- `dev`
-- `qa`
-- `sandbox`
+### Branch to Environment Mapping
 
-Each environment has its own:
-- Terraform state
-- AWS resources
-- GitHub secrets
-- Protection rules
-- Quality gates
+The repository uses a specific mapping between Git branches and deployment environments:
+
+| Branch Name | Environment Name | Purpose |
+|-------------|------------------|---------|
+| `main`      | `prod`          | Production environment |
+| `staging`   | `staging`       | Pre-production testing |
+| `dev`       | `dev`           | Development environment |
+| `qa`        | `qa`            | Quality assurance testing |
+| `sandbox`   | `sandbox`       | Experimental features |
+
+**Note**: While the main branch is named `main`, it maps to the `prod` environment in all configurations. This is important to understand when working with:
+- GitHub Environments
+- AWS IAM Roles
+- Terraform State
+- Deployment Workflows
+
+### Environment Validation
+
+All scripts include validation to ensure:
+1. Only valid branch names are used
+2. Environment names are consistent across all tools
+3. Branch-to-environment mappings are maintained
 
 ## Initial Setup
 
-### 1. GitHub Authentication
+1. **GitHub Authentication**
+   ```bash
+   gh auth login
+   ```
 
-```bash
-# Login to GitHub CLI
-gh auth login
-```
+2. **AWS OIDC Setup**
+   ```bash
+   export AWS_ACCOUNT_ID="your-aws-account-id"
+   export GITHUB_ORG="your-github-org"
+   export GITHUB_REPO="finefinds-devops-cicd"
+   ./scripts/setup-aws-oidc.sh
+   ```
 
-### 2. AWS OIDC Setup
+3. **GitHub Secrets Setup**
+   ```bash
+   # Set SonarQube credentials
+   export SONAR_TOKEN="your-sonar-token"
+   export SONAR_HOST_URL="your-sonar-url"
 
-```bash
-# Set required environment variables
-export AWS_ACCOUNT_ID="your-aws-account-id"
-export GITHUB_ORG="your-github-org"
-export GITHUB_REPO="your-github-repo"
+   # Set AWS credentials for each environment
+   export AWS_PROD_ACCESS_KEY="your-prod-access-key"
+   export AWS_PROD_SECRET_KEY="your-prod-secret-key"
+   export AWS_STAGING_ACCESS_KEY="your-staging-access-key"
+   export AWS_STAGING_SECRET_KEY="your-staging-secret-key"
+   export AWS_DEV_ACCESS_KEY="your-dev-access-key"
+   export AWS_DEV_SECRET_KEY="your-dev-secret-key"
+   export AWS_QA_ACCESS_KEY="your-qa-access-key"
+   export AWS_QA_SECRET_KEY="your-qa-secret-key"
+   export AWS_SANDBOX_ACCESS_KEY="your-sandbox-access-key"
+   export AWS_SANDBOX_SECRET_KEY="your-sandbox-secret-key"
 
-# Run the OIDC setup script
-chmod +x scripts/setup-aws-oidc.sh
-./scripts/setup-aws-oidc.sh
-```
+   ./scripts/setup-github-secrets.sh
+   ```
 
-This script will:
-- Create an OIDC provider in AWS
-- Create IAM roles for each environment
-- Configure trust relationships
-- Attach necessary policies
-
-### 3. GitHub Secrets Setup
-
-```bash
-# Set SonarQube credentials
-export SONAR_TOKEN="your-sonarqube-token"
-export SONAR_HOST_URL="your-sonarqube-url"
-
-# Set AWS credentials for each environment
-export AWS_PROD_ACCESS_KEY="prod-access-key"
-export AWS_PROD_SECRET_KEY="prod-secret-key"
-export AWS_STAGING_ACCESS_KEY="staging-access-key"
-export AWS_STAGING_SECRET_KEY="staging-secret-key"
-export AWS_DEV_ACCESS_KEY="dev-access-key"
-export AWS_DEV_SECRET_KEY="dev-secret-key"
-export AWS_QA_ACCESS_KEY="qa-access-key"
-export AWS_QA_SECRET_KEY="qa-secret-key"
-export AWS_SANDBOX_ACCESS_KEY="sandbox-access-key"
-export AWS_SANDBOX_SECRET_KEY="sandbox-secret-key"
-
-# Run the secrets setup script
-chmod +x scripts/setup-github-secrets.sh
-./scripts/setup-github-secrets.sh
-```
-
-### 4. Environment Protection Rules
-
-```bash
-# Run the protection rules setup script
-chmod +x scripts/setup-environment-protection.sh
-./scripts/setup-environment-protection.sh
-```
-
-This will configure:
-- Production: 30-minute wait timer, 2 required reviewers
-- Staging: 15-minute wait timer, 1 required reviewer
-- Development/QA/Sandbox: No wait timer or required reviewers
+4. **Environment Protection Rules**
+   ```bash
+   ./scripts/setup-environment-protection.sh
+   ```
 
 ## Environment-Specific Configurations
 
-### Production (main)
-- Strict quality gates
-- Multi-AZ deployment
-- 30-day backup retention
-- 2 required reviewers
-- 30-minute wait timer
+### Production (main branch → prod environment)
+- Quality Gate: Strict
+- Backup Retention: 30 days
+- Protection Rules:
+  - 30-minute wait timer
+  - 2 required reviewers
+  - Branch protection enabled
 
 ### Staging
-- Moderate quality gates
-- Single-AZ deployment
-- 14-day backup retention
-- 1 required reviewer
-- 15-minute wait timer
+- Quality Gate: Moderate
+- Backup Retention: 14 days
+- Protection Rules:
+  - 15-minute wait timer
+  - 1 required reviewer
+  - Branch protection enabled
 
-### Development/QA/Sandbox
-- Basic quality gates
-- Single-AZ deployment
-- 7-day backup retention
-- No required reviewers
-- No wait timer
+### Development
+- Quality Gate: Basic
+- Backup Retention: 7 days
+- Protection Rules:
+  - No wait timer
+  - No required reviewers
+  - Branch protection enabled
+
+### QA
+- Quality Gate: Basic
+- Backup Retention: 7 days
+- Protection Rules:
+  - No wait timer
+  - No required reviewers
+  - Branch protection enabled
+
+### Sandbox
+- Quality Gate: None
+- Backup Retention: 3 days
+- Protection Rules:
+  - No wait timer
+  - No required reviewers
+  - Branch protection enabled
 
 ## GitHub Actions Workflows
 
 ### Terraform Deployment
-- Triggers on push and pull requests
-- Uses OIDC for AWS authentication
+- Triggered on push to protected branches
+- Uses AWS OIDC for authentication
 - Environment-specific deployments
-- Automatic apply on push to main branch
+- Branch-to-environment mapping is handled automatically
 
 ### SonarQube Scan
-- Triggers on push and pull requests
-- Environment-specific quality gates
-- Coverage and duplication thresholds
-- Quality gate status check
+- Triggered on pull requests and pushes
+- Quality gates are environment-specific
+- Results are stored in SonarQube server
 
 ## Security Considerations
 
-1. **AWS Authentication**
-   - Uses OIDC instead of access keys
-   - Environment-specific IAM roles
-   - Least privilege principle
+### AWS Authentication
+- Uses OIDC for GitHub Actions
+- Environment-specific IAM roles
+- Role names follow the environment mapping (e.g., `github-actions-prod` for main branch)
 
-2. **GitHub Secrets**
-   - Environment-specific secrets
-   - No shared credentials between environments
-   - Regular rotation recommended
+### GitHub Secrets
+- Environment-specific secrets
+- Secrets are automatically mapped to the correct environment
+- Sensitive values are encrypted
 
-3. **Environment Protection**
-   - Branch protection rules
-   - Required reviewers
-   - Wait timers for critical environments
+### Environment Protection
+- Branch protection rules
+- Environment-specific wait timers
+- Required reviewers based on environment
 
 ## Maintenance
 
 ### Rotating Secrets
 1. Generate new secrets
-2. Update environment variables
-3. Run the secrets setup script
-4. Verify the changes
+2. Update GitHub secrets using the setup script
+3. Verify deployments still work
 
 ### Adding New Environments
-1. Add environment to scripts
-2. Create new AWS IAM role
-3. Set up GitHub secrets
+1. Add new branch-to-environment mapping in all scripts
+2. Create new environment in GitHub
+3. Set up environment-specific secrets
 4. Configure protection rules
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **OIDC Authentication Fails**
-   - Verify OIDC provider exists
-   - Check IAM role trust relationships
-   - Ensure GitHub repository has correct permissions
+1. **Environment Name Mismatch**
+   - Error: "Environment not found"
+   - Solution: Verify branch-to-environment mapping in scripts
 
-2. **GitHub Secrets Not Available**
-   - Verify GitHub CLI authentication
-   - Check environment variables
-   - Ensure secrets are set for the correct environment
+2. **IAM Role Issues**
+   - Error: "Role not found"
+   - Solution: Check role names follow environment mapping
 
-3. **Terraform Apply Fails**
-   - Check AWS credentials
-   - Verify environment variables
-   - Check Terraform state
+3. **Secret Access Issues**
+   - Error: "Secret not found"
+   - Solution: Verify secrets are set for correct environment
 
-## Contributing
+### Validation Errors
 
-1. Create a new branch
-2. Make your changes
-3. Run tests
-4. Submit a pull request
-5. Wait for required reviews
+If you encounter validation errors:
+1. Check the branch name is valid
+2. Verify environment mapping is correct
+3. Ensure all required variables are set
 
-## License
+## Support
 
-[Your License Here] 
+For issues and support, please contact the DevOps team. 
