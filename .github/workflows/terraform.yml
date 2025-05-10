@@ -6,22 +6,25 @@ on:
   pull_request:
     branches: [ main, dev, qa, staging, sandbox ]
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   terraform:
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name }}
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v1
+      uses: hashicorp/setup-terraform@v2
 
     - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v1
+      uses: aws-actions/configure-aws-credentials@v4
       with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-${{ github.ref_name }}
         aws-region: ${{ secrets.AWS_REGION }}
 
     - name: Terraform Init
@@ -38,4 +41,40 @@ jobs:
       if: github.event_name == 'push'
       run: |
         cd terraform/environments/${{ github.ref_name }}
-        terraform apply -auto-approve 
+        terraform apply -auto-approve
+
+    - name: Get SonarQube URL
+      if: github.event_name == 'push'
+      id: sonarqube
+      run: |
+        cd terraform/environments/${{ github.ref_name }}
+        SONARQUBE_URL=$(terraform output -raw sonarqube_url)
+        echo "url=$SONARQUBE_URL" >> $GITHUB_OUTPUT
+
+    - name: Setup SonarQube
+      if: github.event_name == 'push' && github.ref_name == 'main'
+      run: |
+        # Wait for SonarQube to be ready
+        echo "Waiting for SonarQube to be ready..."
+        SONARQUBE_URL="${{ steps.sonarqube.outputs.url }}"
+        for i in {1..30}; do
+          if curl -s "$SONARQUBE_URL" > /dev/null; then
+            echo "SonarQube is ready!"
+            break
+          fi
+          echo "Waiting... ($i/30)"
+          sleep 10
+        done
+
+        # Generate SonarQube token
+        echo "Generating SonarQube token..."
+        TOKEN=$(curl -s -X POST \
+          -u "admin:admin" \
+          -d "name=github-actions" \
+          "$SONARQUBE_URL/api/user_tokens/generate" | jq -r '.token')
+
+        # Set GitHub secrets
+        gh secret set SONAR_TOKEN -b"$TOKEN" -e"${{ github.ref_name }}"
+        gh secret set SONAR_HOST_URL -b"$SONARQUBE_URL" -e"${{ github.ref_name }}"
+
+        echo "SonarQube setup completed!" 

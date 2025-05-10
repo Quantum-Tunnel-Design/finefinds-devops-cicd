@@ -6,44 +6,77 @@ if ! command -v gh &> /dev/null; then
     exit 1
 fi
 
-# Check if user is authenticated
-if ! gh auth status &> /dev/null; then
-    echo "Please login to GitHub first using 'gh auth login'"
+# Check if required environment variables are set
+if [ -z "$SONAR_TOKEN" ] || [ -z "$SONAR_HOST_URL" ]; then
+    echo "Please set SONAR_TOKEN and SONAR_HOST_URL environment variables"
     exit 1
 fi
 
-# Function to prompt for secret value
-prompt_secret() {
-    local secret_name=$1
-    local secret_value
-    read -sp "Enter value for $secret_name: " secret_value
-    echo
-    echo "$secret_value"
+# Function to create environment if it doesn't exist
+create_environment() {
+    local env=$1
+    if ! gh api "repos/$(gh repo view --json nameWithOwner -q .nameWithOwner)/environments/$env" &> /dev/null; then
+        echo "Creating environment: $env"
+        gh api "repos/$(gh repo view --json nameWithOwner -q .nameWithOwner)/environments" \
+            -X POST \
+            -F name="$env" \
+            -F wait_timer=0
+    fi
 }
 
-# Set AWS credentials
-AWS_ACCESS_KEY_ID=$(prompt_secret "AWS_ACCESS_KEY_ID")
-AWS_SECRET_ACCESS_KEY=$(prompt_secret "AWS_SECRET_ACCESS_KEY")
-AWS_REGION=$(prompt_secret "AWS_REGION")
+# Function to set secrets for an environment
+set_environment_secrets() {
+    local env=$1
+    local aws_access_key=$2
+    local aws_secret_key=$3
+    local aws_region=$4
 
-# Set database passwords
-DB_PASSWORD=$(prompt_secret "DB_PASSWORD")
-SONARQUBE_DB_PASSWORD=$(prompt_secret "SONARQUBE_DB_PASSWORD")
-MONGODB_ADMIN_PASSWORD=$(prompt_secret "MONGODB_ADMIN_PASSWORD")
+    echo "Setting secrets for environment: $env"
+    
+    # Set SonarQube secrets
+    gh secret set SONAR_TOKEN -b"$SONAR_TOKEN" -e"$env"
+    gh secret set SONAR_HOST_URL -b"$SONAR_HOST_URL" -e"$env"
+    
+    # Set AWS secrets
+    gh secret set AWS_ACCESS_KEY_ID -b"$aws_access_key" -e"$env"
+    gh secret set AWS_SECRET_ACCESS_KEY -b"$aws_secret_key" -e"$env"
+    gh secret set AWS_REGION -b"$aws_region" -e"$env"
+}
 
-# Set application secrets
-JWT_SECRET=$(prompt_secret "JWT_SECRET")
-COGNITO_CLIENT_SECRET=$(prompt_secret "COGNITO_CLIENT_SECRET")
+# Create environments
+for env in main dev qa staging sandbox; do
+    create_environment "$env"
+done
 
-# Set secrets in GitHub
-echo "Setting secrets in GitHub..."
-gh secret set AWS_ACCESS_KEY_ID --body "$AWS_ACCESS_KEY_ID"
-gh secret set AWS_SECRET_ACCESS_KEY --body "$AWS_SECRET_ACCESS_KEY"
-gh secret set AWS_REGION --body "$AWS_REGION"
-gh secret set DB_PASSWORD --body "$DB_PASSWORD"
-gh secret set SONARQUBE_DB_PASSWORD --body "$SONARQUBE_DB_PASSWORD"
-gh secret set MONGODB_ADMIN_PASSWORD --body "$MONGODB_ADMIN_PASSWORD"
-gh secret set JWT_SECRET --body "$JWT_SECRET"
-gh secret set COGNITO_CLIENT_SECRET --body "$COGNITO_CLIENT_SECRET"
+# Set secrets for each environment
+# Production (main)
+set_environment_secrets "main" \
+    "$AWS_PROD_ACCESS_KEY" \
+    "$AWS_PROD_SECRET_KEY" \
+    "us-east-1"
 
-echo "All secrets have been set successfully!" 
+# Staging
+set_environment_secrets "staging" \
+    "$AWS_STAGING_ACCESS_KEY" \
+    "$AWS_STAGING_SECRET_KEY" \
+    "us-east-1"
+
+# Development
+set_environment_secrets "dev" \
+    "$AWS_DEV_ACCESS_KEY" \
+    "$AWS_DEV_SECRET_KEY" \
+    "us-east-1"
+
+# QA
+set_environment_secrets "qa" \
+    "$AWS_QA_ACCESS_KEY" \
+    "$AWS_QA_SECRET_KEY" \
+    "us-east-1"
+
+# Sandbox
+set_environment_secrets "sandbox" \
+    "$AWS_SANDBOX_ACCESS_KEY" \
+    "$AWS_SANDBOX_SECRET_KEY" \
+    "us-east-1"
+
+echo "GitHub secrets setup completed!" 

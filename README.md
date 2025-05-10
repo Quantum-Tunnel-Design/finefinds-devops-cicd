@@ -1,103 +1,191 @@
-# FineFinds DevOps
+# FineFinds DevOps Setup
 
-This repository contains all infrastructure and deployment configurations for the FineFinds education platform.
-
-## Repository Structure
-
-```
-.
-├── terraform/              # Infrastructure as Code
-│   ├── environments/       # Environment-specific configurations
-│   │   ├── dev/
-│   │   ├── staging/
-│   │   └── prod/
-│   ├── modules/           # Reusable Terraform modules
-│   └── shared/            # Shared resources
-├── kubernetes/            # Kubernetes manifests
-├── scripts/              # Deployment and utility scripts
-└── docs/                 # Documentation
-```
+This repository contains the infrastructure and CI/CD configuration for the FineFinds project. It includes Terraform configurations, GitHub Actions workflows, and scripts for managing environments and secrets.
 
 ## Prerequisites
 
-- Terraform v1.5.0+
-- AWS CLI v2.0+
-- kubectl (for Kubernetes deployments)
-- jq
-- make
+- [GitHub CLI](https://cli.github.com/) (`gh`)
+- [AWS CLI](https://aws.amazon.com/cli/)
+- [Terraform](https://www.terraform.io/) (v1.0.0 or later)
+- [Node.js](https://nodejs.org/) (v18 or later)
+- [npm](https://www.npmjs.com/) (v8 or later)
 
 ## Environment Setup
 
-1. Configure AWS credentials:
+The project uses multiple environments:
+- `main` (Production)
+- `staging`
+- `dev`
+- `qa`
+- `sandbox`
+
+Each environment has its own:
+- Terraform state
+- AWS resources
+- GitHub secrets
+- Protection rules
+- Quality gates
+
+## Initial Setup
+
+### 1. GitHub Authentication
+
 ```bash
-aws configure
+# Login to GitHub CLI
+gh auth login
 ```
 
-2. Set up environment variables:
+### 2. AWS OIDC Setup
+
 ```bash
-cp .env.example .env
-# Edit .env with your configuration
+# Set required environment variables
+export AWS_ACCOUNT_ID="your-aws-account-id"
+export GITHUB_ORG="your-github-org"
+export GITHUB_REPO="your-github-repo"
+
+# Run the OIDC setup script
+chmod +x scripts/setup-aws-oidc.sh
+./scripts/setup-aws-oidc.sh
 ```
 
-## Usage
+This script will:
+- Create an OIDC provider in AWS
+- Create IAM roles for each environment
+- Configure trust relationships
+- Attach necessary policies
 
-### Terraform
+### 3. GitHub Secrets Setup
 
-Initialize Terraform:
 ```bash
-cd terraform/environments/dev  # or staging/prod
-terraform init
+# Set SonarQube credentials
+export SONAR_TOKEN="your-sonarqube-token"
+export SONAR_HOST_URL="your-sonarqube-url"
+
+# Set AWS credentials for each environment
+export AWS_PROD_ACCESS_KEY="prod-access-key"
+export AWS_PROD_SECRET_KEY="prod-secret-key"
+export AWS_STAGING_ACCESS_KEY="staging-access-key"
+export AWS_STAGING_SECRET_KEY="staging-secret-key"
+export AWS_DEV_ACCESS_KEY="dev-access-key"
+export AWS_DEV_SECRET_KEY="dev-secret-key"
+export AWS_QA_ACCESS_KEY="qa-access-key"
+export AWS_QA_SECRET_KEY="qa-secret-key"
+export AWS_SANDBOX_ACCESS_KEY="sandbox-access-key"
+export AWS_SANDBOX_SECRET_KEY="sandbox-secret-key"
+
+# Run the secrets setup script
+chmod +x scripts/setup-github-secrets.sh
+./scripts/setup-github-secrets.sh
 ```
 
-Plan changes:
+### 4. Environment Protection Rules
+
 ```bash
-terraform plan
+# Run the protection rules setup script
+chmod +x scripts/setup-environment-protection.sh
+./scripts/setup-environment-protection.sh
 ```
 
-Apply changes:
-```bash
-terraform apply
-```
+This will configure:
+- Production: 30-minute wait timer, 2 required reviewers
+- Staging: 15-minute wait timer, 1 required reviewer
+- Development/QA/Sandbox: No wait timer or required reviewers
 
-### Kubernetes
+## Environment-Specific Configurations
 
-Apply Kubernetes manifests:
-```bash
-kubectl apply -f kubernetes/
-```
+### Production (main)
+- Strict quality gates
+- Multi-AZ deployment
+- 30-day backup retention
+- 2 required reviewers
+- 30-minute wait timer
 
-## Security
+### Staging
+- Moderate quality gates
+- Single-AZ deployment
+- 14-day backup retention
+- 1 required reviewer
+- 15-minute wait timer
 
-- All sensitive values are stored in AWS Secrets Manager
-- IAM roles use least privilege principle
-- Network security is enforced through security groups
-- All infrastructure changes require approval
-- Access to this repository is restricted
+### Development/QA/Sandbox
+- Basic quality gates
+- Single-AZ deployment
+- 7-day backup retention
+- No required reviewers
+- No wait timer
 
-## CI/CD
+## GitHub Actions Workflows
 
-The CI/CD pipeline is configured in `.github/workflows/` and includes:
+### Terraform Deployment
+- Triggers on push and pull requests
+- Uses OIDC for AWS authentication
+- Environment-specific deployments
+- Automatic apply on push to main branch
 
-1. Infrastructure validation
-2. Security scanning
-3. Automated deployments
-4. Rollback procedures
+### SonarQube Scan
+- Triggers on push and pull requests
+- Environment-specific quality gates
+- Coverage and duplication thresholds
+- Quality gate status check
 
-## Monitoring
+## Security Considerations
 
-- CloudWatch dashboards
-- Prometheus metrics
-- Grafana visualizations
-- Alerting via SNS
+1. **AWS Authentication**
+   - Uses OIDC instead of access keys
+   - Environment-specific IAM roles
+   - Least privilege principle
+
+2. **GitHub Secrets**
+   - Environment-specific secrets
+   - No shared credentials between environments
+   - Regular rotation recommended
+
+3. **Environment Protection**
+   - Branch protection rules
+   - Required reviewers
+   - Wait timers for critical environments
+
+## Maintenance
+
+### Rotating Secrets
+1. Generate new secrets
+2. Update environment variables
+3. Run the secrets setup script
+4. Verify the changes
+
+### Adding New Environments
+1. Add environment to scripts
+2. Create new AWS IAM role
+3. Set up GitHub secrets
+4. Configure protection rules
+
+## Troubleshooting
+
+### Common Issues
+
+1. **OIDC Authentication Fails**
+   - Verify OIDC provider exists
+   - Check IAM role trust relationships
+   - Ensure GitHub repository has correct permissions
+
+2. **GitHub Secrets Not Available**
+   - Verify GitHub CLI authentication
+   - Check environment variables
+   - Ensure secrets are set for the correct environment
+
+3. **Terraform Apply Fails**
+   - Check AWS credentials
+   - Verify environment variables
+   - Check Terraform state
 
 ## Contributing
 
-1. Create a feature branch
+1. Create a new branch
 2. Make your changes
-3. Submit a pull request
-4. Get approval from DevOps team
-5. Merge after successful validation
+3. Run tests
+4. Submit a pull request
+5. Wait for required reviews
 
 ## License
 
-This repository is private and confidential. 
+[Your License Here] 
