@@ -35,6 +35,11 @@ resource "aws_cognito_user_pool" "main" {
     Project     = var.project
     Terraform   = "true"
   }
+
+  lifecycle {
+    ignore_changes = [name]
+    prevent_destroy = true
+  }
 }
 
 # Cognito User Pool Client
@@ -64,6 +69,11 @@ resource "aws_cognito_user_pool_client" "main" {
   refresh_token_validity = 30
   access_token_validity  = 1
   id_token_validity     = 1
+
+  lifecycle {
+    ignore_changes = [name]
+    prevent_destroy = true
+  }
 }
 
 # Cognito User Pool Groups
@@ -72,6 +82,10 @@ resource "aws_cognito_user_group" "admin" {
   user_pool_id = aws_cognito_user_pool.main.id
   description  = "Administrators"
   precedence   = 1
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_cognito_user_group" "vendor" {
@@ -79,6 +93,10 @@ resource "aws_cognito_user_group" "vendor" {
   user_pool_id = aws_cognito_user_pool.main.id
   description  = "Vendors"
   precedence   = 2
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_cognito_user_group" "parent" {
@@ -86,6 +104,10 @@ resource "aws_cognito_user_group" "parent" {
   user_pool_id = aws_cognito_user_pool.main.id
   description  = "Parents"
   precedence   = 3
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_cognito_user_group" "student" {
@@ -93,6 +115,10 @@ resource "aws_cognito_user_group" "student" {
   user_pool_id = aws_cognito_user_pool.main.id
   description  = "Students"
   precedence   = 4
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # Variables

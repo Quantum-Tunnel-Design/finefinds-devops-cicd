@@ -15,6 +15,7 @@ resource "aws_ecs_cluster" "main" {
 
   lifecycle {
     ignore_changes = [name]
+    prevent_destroy = true
   }
 }
 
@@ -124,12 +125,17 @@ resource "aws_iam_role" "ecs_execution_role" {
 
   lifecycle {
     ignore_changes = [name]
+    prevent_destroy = true
   }
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
   role       = aws_iam_role.ecs_execution_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_iam_role" "ecs_task_role" {
@@ -156,26 +162,27 @@ resource "aws_iam_role" "ecs_task_role" {
 
   lifecycle {
     ignore_changes = [name]
+    prevent_destroy = true
   }
 }
 
 # Security Groups
 resource "aws_security_group" "ecs_tasks" {
   name        = "${var.project}-${var.environment}-ecs-tasks-sg"
-  description = "Allow inbound traffic for ECS tasks"
+  description = "Security group for ECS tasks"
   vpc_id      = var.vpc_id
 
   ingress {
-    protocol        = "tcp"
     from_port       = var.container_port
     to_port         = var.container_port
+    protocol        = "tcp"
     security_groups = [var.alb_security_group_id]
   }
 
   egress {
-    protocol    = "-1"
     from_port   = 0
     to_port     = 0
+    protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
@@ -186,7 +193,7 @@ resource "aws_security_group" "ecs_tasks" {
   }
 }
 
-# Load Balancer Target Group
+# Target Group
 resource "aws_lb_target_group" "app" {
   name        = "${var.project}-${var.environment}-tg"
   port        = var.container_port
@@ -195,15 +202,13 @@ resource "aws_lb_target_group" "app" {
   target_type = "ip"
 
   health_check {
-    enabled             = true
+    path                = "/health"
+    port                = "traffic-port"
     healthy_threshold   = 2
-    interval            = 30
+    unhealthy_threshold = 10
+    timeout             = 30
+    interval            = 60
     matcher            = "200"
-    path               = "/health"
-    port               = "traffic-port"
-    protocol           = "HTTP"
-    timeout            = 5
-    unhealthy_threshold = 2
   }
 
   tags = {
@@ -214,6 +219,7 @@ resource "aws_lb_target_group" "app" {
 
   lifecycle {
     ignore_changes = [name]
+    prevent_destroy = true
   }
 }
 
@@ -234,18 +240,18 @@ variable "vpc_id" {
 }
 
 variable "subnet_ids" {
-  description = "List of subnet IDs for the ECS service"
+  description = "List of subnet IDs for the ECS tasks"
   type        = list(string)
 }
 
 variable "task_cpu" {
-  description = "CPU units for the ECS task"
+  description = "CPU units for the task"
   type        = number
   default     = 256
 }
 
 variable "task_memory" {
-  description = "Memory for the ECS task"
+  description = "Memory for the task"
   type        = number
   default     = 512
 }

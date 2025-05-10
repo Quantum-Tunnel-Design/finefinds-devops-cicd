@@ -7,6 +7,10 @@ resource "aws_s3_bucket" "main" {
     Project     = var.project
     Terraform   = "true"
   }
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # Random string for unique bucket names
@@ -22,6 +26,10 @@ resource "aws_s3_bucket_versioning" "main" {
   versioning_configuration {
     status = "Enabled"
   }
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # Bucket Encryption
@@ -32,6 +40,10 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "main" {
     apply_server_side_encryption_by_default {
       sse_algorithm = "AES256"
     }
+  }
+
+  lifecycle {
+    prevent_destroy = true
   }
 }
 
@@ -54,6 +66,10 @@ resource "aws_s3_bucket_lifecycle_configuration" "main" {
     noncurrent_version_expiration {
       noncurrent_days = var.lifecycle_noncurrent_version_expiration_days
     }
+  }
+
+  lifecycle {
+    prevent_destroy = true
   }
 }
 
@@ -80,6 +96,10 @@ resource "aws_s3_bucket_policy" "main" {
       }
     ]
   })
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # Variables

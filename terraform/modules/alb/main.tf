@@ -29,6 +29,10 @@ resource "aws_security_group" "alb" {
     Project     = var.project
     Environment = var.environment
   }
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_lb" "main" {
@@ -45,6 +49,11 @@ resource "aws_lb" "main" {
     Project     = var.project
     Environment = var.environment
   }
+
+  lifecycle {
+    ignore_changes = [name]
+    prevent_destroy = true
+  }
 }
 
 resource "aws_lb_listener" "http" {
@@ -55,5 +64,9 @@ resource "aws_lb_listener" "http" {
   default_action {
     type             = "forward"
     target_group_arn = var.target_group_arn
+  }
+
+  lifecycle {
+    prevent_destroy = true
   }
 } 

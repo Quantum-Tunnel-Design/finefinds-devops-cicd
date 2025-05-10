@@ -38,6 +38,8 @@ resource "aws_docdb_subnet_group" "main" {
 
   lifecycle {
     ignore_changes = [name]
+    create_before_destroy = true
+    prevent_destroy = true
   }
 }
 
@@ -233,6 +235,7 @@ resource "aws_iam_role" "ecs_execution_role" {
 
   lifecycle {
     ignore_changes = [name]
+    prevent_destroy = true
   }
 }
 
@@ -260,5 +263,6 @@ resource "aws_iam_role" "ecs_task_role" {
 
   lifecycle {
     ignore_changes = [name]
+    prevent_destroy = true
   }
 } 

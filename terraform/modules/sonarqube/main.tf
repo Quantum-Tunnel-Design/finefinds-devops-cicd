@@ -82,6 +82,7 @@ resource "aws_efs_file_system" "sonarqube" {
 
   lifecycle {
     ignore_changes = [creation_token]
+    prevent_destroy = true
   }
 }
 
@@ -101,6 +102,10 @@ resource "aws_efs_access_point" "sonarqube" {
     gid = 1000
     uid = 1000
   }
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # Generate random password for SonarQube
@@ -117,12 +122,17 @@ resource "aws_secretsmanager_secret" "sonarqube_password" {
 
   lifecycle {
     ignore_changes = [name]
+    prevent_destroy = true
   }
 }
 
 resource "aws_secretsmanager_secret_version" "sonarqube_password" {
   secret_id     = aws_secretsmanager_secret.sonarqube_password.id
   secret_string = random_password.sonarqube_password.result
+
+  lifecycle {
+    ignore_changes = [secret_string]
+  }
 }
 
 # RDS Instance for SonarQube
@@ -163,6 +173,7 @@ resource "aws_db_instance" "sonarqube" {
       allocated_storage,
       instance_class
     ]
+    prevent_destroy = true
   }
 }
 
@@ -190,6 +201,10 @@ resource "aws_security_group" "sonarqube_db" {
     Name        = "sonarqube-db-${var.environment}"
     Environment = var.environment
   }
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # Security group for SonarQube application
@@ -215,6 +230,10 @@ resource "aws_security_group" "sonarqube" {
   tags = {
     Name        = "sonarqube-${var.environment}"
     Environment = var.environment
+  }
+
+  lifecycle {
+    prevent_destroy = true
   }
 }
 
@@ -243,12 +262,17 @@ resource "aws_iam_role" "ecs_execution_role" {
 
   lifecycle {
     ignore_changes = [name]
+    prevent_destroy = true
   }
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
   role       = aws_iam_role.ecs_execution_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_iam_role" "ecs_task_role" {
@@ -275,6 +299,7 @@ resource "aws_iam_role" "ecs_task_role" {
 
   lifecycle {
     ignore_changes = [name]
+    prevent_destroy = true
   }
 }
 

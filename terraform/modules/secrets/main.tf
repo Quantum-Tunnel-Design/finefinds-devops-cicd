@@ -16,35 +16,62 @@ resource "random_password" "mongodb_password" {
 
 # Create JWT secret
 resource "aws_secretsmanager_secret" "jwt_secret" {
-  name        = "${var.project}-${var.environment}-jwt-secret-${formatdate("YYYYMMDDHHmmss", timestamp())}"
+  name        = "${var.project}-${var.environment}-jwt-secret-20250510212247"
   description = "JWT secret for ${var.project} ${var.environment} environment"
+
+  lifecycle {
+    ignore_changes = [name]
+    prevent_destroy = true
+  }
 }
 
 resource "aws_secretsmanager_secret_version" "jwt_secret" {
   secret_id     = aws_secretsmanager_secret.jwt_secret.id
   secret_string = random_password.jwt_secret.result
+
+  lifecycle {
+    ignore_changes = [secret_string]
+  }
 }
 
 # Create database URL secret
 resource "aws_secretsmanager_secret" "database_url" {
-  name        = "${var.project}-${var.environment}-db-password-${formatdate("YYYYMMDDHHmmss", timestamp())}"
+  name        = "${var.project}-${var.environment}-db-password-20250510212247"
   description = "Database password for ${var.project} ${var.environment} environment"
+
+  lifecycle {
+    ignore_changes = [name]
+    prevent_destroy = true
+  }
 }
 
 resource "aws_secretsmanager_secret_version" "database_url" {
   secret_id     = aws_secretsmanager_secret.database_url.id
   secret_string = random_password.database_password.result
+
+  lifecycle {
+    ignore_changes = [secret_string]
+  }
 }
 
 # Create MongoDB password secret
 resource "aws_secretsmanager_secret" "mongodb_password" {
-  name        = "${var.project}-${var.environment}-mongodb-password-${formatdate("YYYYMMDDHHmmss", timestamp())}"
+  name        = "${var.project}-${var.environment}-mongodb-password-20250510212247"
   description = "MongoDB password for ${var.project} ${var.environment} environment"
+
+  lifecycle {
+    ignore_changes = [name]
+    prevent_destroy = true
+  }
 }
 
 resource "aws_secretsmanager_secret_version" "mongodb_password" {
   secret_id     = aws_secretsmanager_secret.mongodb_password.id
   secret_string = random_password.mongodb_password.result
+
+  lifecycle {
+    ignore_changes = [secret_string]
+  }
 }
 
 # Variables

@@ -11,6 +11,7 @@ resource "aws_db_subnet_group" "main" {
 
   lifecycle {
     ignore_changes = [name]
+    prevent_destroy = true
   }
 }
 
@@ -31,6 +32,10 @@ resource "aws_security_group" "rds" {
     Environment = var.environment
     Project     = var.project
     Terraform   = "true"
+  }
+
+  lifecycle {
+    prevent_destroy = true
   }
 }
 
@@ -72,6 +77,7 @@ resource "aws_db_instance" "main" {
       allocated_storage,
       instance_class
     ]
+    prevent_destroy = true
   }
 }
 
