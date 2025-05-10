@@ -89,13 +89,14 @@ module "ecs" {
   project     = var.project
   environment = var.environment
   vpc_id      = local.vpc_id
-  subnet_ids  = local.private_subnets
+  private_subnet_ids = local.private_subnets
   aws_region  = var.aws_region
   alb_security_group_id = module.alb.security_group_id
   ecs_security_group_id = module.ecs.security_group_id
   database_url_arn = module.secrets.database_url_arn
   mongodb_uri_arn = module.secrets.mongodb_uri_arn
   ecr_repository_url = module.ecr.repository_url
+  alb_target_group_arn = module.alb.target_group_arn
 
   depends_on = [module.vpc, module.alb, module.secrets, module.ecr]
 }
