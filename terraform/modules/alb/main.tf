@@ -61,11 +61,12 @@ resource "aws_lb_target_group" "main" {
   target_type = "ip"
 
   health_check {
-    path                = "/health"
-    interval            = 30
-    timeout             = 5
-    healthy_threshold   = 2
-    unhealthy_threshold = 2
+    path                = var.health_check_path
+    interval            = var.health_check_interval
+    timeout             = var.health_check_timeout
+    healthy_threshold   = var.health_check_healthy_threshold
+    unhealthy_threshold = var.health_check_unhealthy_threshold
+    port                = var.health_check_port
   }
 
   tags = {
@@ -94,8 +95,9 @@ resource "aws_lb_listener" "http" {
   }
 }
 
-# HTTPS Listener
+# HTTPS Listener (only created if certificate_arn is provided)
 resource "aws_lb_listener" "https" {
+  count             = var.certificate_arn != null ? 1 : 0
   load_balancer_arn = aws_lb.main.arn
   port              = 443
   protocol          = "HTTPS"
