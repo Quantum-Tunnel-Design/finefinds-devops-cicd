@@ -195,13 +195,29 @@ module "networking" {
   tags                = local.common_tags
 }
 
+# Get current AWS account ID
+data "aws_caller_identity" "current" {}
+
+# Check if certificate exists
+data "aws_acm_certificate" "main" {
+  domain      = "${var.environment}.finefinds.com"
+  statuses    = ["ISSUED", "PENDING_VALIDATION"]
+  most_recent = true
+}
+
+# Local variables for certificate handling
+locals {
+  certificate_arn = data.aws_acm_certificate.main.arn != null ? data.aws_acm_certificate.main.arn : "arn:aws:acm:us-east-1:${data.aws_caller_identity.current.account_id}:certificate/${var.environment}-finefinds-com"
+}
+
+# Update security module to use local.certificate_arn
 module "security" {
   source            = "../../modules/security"
   name_prefix       = "${var.project}-${var.environment}"
   tags              = local.common_tags
   callback_urls     = ["https://${var.environment}.finefinds.com/callback"]
   logout_urls       = ["https://${var.environment}.finefinds.com/logout"]
-  certificate_arn   = var.certificate_arn
+  certificate_arn   = local.certificate_arn
   db_username       = var.db_username
   db_password       = var.db_password
   mongodb_username  = var.mongodb_username
@@ -273,4 +289,10 @@ variable "secret_suffix" {
   description = "Suffix for secret names"
   type        = string
   default     = formatdate("YYYYMMDDHHmmss", timestamp())
+}
+
+variable "certificate_arn" {
+  description = "ARN of the SSL certificate for the ALB"
+  type        = string
+  default     = null
 } 

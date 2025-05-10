@@ -104,6 +104,21 @@ module "monitoring" {
   aws_region  = var.aws_region
 }
 
+# Get current AWS account ID
+data "aws_caller_identity" "current" {}
+
+# Check if certificate exists
+data "aws_acm_certificate" "main" {
+  domain      = "${var.environment}.finefinds.com"
+  statuses    = ["ISSUED", "PENDING_VALIDATION"]
+  most_recent = true
+}
+
+# Local variables for certificate handling
+locals {
+  certificate_arn = data.aws_acm_certificate.main.arn != null ? data.aws_acm_certificate.main.arn : "arn:aws:acm:us-east-1:${data.aws_caller_identity.current.account_id}:certificate/${var.environment}-finefinds-com"
+}
+
 # Variables
 variable "project" {
   description = "Project name"
@@ -172,6 +187,12 @@ variable "db_password" {
   sensitive   = true
 }
 
+variable "certificate_arn" {
+  description = "ARN of the SSL certificate for the ALB"
+  type        = string
+  default     = null
+}
+
 # Outputs
 output "vpc_id" {
   description = "ID of the VPC"
@@ -230,9 +251,9 @@ module "security" {
   source            = "../../modules/security"
   name_prefix       = local.name_prefix
   tags              = local.common_tags
-  callback_urls     = ["https://sandbox.finefinds.com/callback"]
-  logout_urls       = ["https://sandbox.finefinds.com/logout"]
-  certificate_arn   = var.certificate_arn
+  callback_urls     = ["https://${var.environment}.finefinds.com/callback"]
+  logout_urls       = ["https://${var.environment}.finefinds.com/logout"]
+  certificate_arn   = local.certificate_arn
   db_username       = var.db_username
   db_password       = var.db_password
   mongodb_username  = var.mongodb_username
@@ -265,7 +286,7 @@ module "compute" {
   vpc_id                   = module.networking.vpc_id
   public_subnet_ids        = module.networking.public_subnet_ids
   private_subnet_ids       = module.networking.private_subnet_ids
-  certificate_arn          = var.certificate_arn
+  certificate_arn          = module.cicd.ecr_repository_url
   task_cpu                 = 256
   task_memory              = 512
   task_execution_role_arn  = module.security.ecs_task_execution_role_arn

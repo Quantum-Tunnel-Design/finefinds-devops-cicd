@@ -107,78 +107,19 @@ module "monitoring" {
   aws_region  = var.aws_region
 }
 
-# Variables
-variable "project" {
-  description = "Project name"
-  type        = string
-  default     = "finefinds"
+# Get current AWS account ID
+data "aws_caller_identity" "current" {}
+
+# Check if certificate exists
+data "aws_acm_certificate" "main" {
+  domain      = "${var.environment}.finefinds.com"
+  statuses    = ["ISSUED", "PENDING_VALIDATION"]
+  most_recent = true
 }
 
-variable "environment" {
-  description = "Environment name"
-  type        = string
-  default     = "qa"
-}
-
-variable "aws_region" {
-  description = "AWS region"
-  type        = string
-  default     = "us-east-1"
-}
-
-variable "container_name" {
-  description = "Name of the container"
-  type        = string
-  default     = "app"
-}
-
-variable "container_port" {
-  description = "Port exposed by the container"
-  type        = number
-  default     = 3000
-}
-
-variable "ecr_repository_url" {
-  description = "URL of the ECR repository"
-  type        = string
-}
-
-variable "image_tag" {
-  description = "Tag of the container image to deploy"
-  type        = string
-  default     = "latest"
-}
-
-variable "database_url_arn" {
-  description = "ARN of the database URL secret"
-  type        = string
-}
-
-variable "mongodb_uri_arn" {
-  description = "ARN of the MongoDB URI secret"
-  type        = string
-}
-
-variable "alb_security_group_id" {
-  description = "Security group ID of the ALB"
-  type        = string
-}
-
-variable "db_username" {
-  description = "Master username for RDS"
-  type        = string
-}
-
-variable "db_password" {
-  description = "Master password for RDS"
-  type        = string
-  sensitive   = true
-}
-
-variable "secret_suffix" {
-  description = "Suffix for secret names"
-  type        = string
-  default     = "latest"
+# Local variables for certificate handling
+locals {
+  certificate_arn = data.aws_acm_certificate.main.arn != null ? data.aws_acm_certificate.main.arn : "arn:aws:acm:us-east-1:${data.aws_caller_identity.current.account_id}:certificate/${var.environment}-finefinds-com"
 }
 
 # Outputs
@@ -241,7 +182,7 @@ module "security" {
   tags              = local.common_tags
   callback_urls     = ["https://${var.environment}.finefinds.com/callback"]
   logout_urls       = ["https://${var.environment}.finefinds.com/logout"]
-  certificate_arn   = var.certificate_arn
+  certificate_arn   = local.certificate_arn
   db_username       = var.db_username
   db_password       = var.db_password
   mongodb_username  = var.mongodb_username
@@ -278,7 +219,7 @@ module "compute" {
   vpc_id                   = module.vpc.vpc_id
   public_subnet_ids        = module.vpc.public_subnet_ids
   private_subnet_ids       = module.vpc.private_subnet_ids
-  certificate_arn          = var.certificate_arn
+  certificate_arn          = local.certificate_arn
   task_cpu                 = 512
   task_memory              = 1024
   task_execution_role_arn  = module.security.ecs_task_execution_role_arn

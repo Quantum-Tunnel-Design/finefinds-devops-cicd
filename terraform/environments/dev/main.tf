@@ -2,6 +2,21 @@ provider "aws" {
   region = var.aws_region
 }
 
+# Get current AWS account ID
+data "aws_caller_identity" "current" {}
+
+# Check if certificate exists
+data "aws_acm_certificate" "main" {
+  domain      = "${var.environment}.finefinds.com"
+  statuses    = ["ISSUED", "PENDING_VALIDATION"]
+  most_recent = true
+}
+
+# Local variables for certificate handling
+locals {
+  certificate_arn = data.aws_acm_certificate.main.arn != null ? data.aws_acm_certificate.main.arn : "arn:aws:acm:us-east-1:${data.aws_caller_identity.current.account_id}:certificate/${var.environment}-finefinds-com"
+}
+
 # VPC Module
 module "vpc" {
   source = "../../modules/vpc"
@@ -34,7 +49,7 @@ module "security" {
   tags              = local.common_tags
   callback_urls     = ["https://dev.finefinds.com/callback"]
   logout_urls       = ["https://dev.finefinds.com/logout"]
-  certificate_arn   = var.certificate_arn
+  certificate_arn   = local.certificate_arn
   db_username       = var.db_username
   db_password       = var.db_password
   mongodb_username  = var.mongodb_username
@@ -73,7 +88,7 @@ module "compute" {
   vpc_id                   = module.vpc.vpc_id
   public_subnet_ids        = module.vpc.public_subnet_ids
   private_subnet_ids       = module.vpc.private_subnet_ids
-  certificate_arn          = var.certificate_arn
+  certificate_arn          = local.certificate_arn
   task_cpu                 = 512
   task_memory              = 1024
   task_execution_role_arn  = module.security.ecs_task_execution_role_arn
@@ -116,7 +131,7 @@ module "alb" {
   security_group_name = local.alb_sg_name
   vpc_cidr_blocks = [local.vpc_cidr]
   container_port = local.container_port
-  certificate_arn = var.certificate_arn
+  certificate_arn = local.certificate_arn
 
   health_check_path     = local.health_check_path
   health_check_port     = local.health_check_port
@@ -270,6 +285,30 @@ module "amplify" {
 }
 
 # Variables
+variable "project" {
+  description = "Project name"
+  type        = string
+  default     = "finefinds"
+}
+
+variable "environment" {
+  description = "Environment name"
+  type        = string
+  default     = "dev"
+}
+
+variable "aws_region" {
+  description = "AWS region"
+  type        = string
+  default     = "us-east-1"
+}
+
+variable "certificate_arn" {
+  description = "ARN of the SSL certificate for the ALB"
+  type        = string
+  default     = null
+}
+
 variable "secret_suffix" {
   description = "Suffix for secret names"
   type        = string
