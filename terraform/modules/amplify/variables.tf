@@ -38,4 +38,20 @@ variable "tags" {
   description = "Tags to apply to all resources"
   type        = map(string)
   default     = {}
+}
+
+variable "sonarqube_url" {
+  description = "URL of the SonarQube instance"
+  type        = string
+}
+
+variable "use_existing_roles" {
+  description = "Whether to use existing IAM roles"
+  type        = bool
+  default     = false
+}
+
+variable "repository" {
+  description = "Repository URL for the Amplify app"
+  type        = string
 } 

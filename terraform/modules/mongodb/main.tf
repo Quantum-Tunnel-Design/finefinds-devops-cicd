@@ -142,16 +142,14 @@ resource "aws_instance" "mongodb" {
 
 # EBS Volume for Data
 resource "aws_ebs_volume" "mongodb_data" {
-  count             = (var.use_existing_cluster || var.use_existing_instance) ? 0 : 1
-  availability_zone = aws_instance.mongodb[0].availability_zone
-  size             = var.data_volume_size
-  type             = "gp3"
+  availability_zone = aws_instance.mongodb.availability_zone
+  size              = 20
+  type              = "gp3"
 
   tags = {
     Name        = "${var.project}-${var.environment}-mongodb-data"
     Environment = var.environment
     Project     = var.project
-    Terraform   = "true"
   }
 }
 

@@ -32,10 +32,11 @@ resource "aws_cloudwatch_dashboard" "main" {
         y      = 0
         width  = 12
         height = 6
+
         properties = {
           metrics = [
             ["AWS/ECS", "CPUUtilization", "ServiceName", "${var.project}-${var.environment}-service", "ClusterName", "${var.project}-${var.environment}-cluster"],
-            ["AWS/ECS", "MemoryUtilization", "ServiceName", "${var.project}-${var.environment}-service", "ClusterName", "${var.project}-${var.environment}-cluster"]
+            [".", "MemoryUtilization", ".", ".", ".", "."]
           ]
           period = 300
           stat   = "Average"
@@ -62,8 +63,6 @@ resource "aws_cloudwatch_dashboard" "main" {
       }
     ]
   })
-
-  tags = var.tags
 }
 
 # Prometheus Workspace

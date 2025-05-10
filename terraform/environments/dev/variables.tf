@@ -175,3 +175,8 @@ variable "subnet_ids" {
   type        = list(string)
   default     = []
 }
+
+variable "certificate_arn" {
+  description = "ARN of the SSL certificate for the ALB"
+  type        = string
+}

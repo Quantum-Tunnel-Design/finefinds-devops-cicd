@@ -11,29 +11,6 @@ resource "aws_ecr_repository" "main" {
   tags = var.tags
 }
 
-# ECR Repository Policy
-resource "aws_ecr_repository_policy" "main" {
-  repository = aws_ecr_repository.main.name
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid    = "AllowPullFromECSTasks"
-        Effect = "Allow"
-        Principal = {
-          AWS = var.ecs_task_role_arn
-        }
-        Action = [
-          "ecr:GetDownloadUrlForLayer",
-          "ecr:BatchGetImage",
-          "ecr:BatchCheckLayerAvailability"
-        ]
-      }
-    ]
-  })
-}
-
 # ECR Lifecycle Policy
 resource "aws_ecr_lifecycle_policy" "main" {
   repository = aws_ecr_repository.main.name

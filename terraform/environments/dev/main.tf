@@ -72,8 +72,8 @@ module "ecs" {
   security_group_name = local.ecs_sg_name
   vpc_cidr_blocks = [local.vpc_cidr]
 
-  database_url_arn = module.secrets.database_url_arn
-  mongodb_uri_arn  = module.secrets.mongodb_uri_arn
+  database_url_arn = module.secrets.database_secret_arn
+  mongodb_uri_arn  = module.secrets.mongodb_secret_arn
   ecr_repository_url = module.ecr.repository_url
 
   alb_target_group_arn = module.alb.target_group_arn
@@ -99,7 +99,7 @@ module "rds" {
 
   db_username = local.db_username
   db_name     = local.db_name
-  db_password_arn = module.secrets.db_password_arn
+  db_password_arn = module.secrets.database_password_arn
 
   tags = local.common_tags
 }
@@ -139,7 +139,7 @@ module "sonarqube" {
 
   db_endpoint = module.rds.db_instance_endpoint
   db_username = local.db_username
-  db_password_arn = module.secrets.db_password_arn
+  db_password_arn = module.secrets.database_password_arn
   sonarqube_password_arn = module.secrets.sonarqube_password_arn
   db_subnet_group_name = module.rds.db_subnet_group_name
 
