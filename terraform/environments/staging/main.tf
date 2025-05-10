@@ -2,6 +2,27 @@ provider "aws" {
   region = var.aws_region
 }
 
+# Get current AWS account ID
+data "aws_caller_identity" "current" {}
+
+# Check if certificate exists
+data "aws_acm_certificate" "main" {
+  domain      = "${var.environment}.finefinds.com"
+  statuses    = ["ISSUED", "PENDING_VALIDATION"]
+  most_recent = true
+}
+
+# Local variables for certificate handling
+locals {
+  certificate_arn = data.aws_acm_certificate.main.arn != null ? data.aws_acm_certificate.main.arn : "arn:aws:acm:us-east-1:${data.aws_caller_identity.current.account_id}:certificate/${var.environment}-finefinds-com"
+  name_prefix = "${var.project}-${var.environment}"
+  common_tags = {
+    Project     = var.project
+    Environment = var.environment
+    ManagedBy   = "terraform"
+  }
+}
+
 # VPC Module
 module "vpc" {
   source = "../../modules/vpc"
@@ -14,6 +35,7 @@ module "vpc" {
   availability_zones   = ["${var.aws_region}a", "${var.aws_region}b"]
   private_subnet_cidrs = ["10.3.1.0/24", "10.3.2.0/24"]
   public_subnet_cidrs  = ["10.3.101.0/24", "10.3.102.0/24"]
+  tags                 = local.common_tags
 }
 
 # ALB Module
@@ -193,21 +215,6 @@ module "networking" {
   vpc_cidr            = var.vpc_cidr
   availability_zones  = var.availability_zones
   tags                = local.common_tags
-}
-
-# Get current AWS account ID
-data "aws_caller_identity" "current" {}
-
-# Check if certificate exists
-data "aws_acm_certificate" "main" {
-  domain      = "${var.environment}.finefinds.com"
-  statuses    = ["ISSUED", "PENDING_VALIDATION"]
-  most_recent = true
-}
-
-# Local variables for certificate handling
-locals {
-  certificate_arn = data.aws_acm_certificate.main.arn != null ? data.aws_acm_certificate.main.arn : "arn:aws:acm:us-east-1:${data.aws_caller_identity.current.account_id}:certificate/${var.environment}-finefinds-com"
 }
 
 # Update security module to use local.certificate_arn
