@@ -22,7 +22,7 @@ resource "aws_cloudwatch_log_group" "ecs" {
 
 # CloudWatch Dashboard
 resource "aws_cloudwatch_dashboard" "main" {
-  dashboard_name = "${var.project}-${var.environment}-dashboard"
+  dashboard_name = "${var.name_prefix}-dashboard"
 
   dashboard_body = jsonencode({
     widgets = [
@@ -32,10 +32,9 @@ resource "aws_cloudwatch_dashboard" "main" {
         y      = 0
         width  = 12
         height = 6
-
         properties = {
           metrics = [
-            ["AWS/ECS", "CPUUtilization", "ServiceName", "${var.project}-${var.environment}-service", "ClusterName", "${var.project}-${var.environment}-cluster"],
+            ["AWS/ECS", "CPUUtilization", "ServiceName", var.ecs_service_name, "ClusterName", var.ecs_cluster_name],
             [".", "MemoryUtilization", ".", ".", ".", "."]
           ]
           period = 300
@@ -52,13 +51,32 @@ resource "aws_cloudwatch_dashboard" "main" {
         height = 6
         properties = {
           metrics = [
-            ["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "${var.project}-${var.environment}-db"],
-            ["AWS/RDS", "FreeableMemory", "DBInstanceIdentifier", "${var.project}-${var.environment}-db"]
+            ["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", var.rds_instance_id],
+            [".", "FreeableMemory", ".", "."],
+            [".", "DatabaseConnections", ".", "."]
           ]
           period = 300
           stat   = "Average"
           region = var.aws_region
           title  = "RDS Metrics"
+        }
+      },
+      {
+        type   = "metric"
+        x      = 0
+        y      = 6
+        width  = 12
+        height = 6
+        properties = {
+          metrics = [
+            ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", var.alb_arn_suffix],
+            [".", "TargetResponseTime", ".", "."],
+            [".", "HTTPCode_Target_5XX_Count", ".", "."]
+          ]
+          period = 300
+          stat   = "Sum"
+          region = var.aws_region
+          title  = "ALB Metrics"
         }
       }
     ]
@@ -67,32 +85,26 @@ resource "aws_cloudwatch_dashboard" "main" {
 
 # Prometheus Workspace
 resource "aws_prometheus_workspace" "main" {
-  alias = "finefinds-${var.environment}"
-
-  tags = {
-    Environment = var.environment
-  }
+  alias = "${var.name_prefix}-prometheus"
+  tags  = var.tags
 }
 
 # Grafana Workspace
 resource "aws_grafana_workspace" "main" {
-  name                     = "finefinds-${var.environment}"
+  name                     = "${var.name_prefix}-grafana"
   account_access_type      = "CURRENT_ACCOUNT"
   authentication_providers = ["AWS_SSO"]
   permission_type         = "SERVICE_MANAGED"
-  role_arn                = var.use_existing_roles ? data.aws_iam_role.existing_grafana[0].arn : aws_iam_role.grafana[0].arn
+  role_arn                = aws_iam_role.grafana.arn
 
   data_sources = ["PROMETHEUS", "CLOUDWATCH"]
 
-  tags = {
-    Environment = var.environment
-  }
+  tags = var.tags
 }
 
 # IAM Role for Grafana
 resource "aws_iam_role" "grafana" {
-  count = var.use_existing_roles ? 0 : 1
-  name  = "${var.project}-${var.environment}-grafana"
+  name = "${var.name_prefix}-grafana-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -107,22 +119,13 @@ resource "aws_iam_role" "grafana" {
     ]
   })
 
-  tags = {
-    Environment = var.environment
-    Project     = var.project
-    Terraform   = "true"
-  }
-
-  lifecycle {
-    ignore_changes = [name]
-  }
+  tags = var.tags
 }
 
 # IAM Policy for Grafana
 resource "aws_iam_role_policy" "grafana" {
-  count = var.use_existing_roles ? 0 : 1
-  name  = "grafana-${var.environment}"
-  role  = var.use_existing_roles ? data.aws_iam_role.existing_grafana[0].id : aws_iam_role.grafana[0].id
+  name = "${var.name_prefix}-grafana-policy"
+  role = aws_iam_role.grafana.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -130,13 +133,14 @@ resource "aws_iam_role_policy" "grafana" {
       {
         Effect = "Allow"
         Action = [
+          "aps:QueryMetrics",
+          "aps:GetLabels",
+          "aps:GetMetricMetadata",
+          "aps:GetSeries",
           "cloudwatch:GetMetricData",
           "cloudwatch:ListMetrics",
           "cloudwatch:GetMetricStatistics",
-          "cloudwatch:DescribeAlarms",
-          "aps:QueryMetrics",
-          "aps:GetLabels",
-          "aps:GetMetricMetadata"
+          "cloudwatch:DescribeAlarms"
         ]
         Resource = "*"
       }
@@ -185,28 +189,24 @@ locals {
 }
 
 # ECS CPU Utilization Alarm
-resource "aws_cloudwatch_metric_alarm" "cpu_utilization" {
-  alarm_name          = "cpu-utilization-${var.environment}"
+resource "aws_cloudwatch_metric_alarm" "ecs_cpu" {
+  alarm_name          = "${var.name_prefix}-ecs-cpu-utilization"
   comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = "2"
+  evaluation_periods  = 2
   metric_name         = "CPUUtilization"
   namespace           = "AWS/ECS"
-  period             = "300"
+  period             = 300
   statistic          = "Average"
-  threshold          = local.current_thresholds.cpu_utilization
+  threshold          = 80
   alarm_description  = "This metric monitors ECS CPU utilization"
   alarm_actions      = [aws_sns_topic.alerts.arn]
-  ok_actions         = [aws_sns_topic.alerts.arn]
 
   dimensions = {
-    ClusterName = "finefinds-${var.environment}"
-    ServiceName = "finefinds-${var.environment}"
+    ClusterName = var.ecs_cluster_name
+    ServiceName = var.ecs_service_name
   }
 
-  tags = {
-    Environment = var.environment
-    Metric      = "CPUUtilization"
-  }
+  tags = var.tags
 }
 
 # ECS Memory Utilization Alarm
@@ -236,26 +236,22 @@ resource "aws_cloudwatch_metric_alarm" "memory_utilization" {
 
 # RDS CPU Utilization Alarm
 resource "aws_cloudwatch_metric_alarm" "rds_cpu" {
-  alarm_name          = "rds-cpu-utilization-${var.environment}"
+  alarm_name          = "${var.name_prefix}-rds-cpu-utilization"
   comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = "2"
+  evaluation_periods  = 2
   metric_name         = "CPUUtilization"
   namespace           = "AWS/RDS"
-  period             = "300"
+  period             = 300
   statistic          = "Average"
-  threshold          = local.current_thresholds.rds_cpu
+  threshold          = 80
   alarm_description  = "This metric monitors RDS CPU utilization"
   alarm_actions      = [aws_sns_topic.alerts.arn]
-  ok_actions         = [aws_sns_topic.alerts.arn]
 
   dimensions = {
-    DBInstanceIdentifier = "finefinds-${var.environment}"
+    DBInstanceIdentifier = var.rds_instance_id
   }
 
-  tags = {
-    Environment = var.environment
-    Metric      = "RDSCPUUtilization"
-  }
+  tags = var.tags
 }
 
 # RDS Memory Alarm
@@ -332,11 +328,8 @@ resource "aws_cloudwatch_metric_alarm" "latency" {
 
 # SNS Topic for Alerts with Environment-specific Configuration
 resource "aws_sns_topic" "alerts" {
-  name = "finefinds-alerts-${var.environment}"
-
-  tags = {
-    Environment = var.environment
-  }
+  name = "${var.name_prefix}-alerts"
+  tags = var.tags
 }
 
 # SNS Topic Policy
@@ -359,7 +352,7 @@ resource "aws_sns_topic_policy" "alerts" {
 }
 
 # SNS Topic Subscription (example for email)
-resource "aws_sns_topic_subscription" "email" {
+resource "aws_sns_topic_subscription" "alerts" {
   topic_arn = aws_sns_topic.alerts.arn
   protocol  = "email"
   endpoint  = var.alert_email

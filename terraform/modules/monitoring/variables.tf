@@ -1,3 +1,8 @@
+variable "name_prefix" {
+  description = "Prefix for resource names"
+  type        = string
+}
+
 variable "project" {
   description = "Project name"
   type        = string
@@ -20,7 +25,7 @@ variable "log_retention_days" {
 }
 
 variable "alert_email" {
-  description = "Email address for alert notifications"
+  description = "Email address for alerts"
   type        = string
 }
 
@@ -52,6 +57,26 @@ variable "use_existing_roles" {
   description = "Whether to use existing IAM roles"
   type        = bool
   default     = false
+}
+
+variable "ecs_cluster_name" {
+  description = "Name of the ECS cluster"
+  type        = string
+}
+
+variable "ecs_service_name" {
+  description = "Name of the ECS service"
+  type        = string
+}
+
+variable "rds_instance_id" {
+  description = "ID of the RDS instance"
+  type        = string
+}
+
+variable "alb_arn_suffix" {
+  description = "ARN suffix of the ALB"
+  type        = string
 }
 
 variable "tags" {
