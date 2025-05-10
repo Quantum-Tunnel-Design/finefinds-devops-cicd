@@ -88,33 +88,7 @@ resource "aws_db_instance" "main" {
 
 # Use existing or new instance
 locals {
-  db_instance_id       = var.use_existing_instance ? data.aws_db_instance.existing[0].id : aws_db_instance.main[0].id
-  db_instance_endpoint = var.use_existing_instance ? data.aws_db_instance.existing[0].endpoint : aws_db_instance.main[0].endpoint
-  db_instance_port     = var.use_existing_instance ? data.aws_db_instance.existing[0].port : aws_db_instance.main[0].port
-}
-
-# Outputs
-output "db_instance_id" {
-  description = "ID of the RDS instance"
-  value       = local.db_instance_id
-}
-
-output "db_instance_endpoint" {
-  description = "Endpoint of the RDS instance"
-  value       = local.db_instance_endpoint
-}
-
-output "db_instance_identifier" {
-  description = "Identifier of the RDS instance"
-  value       = var.use_existing_instance ? data.aws_db_instance.existing[0].db_name : aws_db_instance.main[0].identifier
-}
-
-output "db_instance_port" {
-  description = "Port of the RDS instance"
-  value       = local.db_instance_port
-}
-
-output "db_subnet_group_name" {
-  description = "Name of the DB subnet group"
-  value       = aws_db_subnet_group.main.name
+  db_instance_id       = var.use_existing_instance ? data.aws_db_instance.existing[0].id : aws_db_instance.main.id
+  db_instance_endpoint = var.use_existing_instance ? data.aws_db_instance.existing[0].endpoint : aws_db_instance.main.endpoint
+  db_instance_port     = var.use_existing_instance ? data.aws_db_instance.existing[0].port : aws_db_instance.main.port
 } 
