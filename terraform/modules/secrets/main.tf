@@ -14,6 +14,11 @@ resource "random_password" "mongodb_password" {
   special = true
 }
 
+resource "random_password" "sonarqube_password" {
+  length  = 32
+  special = true
+}
+
 # JWT Secret
 resource "aws_secretsmanager_secret" "jwt_secret" {
   count = var.use_existing_secrets ? 0 : 1
@@ -31,7 +36,7 @@ resource "aws_secretsmanager_secret" "jwt_secret" {
 }
 
 # Database Password Secret
-resource "aws_secretsmanager_secret" "database_url" {
+resource "aws_secretsmanager_secret" "database_password" {
   count = var.use_existing_secrets ? 0 : 1
   name  = "${var.project}-${var.environment}-db-password-${var.secret_suffix}"
 
@@ -62,11 +67,28 @@ resource "aws_secretsmanager_secret" "mongodb_password" {
   }
 }
 
+# SonarQube Password Secret
+resource "aws_secretsmanager_secret" "sonarqube_password" {
+  count = var.use_existing_secrets ? 0 : 1
+  name  = "${var.project}-${var.environment}-sonarqube-password-${var.secret_suffix}"
+
+  tags = {
+    Environment = var.environment
+    Project     = var.project
+    Terraform   = "true"
+  }
+
+  lifecycle {
+    ignore_changes = [name]
+  }
+}
+
 # Use existing or new secrets
 locals {
   jwt_secret_arn      = var.use_existing_secrets ? "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${var.project}-${var.environment}-jwt-secret-${var.secret_suffix}" : aws_secretsmanager_secret.jwt_secret[0].arn
-  db_password_arn     = var.use_existing_secrets ? "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${var.project}-${var.environment}-db-password-${var.secret_suffix}" : aws_secretsmanager_secret.database_url[0].arn
+  db_password_arn     = var.use_existing_secrets ? "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${var.project}-${var.environment}-db-password-${var.secret_suffix}" : aws_secretsmanager_secret.database_password[0].arn
   mongodb_password_arn = var.use_existing_secrets ? "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${var.project}-${var.environment}-mongodb-password-${var.secret_suffix}" : aws_secretsmanager_secret.mongodb_password[0].arn
+  sonarqube_password_arn = var.use_existing_secrets ? "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${var.project}-${var.environment}-sonarqube-password-${var.secret_suffix}" : aws_secretsmanager_secret.sonarqube_password[0].arn
 }
 
 # Get current AWS account ID and region
@@ -101,14 +123,19 @@ output "jwt_secret_arn" {
   description = "ARN of the JWT secret"
 }
 
-output "database_url_arn" {
+output "database_password_arn" {
   value       = local.db_password_arn
-  description = "ARN of the database URL secret"
+  description = "ARN of the database password secret"
 }
 
-output "mongodb_uri_arn" {
+output "mongodb_password_arn" {
   value       = local.mongodb_password_arn
   description = "ARN of the MongoDB password secret"
+}
+
+output "sonarqube_password_arn" {
+  value       = local.sonarqube_password_arn
+  description = "ARN of the SonarQube password secret"
 }
 
 output "jwt_secret" {
@@ -126,6 +153,12 @@ output "database_password" {
 output "mongodb_password" {
   value       = random_password.mongodb_password.result
   description = "Generated MongoDB password"
+  sensitive   = true
+}
+
+output "sonarqube_password" {
+  value       = random_password.sonarqube_password.result
+  description = "Generated SonarQube password"
   sensitive   = true
 }
 
@@ -211,4 +244,20 @@ output "mongodb_secret_arn" {
 output "api_keys_secret_arn" {
   description = "ARN of the API keys secret"
   value       = aws_secretsmanager_secret.api_keys.arn
+}
+
+# MongoDB Password Secret
+data "aws_secretsmanager_secret" "mongodb_password" {
+  name = "finefinds/${var.environment}/mongodb-password"
+}
+
+data "aws_secretsmanager_secret_version" "mongodb_password" {
+  secret_id = data.aws_secretsmanager_secret.mongodb_password.id
+}
+
+# Output the ARN for use in other modules
+output "mongodb_password_arn" {
+  description = "ARN of the MongoDB password secret"
+  value       = data.aws_secretsmanager_secret.mongodb_password.arn
+  sensitive   = true
 } 

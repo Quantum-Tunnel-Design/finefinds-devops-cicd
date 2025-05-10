@@ -55,10 +55,17 @@ module "rds" {
   environment = var.environment
   vpc_id      = local.vpc_id
   subnet_ids  = local.private_subnets
-  db_password = var.db_password
+  db_password_arn = module.secrets.database_password_arn
   ecs_security_group_id = module.ecs.security_group_id
 
-  depends_on = [module.vpc, module.ecs]
+  depends_on = [module.vpc, module.ecs, module.secrets]
+}
+
+# Generate random password for MongoDB
+resource "random_password" "mongodb" {
+  length           = 16
+  special          = true
+  override_special = "!#$%&*()-_=+[]{}<>:?"
 }
 
 # MongoDB Module - Depends only on VPC
@@ -69,9 +76,10 @@ module "mongodb" {
   environment = var.environment
   vpc_id      = local.vpc_id
   subnet_ids  = local.private_subnets
-  vpc_cidr    = local.vpc_cidr
+  ecs_security_group_id = module.ecs.security_group_id
+  mongodb_password_arn = module.secrets.mongodb_password_arn
 
-  depends_on = [module.vpc]
+  depends_on = [module.vpc, module.ecs, module.secrets]
 }
 
 # ECR Module - No VPC dependencies
@@ -122,11 +130,12 @@ module "sonarqube" {
   db_endpoint = module.rds.endpoint
   db_subnet_group_name = local.db_subnet_group_name
   db_username = var.sonarqube_db_username
+  db_password_arn = module.secrets.sonarqube_password_arn
   db_instance_class = "db.t3.micro"
   allocated_storage = 20
   skip_final_snapshot = true
 
-  depends_on = [module.vpc, module.rds]
+  depends_on = [module.vpc, module.rds, module.secrets]
 }
 
 # Cognito Module - No VPC dependencies
@@ -196,6 +205,12 @@ variable "secret_suffix" {
   description = "Suffix for secret names"
   type        = string
   default     = "20250510212247"
+}
+
+variable "mongodb_password" {
+  description = "Password for the MongoDB instance"
+  type        = string
+  sensitive   = true
 }
 
 # Outputs
