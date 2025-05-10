@@ -101,8 +101,8 @@ module "ecs" {
   aws_region  = var.aws_region
   alb_security_group_id = module.alb.security_group_id
   ecs_security_group_id = module.ecs.security_group_id
-  database_url_arn = module.secrets.database_url_arn
-  mongodb_uri_arn = module.secrets.mongodb_uri_arn
+  database_url_arn = module.secrets.database_secret_arn
+  mongodb_uri_arn = module.secrets.mongodb_secret_arn
   ecr_repository_url = module.ecr.repository_url
   alb_target_group_arn = module.alb.target_group_arn
 
