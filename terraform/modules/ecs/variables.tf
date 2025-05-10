@@ -38,6 +38,12 @@ variable "vpc_cidr_blocks" {
   type        = list(string)
 }
 
+variable "container_port" {
+  description = "Port exposed by the container"
+  type        = number
+  default     = 3000
+}
+
 variable "database_url_arn" {
   description = "ARN of the database URL secret in AWS Secrets Manager"
   type        = string

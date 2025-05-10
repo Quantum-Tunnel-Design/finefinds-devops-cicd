@@ -1,6 +1,6 @@
 output "endpoint" {
   description = "Endpoint of the MongoDB instance"
-  value       = aws_docdb_cluster.main.endpoint
+  value       = local.cluster_endpoint
 }
 
 output "port" {
@@ -10,7 +10,7 @@ output "port" {
 
 output "security_group_id" {
   description = "ID of the MongoDB security group"
-  value       = aws_security_group.main.id
+  value       = aws_security_group.mongodb.id
 }
 
 output "cluster_identifier" {

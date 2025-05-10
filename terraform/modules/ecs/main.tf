@@ -1,22 +1,18 @@
 # ECS Cluster
 resource "aws_ecs_cluster" "main" {
-  name = "${var.project}-${var.environment}"
+  name = var.name
 
   setting {
     name  = "containerInsights"
     value = "enabled"
   }
 
-  tags = {
-    Name        = "${var.project}-${var.environment}"
-    Environment = var.environment
-    Project     = var.project
-  }
+  tags = var.tags
 }
 
 # ECS Task Execution Role
 resource "aws_iam_role" "ecs_task_execution_role" {
-  name = "${var.project}-${var.environment}-task-execution-role"
+  name = "${var.name}-task-execution-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -31,10 +27,7 @@ resource "aws_iam_role" "ecs_task_execution_role" {
     ]
   })
 
-  tags = {
-    Environment = var.environment
-    Project     = var.project
-  }
+  tags = var.tags
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
@@ -44,7 +37,7 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
 
 # ECS Task Role
 resource "aws_iam_role" "ecs_task_role" {
-  name = "${var.project}-${var.environment}-task-role"
+  name = "${var.name}-task-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -59,15 +52,12 @@ resource "aws_iam_role" "ecs_task_role" {
     ]
   })
 
-  tags = {
-    Environment = var.environment
-    Project     = var.project
-  }
+  tags = var.tags
 }
 
 # Security Group for ECS Tasks
 resource "aws_security_group" "main" {
-  name        = "${var.project}-${var.environment}-ecs-tasks-sg"
+  name        = var.security_group_name
   description = "Security group for ECS tasks"
   vpc_id      = var.vpc_id
 
@@ -85,11 +75,7 @@ resource "aws_security_group" "main" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = {
-    Name        = "${var.project}-${var.environment}-ecs-tasks-sg"
-    Environment = var.environment
-    Project     = var.project
-  }
+  tags = var.tags
 
   lifecycle {
     create_before_destroy = true
@@ -98,7 +84,7 @@ resource "aws_security_group" "main" {
 
 # ECS Task Definition
 resource "aws_ecs_task_definition" "main" {
-  family                   = "${var.project}-${var.environment}"
+  family                   = var.name
   network_mode            = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                     = var.task_cpu
@@ -108,7 +94,7 @@ resource "aws_ecs_task_definition" "main" {
 
   container_definitions = jsonencode([
     {
-      name      = "app"
+      name      = "${var.name}-container"
       image     = "${var.ecr_repository_url}:latest"
       essential = true
       portMappings = [
@@ -137,7 +123,7 @@ resource "aws_ecs_task_definition" "main" {
       logConfiguration = {
         logDriver = "awslogs"
         options = {
-          "awslogs-group"         = "/ecs/${var.project}-${var.environment}"
+          "awslogs-group"         = "/ecs/${var.name}"
           "awslogs-region"        = var.aws_region
           "awslogs-stream-prefix" = "ecs"
         }
@@ -145,15 +131,12 @@ resource "aws_ecs_task_definition" "main" {
     }
   ])
 
-  tags = {
-    Environment = var.environment
-    Project     = var.project
-  }
+  tags = var.tags
 }
 
 # ECS Service
 resource "aws_ecs_service" "main" {
-  name            = "${var.project}-${var.environment}"
+  name            = "${var.name}-service"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.main.arn
   desired_count   = 1
@@ -167,14 +150,11 @@ resource "aws_ecs_service" "main" {
 
   load_balancer {
     target_group_arn = var.alb_target_group_arn
-    container_name   = "app"
+    container_name   = "${var.name}-container"
     container_port   = var.container_port
   }
 
-  tags = {
-    Environment = var.environment
-    Project     = var.project
-  }
+  tags = var.tags
 
   lifecycle {
     create_before_destroy = true
@@ -182,43 +162,16 @@ resource "aws_ecs_service" "main" {
 }
 
 # CloudWatch Log Group
-resource "aws_cloudwatch_log_group" "ecs" {
-  name              = "/ecs/${var.project}-${var.environment}"
+resource "aws_cloudwatch_log_group" "main" {
+  name              = "/ecs/${var.name}"
   retention_in_days = 30
 
-  tags = {
-    Environment = var.environment
-    Project     = var.project
-    Terraform   = "true"
-  }
-}
-
-# Target Group for ALB
-resource "aws_lb_target_group" "app" {
-  name        = "${var.project}-${var.environment}-tg"
-  port        = var.container_port
-  protocol    = "HTTP"
-  vpc_id      = var.vpc_id
-  target_type = "ip"
-
-  health_check {
-    path                = "/health"
-    interval            = 30
-    timeout             = 5
-    healthy_threshold   = 2
-    unhealthy_threshold = 2
-  }
-
-  tags = {
-    Name        = "${var.project}-${var.environment}-tg"
-    Environment = var.environment
-    Project     = var.project
-  }
+  tags = var.tags
 }
 
 # IAM roles and policies
 resource "aws_iam_role_policy" "ecs_task_role_policy" {
-  name = "${var.project}-${var.environment}-task-policy"
+  name = "${var.name}-task-policy"
   role = aws_iam_role.ecs_task_role.id
 
   policy = jsonencode({
