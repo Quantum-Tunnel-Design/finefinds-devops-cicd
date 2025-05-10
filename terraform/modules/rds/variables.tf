@@ -69,4 +69,19 @@ variable "db_name" {
 variable "db_password_arn" {
   description = "ARN of the database password secret in AWS Secrets Manager"
   type        = string
+}
+
+variable "name" {
+  description = "Name of the RDS instance"
+  type        = string
+}
+
+variable "security_group_name" {
+  description = "Name of the RDS security group"
+  type        = string
+}
+
+variable "vpc_cidr_blocks" {
+  description = "List of VPC CIDR blocks to allow traffic from"
+  type        = list(string)
 } 

@@ -65,6 +65,37 @@ resource "aws_iam_role" "ecs_task_role" {
   }
 }
 
+# Security Group for ECS Tasks
+resource "aws_security_group" "ecs_tasks" {
+  name        = "${var.project}-${var.environment}-ecs-tasks-sg"
+  description = "Security group for ECS tasks"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    from_port       = 3000
+    to_port         = 3000
+    protocol        = "tcp"
+    security_groups = [var.alb_security_group_id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name        = "${var.project}-${var.environment}-ecs-tasks-sg"
+    Environment = var.environment
+    Project     = var.project
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
 # ECS Task Definition
 resource "aws_ecs_task_definition" "app" {
   family                   = "${var.project}-${var.environment}"
@@ -156,33 +187,6 @@ resource "aws_cloudwatch_log_group" "ecs" {
     Environment = var.environment
     Project     = var.project
     Terraform   = "true"
-  }
-}
-
-# Security Group for ECS Tasks
-resource "aws_security_group" "ecs_tasks" {
-  name        = "${var.project}-${var.environment}-ecs-tasks-sg"
-  description = "Security group for ECS tasks"
-  vpc_id      = var.vpc_id
-
-  ingress {
-    from_port       = 3000
-    to_port         = 3000
-    protocol        = "tcp"
-    security_groups = [var.alb_security_group_id]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name        = "${var.project}-${var.environment}-ecs-tasks-sg"
-    Environment = var.environment
-    Project     = var.project
   }
 }
 

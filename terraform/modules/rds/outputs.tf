@@ -16,4 +16,34 @@ output "db_instance_username" {
 output "endpoint" {
   description = "Endpoint of the RDS instance"
   value       = var.use_existing_instance ? data.aws_db_instance.existing[0].endpoint : aws_db_instance.main[0].endpoint
+}
+
+output "db_instance_id" {
+  description = "ID of the RDS instance"
+  value       = aws_db_instance.main.id
+}
+
+output "db_instance_endpoint" {
+  description = "Endpoint of the RDS instance"
+  value       = aws_db_instance.main.endpoint
+}
+
+output "db_instance_identifier" {
+  description = "Identifier of the RDS instance"
+  value       = aws_db_instance.main.identifier
+}
+
+output "db_instance_port" {
+  description = "Port of the RDS instance"
+  value       = aws_db_instance.main.port
+}
+
+output "db_subnet_group_name" {
+  description = "Name of the DB subnet group"
+  value       = aws_db_subnet_group.main.name
+}
+
+output "security_group_id" {
+  description = "ID of the RDS security group"
+  value       = aws_security_group.rds.id
 } 

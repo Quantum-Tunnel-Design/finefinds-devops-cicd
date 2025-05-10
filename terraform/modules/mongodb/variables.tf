@@ -9,12 +9,12 @@ variable "environment" {
 }
 
 variable "vpc_id" {
-  description = "VPC ID where resources will be created"
+  description = "ID of the VPC"
   type        = string
 }
 
 variable "subnet_ids" {
-  description = "List of subnet IDs for the MongoDB instance"
+  description = "List of subnet IDs for MongoDB"
   type        = list(string)
 }
 
@@ -87,4 +87,37 @@ variable "existing_cluster_endpoint" {
   description = "Endpoint of the existing DocumentDB cluster"
   type        = string
   default     = ""
+}
+
+variable "name" {
+  description = "Name of the MongoDB instance"
+  type        = string
+}
+
+variable "security_group_name" {
+  description = "Name of the MongoDB security group"
+  type        = string
+}
+
+variable "vpc_cidr_blocks" {
+  description = "List of VPC CIDR blocks to allow traffic from"
+  type        = list(string)
+}
+
+variable "instance_class" {
+  description = "Instance class for MongoDB"
+  type        = string
+  default     = "db.t3.medium"
+}
+
+variable "allocated_storage" {
+  description = "Allocated storage in GB"
+  type        = number
+  default     = 20
+}
+
+variable "skip_final_snapshot" {
+  description = "Whether to skip the final snapshot when destroying"
+  type        = bool
+  default     = true
 } 

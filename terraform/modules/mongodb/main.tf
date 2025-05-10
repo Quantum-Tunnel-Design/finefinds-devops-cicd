@@ -12,26 +12,38 @@ data "aws_secretsmanager_secret_version" "mongodb_password" {
   secret_id = var.mongodb_password_arn
 }
 
-# Security Group
+locals {
+  mongodb_password = jsondecode(data.aws_secretsmanager_secret_version.mongodb_password.secret_string)
+}
+
+# MongoDB Security Group
 resource "aws_security_group" "mongodb" {
-  count       = (var.use_existing_cluster || var.use_existing_instance) ? 0 : 1
-  name        = "${var.project}-${var.environment}-mongodb-sg"
+  name        = var.security_group_name
   description = "Security group for MongoDB instance"
   vpc_id      = var.vpc_id
 
   ingress {
+    protocol    = "tcp"
     from_port   = 27017
     to_port     = 27017
-    protocol    = "tcp"
-    cidr_blocks = ["10.0.0.0/8"]  # Allow from VPC CIDR
+    cidr_blocks = var.vpc_cidr_blocks
   }
 
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+  tags = {
+    Name        = var.security_group_name
+    Environment = var.environment
+    Project     = var.project
   }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# MongoDB Subnet Group
+resource "aws_docdb_subnet_group" "main" {
+  name       = "${var.project}-${var.environment}-mongodb-subnet-group"
+  subnet_ids = var.subnet_ids
 
   tags = {
     Environment = var.environment
@@ -44,11 +56,17 @@ resource "aws_security_group" "mongodb" {
   }
 }
 
-# DocumentDB Subnet Group
-resource "aws_docdb_subnet_group" "main" {
-  count      = var.use_existing_subnet_group ? 0 : 1
-  name       = "${var.project}-${var.environment}-docdb-subnet-group"
-  subnet_ids = var.subnet_ids
+# MongoDB Cluster
+resource "aws_docdb_cluster" "main" {
+  cluster_identifier = var.name
+  engine            = "docdb"
+  master_username   = "admin"
+  master_password   = local.mongodb_password
+
+  vpc_security_group_ids = [aws_security_group.mongodb.id]
+  db_subnet_group_name   = aws_docdb_subnet_group.main.name
+
+  skip_final_snapshot = var.skip_final_snapshot
 
   tags = {
     Environment = var.environment
@@ -57,34 +75,21 @@ resource "aws_docdb_subnet_group" "main" {
   }
 
   lifecycle {
-    ignore_changes = [name]
-    prevent_destroy = true
+    create_before_destroy = true
   }
 }
 
-# Use existing or new subnet group
-locals {
-  subnet_group_name = var.use_existing_subnet_group ? "${var.project}-${var.environment}-docdb-subnet-group" : aws_docdb_subnet_group.main[0].name
-  security_group_id = var.use_existing_cluster ? var.existing_security_group_id : (var.use_existing_instance ? var.existing_instance_security_group_id : aws_security_group.mongodb[0].id)
-  mongodb_password  = jsondecode(data.aws_secretsmanager_secret_version.mongodb_password.secret_string)
-}
-
-# MongoDB Instance (DocumentDB)
-resource "aws_docdb_cluster" "main" {
-  count              = (var.use_existing_cluster || var.use_existing_instance) ? 0 : 1
-  cluster_identifier = "${var.project}-${var.environment}-docdb"
-  engine            = "docdb"
-  master_username   = var.admin_username
-  master_password   = local.mongodb_password
-  skip_final_snapshot = true
-
-  vpc_security_group_ids = [aws_security_group.mongodb[0].id]
-  db_subnet_group_name   = aws_docdb_subnet_group.main[0].name
+# MongoDB Instance
+resource "aws_docdb_cluster_instance" "main" {
+  count              = 1
+  identifier         = "${var.name}-${count.index}"
+  cluster_identifier = aws_docdb_cluster.main.id
+  instance_class     = var.instance_class
 
   tags = {
-    Name        = "${var.project}-${var.environment}-docdb"
     Environment = var.environment
     Project     = var.project
+    Terraform   = "true"
   }
 
   lifecycle {
@@ -99,7 +104,7 @@ resource "aws_instance" "mongodb" {
   instance_type = var.instance_type
   subnet_id     = var.subnet_ids[0]
 
-  vpc_security_group_ids = [local.security_group_id]
+  vpc_security_group_ids = [var.existing_security_group_id]
 
   root_block_device {
     volume_size = var.volume_size
@@ -174,7 +179,7 @@ output "endpoint" {
 
 output "security_group_id" {
   description = "Security group ID of the MongoDB instance"
-  value       = local.security_group_id
+  value       = var.existing_security_group_id
 }
 
 # IAM Roles
