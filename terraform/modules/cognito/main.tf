@@ -166,29 +166,6 @@ resource "aws_cognito_user_pool_domain" "main" {
   certificate_arn = var.certificate_arn
 }
 
-# Variables
-variable "project" {
-  description = "Project name"
-  type        = string
-}
-
-variable "environment" {
-  description = "Environment name"
-  type        = string
-}
-
-variable "callback_urls" {
-  description = "List of callback URLs"
-  type        = list(string)
-  default     = ["https://api.finefinds.com/auth/callback"]
-}
-
-variable "logout_urls" {
-  description = "List of logout URLs"
-  type        = list(string)
-  default     = ["https://api.finefinds.com/auth/logout"]
-}
-
 # Outputs
 output "user_pool_id" {
   description = "ID of the Cognito User Pool"

@@ -50,6 +50,18 @@ variable "environment" {
   type        = string
 }
 
+variable "callback_urls" {
+  description = "List of callback URLs"
+  type        = list(string)
+  default     = ["https://api.finefinds.com/auth/callback"]
+}
+
+variable "logout_urls" {
+  description = "List of logout URLs"
+  type        = list(string)
+  default     = ["https://api.finefinds.com/auth/logout"]
+}
+
 variable "use_existing_roles" {
   description = "Whether to use existing IAM roles"
   type        = bool
