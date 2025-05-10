@@ -94,20 +94,22 @@ resource "aws_lb_listener" "http" {
   }
 }
 
-# HTTPS Listener (placeholder for SSL certificate)
+# HTTPS Listener
 resource "aws_lb_listener" "https" {
   load_balancer_arn = aws_lb.main.arn
   port              = 443
   protocol          = "HTTPS"
   ssl_policy        = "ELBSecurityPolicy-2016-08"
-  certificate_arn   = "arn:aws:acm:region:account:certificate/certificate-id" # Replace with actual certificate ARN
+  certificate_arn   = var.certificate_arn
 
   default_action {
-    type = "fixed-response"
-    fixed_response {
-      content_type = "text/plain"
-      message_body = "Not Found"
-      status_code  = "404"
-    }
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.main.arn
+  }
+
+  tags = {
+    Environment = var.environment
+    Project     = var.project
+    Terraform   = "true"
   }
 } 

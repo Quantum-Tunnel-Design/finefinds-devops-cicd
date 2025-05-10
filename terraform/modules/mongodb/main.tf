@@ -168,7 +168,7 @@ resource "aws_volume_attachment" "mongodb_data" {
 
 # Use existing or new cluster/instance
 locals {
-  cluster_endpoint = var.use_existing_cluster ? var.existing_cluster_endpoint : (var.use_existing_instance ? data.aws_instance.existing_mongodb[0].private_ip : (length(aws_docdb_cluster.main) > 0 ? aws_docdb_cluster.main[0].endpoint : aws_instance.mongodb[0].private_ip))
+  cluster_endpoint = var.use_existing_cluster ? var.existing_cluster_endpoint : (var.use_existing_instance ? data.aws_instance.existing_mongodb[0].private_ip : aws_docdb_cluster.main.endpoint)
 }
 
 # Outputs
