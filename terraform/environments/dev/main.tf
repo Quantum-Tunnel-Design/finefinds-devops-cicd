@@ -34,6 +34,16 @@ module "vpc" {
   public_subnet_cidrs  = ["10.0.101.0/24", "10.0.102.0/24"]
 }
 
+# Secrets Manager Module - No VPC dependencies
+module "secrets" {
+  source = "../../modules/secrets"
+
+  project        = var.project
+  environment    = var.environment
+  secret_suffix  = var.secret_suffix
+  use_existing_secrets = true
+}
+
 # ALB Module - Depends only on VPC
 module "alb" {
   source = "../../modules/alb"
@@ -43,18 +53,11 @@ module "alb" {
   vpc_id      = local.vpc_id
   subnet_ids  = local.public_subnets
   container_port = var.container_port
+  name        = local.alb_name
+  security_group_name = local.alb_sg_name
+  vpc_cidr_blocks = local.vpc_cidr_blocks
 
   depends_on = [module.vpc]
-}
-
-# Secrets Manager Module - No VPC dependencies
-module "secrets" {
-  source = "../../modules/secrets"
-
-  project        = var.project
-  environment    = var.environment
-  secret_suffix  = var.secret_suffix
-  use_existing_secrets = true
 }
 
 # RDS Module - Depends on VPC and Secrets
@@ -66,6 +69,9 @@ module "rds" {
   vpc_id      = local.vpc_id
   subnet_ids  = local.private_subnets
   db_password_arn = module.secrets.database_password_arn
+  name        = local.rds_name
+  security_group_name = local.rds_sg_name
+  vpc_cidr_blocks = local.vpc_cidr_blocks
 
   depends_on = [module.vpc, module.secrets]
 }
@@ -79,6 +85,9 @@ module "mongodb" {
   vpc_id      = local.vpc_id
   subnet_ids  = local.private_subnets
   mongodb_password_arn = module.secrets.mongodb_password_arn
+  name        = local.mongodb_name
+  security_group_name = local.mongo_sg_name
+  vpc_cidr_blocks = local.vpc_cidr_blocks
 
   depends_on = [module.vpc, module.secrets]
 }
@@ -91,7 +100,7 @@ module "ecr" {
   environment = var.environment
 }
 
-# ECS Module - Depends on VPC, ALB, and Secrets
+# ECS Module - Depends on VPC and Secrets
 module "ecs" {
   source = "../../modules/ecs"
 
@@ -100,16 +109,17 @@ module "ecs" {
   vpc_id      = local.vpc_id
   private_subnet_ids = local.private_subnets
   aws_region  = var.aws_region
-  alb_security_group_id = module.alb.security_group_id
+  name        = local.ecs_cluster_name
+  security_group_name = local.ecs_sg_name
+  vpc_cidr_blocks = local.vpc_cidr_blocks
   database_url_arn = module.secrets.database_secret_arn
   mongodb_uri_arn = module.secrets.mongodb_secret_arn
   ecr_repository_url = module.ecr.repository_url
-  alb_target_group_arn = module.alb.target_group_arn
 
-  depends_on = [module.vpc, module.alb, module.secrets, module.ecr]
+  depends_on = [module.vpc, module.secrets, module.ecr]
 }
 
-# SonarQube Module - Depends on VPC, RDS, ALB, and Secrets
+# SonarQube Module - Depends on VPC, RDS, and Secrets
 module "sonarqube" {
   source = "../../modules/sonarqube"
 
@@ -122,10 +132,11 @@ module "sonarqube" {
   db_username         = var.sonarqube_db_username
   db_password_arn     = module.secrets.sonarqube_password_arn
   db_subnet_group_name = local.db_subnet_group_name
-  alb_security_group_id = module.alb.security_group_id
-  alb_dns_name        = module.alb.dns_name
+  name                = local.sonarqube_name
+  security_group_name = local.sonarqube_sg_name
+  vpc_cidr_blocks     = local.vpc_cidr_blocks
 
-  depends_on = [module.vpc, module.rds, module.alb, module.secrets]
+  depends_on = [module.vpc, module.rds, module.secrets]
 }
 
 # Cognito Module - No VPC dependencies

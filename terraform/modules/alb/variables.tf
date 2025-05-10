@@ -19,9 +19,23 @@ variable "subnet_ids" {
 }
 
 variable "container_port" {
-  description = "Port exposed by the container"
+  description = "Port that the container is listening on"
   type        = number
-  default     = 3000
+}
+
+variable "name" {
+  description = "Name of the ALB"
+  type        = string
+}
+
+variable "security_group_name" {
+  description = "Name of the ALB security group"
+  type        = string
+}
+
+variable "vpc_cidr_blocks" {
+  description = "List of VPC CIDR blocks to allow traffic from"
+  type        = list(string)
 }
 
 variable "health_check_path" {

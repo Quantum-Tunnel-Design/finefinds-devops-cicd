@@ -1,5 +1,6 @@
+# ALB Security Group
 resource "aws_security_group" "alb" {
-  name        = "${var.project}-${var.environment}-alb-sg"
+  name        = var.security_group_name
   description = "Security group for ALB"
   vpc_id      = var.vpc_id
 
@@ -21,60 +22,40 @@ resource "aws_security_group" "alb" {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = var.vpc_cidr_blocks
   }
 
   tags = {
-    Name        = "${var.project}-${var.environment}-alb-sg"
-    Project     = var.project
+    Name        = var.security_group_name
     Environment = var.environment
+    Project     = var.project
   }
 
   lifecycle {
-    ignore_changes = [name]
     create_before_destroy = true
   }
 }
 
+# Application Load Balancer
 resource "aws_lb" "main" {
-  name               = "${var.project}-${var.environment}-alb"
+  name               = var.name
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb.id]
   subnets           = var.subnet_ids
 
-  enable_deletion_protection = var.environment == "prod" ? true : false
+  enable_deletion_protection = true
 
   tags = {
-    Name        = "${var.project}-${var.environment}-alb"
-    Project     = var.project
     Environment = var.environment
-  }
-
-  lifecycle {
-    ignore_changes = [name]
-    create_before_destroy = true
+    Project     = var.project
   }
 }
 
-resource "aws_lb_listener" "http" {
-  load_balancer_arn = aws_lb.main.arn
-  port              = 80
-  protocol          = "HTTP"
-
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.app.arn
-  }
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-resource "aws_lb_target_group" "app" {
-  name        = "${var.project}-${var.environment}-tg"
-  port        = 80
+# Target Group
+resource "aws_lb_target_group" "main" {
+  name        = "${var.name}-tg"
+  port        = var.container_port
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
   target_type = "ip"
@@ -88,12 +69,45 @@ resource "aws_lb_target_group" "app" {
   }
 
   tags = {
-    Name        = "${var.project}-${var.environment}-tg"
     Environment = var.environment
     Project     = var.project
   }
 
   lifecycle {
     create_before_destroy = true
+  }
+}
+
+# HTTP Listener
+resource "aws_lb_listener" "http" {
+  load_balancer_arn = aws_lb.main.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type = "fixed-response"
+    fixed_response {
+      content_type = "text/plain"
+      message_body = "Not Found"
+      status_code  = "404"
+    }
+  }
+}
+
+# HTTPS Listener (placeholder for SSL certificate)
+resource "aws_lb_listener" "https" {
+  load_balancer_arn = aws_lb.main.arn
+  port              = 443
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-2016-08"
+  certificate_arn   = "arn:aws:acm:region:account:certificate/certificate-id" # Replace with actual certificate ARN
+
+  default_action {
+    type = "fixed-response"
+    fixed_response {
+      content_type = "text/plain"
+      message_body = "Not Found"
+      status_code  = "404"
+    }
   }
 } 
