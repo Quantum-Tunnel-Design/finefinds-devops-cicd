@@ -28,11 +28,6 @@ variable "alb_security_group_id" {
   type        = string
 }
 
-variable "ecs_security_group_id" {
-  description = "Security group ID for ECS tasks"
-  type        = string
-}
-
 variable "database_url_arn" {
   description = "ARN of the database URL secret"
   type        = string

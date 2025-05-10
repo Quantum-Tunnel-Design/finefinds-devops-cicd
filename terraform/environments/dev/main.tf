@@ -47,7 +47,17 @@ module "alb" {
   depends_on = [module.vpc]
 }
 
-# RDS Module - Depends only on VPC
+# Secrets Manager Module - No VPC dependencies
+module "secrets" {
+  source = "../../modules/secrets"
+
+  project        = var.project
+  environment    = var.environment
+  secret_suffix  = var.secret_suffix
+  use_existing_secrets = true
+}
+
+# RDS Module - Depends on VPC and Secrets
 module "rds" {
   source = "../../modules/rds"
 
@@ -56,19 +66,11 @@ module "rds" {
   vpc_id      = local.vpc_id
   subnet_ids  = local.private_subnets
   db_password_arn = module.secrets.database_password_arn
-  ecs_security_group_id = module.ecs.security_group_id
 
-  depends_on = [module.vpc, module.ecs, module.secrets]
+  depends_on = [module.vpc, module.secrets]
 }
 
-# Generate random password for MongoDB
-resource "random_password" "mongodb" {
-  length           = 16
-  special          = true
-  override_special = "!#$%&*()-_=+[]{}<>:?"
-}
-
-# MongoDB Module - Depends only on VPC
+# MongoDB Module - Depends on VPC and Secrets
 module "mongodb" {
   source = "../../modules/mongodb"
 
@@ -76,10 +78,9 @@ module "mongodb" {
   environment = var.environment
   vpc_id      = local.vpc_id
   subnet_ids  = local.private_subnets
-  ecs_security_group_id = module.ecs.security_group_id
   mongodb_password_arn = module.secrets.mongodb_password_arn
 
-  depends_on = [module.vpc, module.ecs, module.secrets]
+  depends_on = [module.vpc, module.secrets]
 }
 
 # ECR Module - No VPC dependencies
@@ -90,7 +91,7 @@ module "ecr" {
   environment = var.environment
 }
 
-# ECS Module - Depends on VPC and ALB
+# ECS Module - Depends on VPC, ALB, and Secrets
 module "ecs" {
   source = "../../modules/ecs"
 
@@ -100,7 +101,6 @@ module "ecs" {
   private_subnet_ids = local.private_subnets
   aws_region  = var.aws_region
   alb_security_group_id = module.alb.security_group_id
-  ecs_security_group_id = module.ecs.security_group_id
   database_url_arn = module.secrets.database_secret_arn
   mongodb_uri_arn = module.secrets.mongodb_secret_arn
   ecr_repository_url = module.ecr.repository_url
@@ -109,16 +109,7 @@ module "ecs" {
   depends_on = [module.vpc, module.alb, module.secrets, module.ecr]
 }
 
-# Update ALB target group with ECS service
-resource "aws_lb_target_group_attachment" "ecs" {
-  target_group_arn = module.alb.target_group_arn
-  target_id        = module.ecs.service_id
-  port             = var.container_port
-
-  depends_on = [module.alb, module.ecs]
-}
-
-# SonarQube Module - Depends on VPC and RDS
+# SonarQube Module - Depends on VPC, RDS, ALB, and Secrets
 module "sonarqube" {
   source = "../../modules/sonarqube"
 
@@ -151,16 +142,6 @@ module "s3" {
 
   project     = var.project
   environment = var.environment
-}
-
-# Secrets Manager Module - No VPC dependencies
-module "secrets" {
-  source = "../../modules/secrets"
-
-  project        = var.project
-  environment    = var.environment
-  secret_suffix  = var.secret_suffix
-  use_existing_secrets = true
 }
 
 # Monitoring Module - No VPC dependencies

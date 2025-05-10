@@ -18,11 +18,6 @@ variable "subnet_ids" {
   type        = list(string)
 }
 
-variable "ecs_security_group_id" {
-  description = "Security group ID of the ECS tasks"
-  type        = string
-}
-
 variable "use_existing_cluster" {
   description = "Whether to use an existing DocumentDB cluster"
   type        = bool
