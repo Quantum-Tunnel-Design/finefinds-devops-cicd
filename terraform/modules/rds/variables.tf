@@ -71,8 +71,7 @@ variable "db_name" {
   default     = "finefinds"
 }
 
-variable "db_password" {
-  description = "Password for the database master user"
+variable "db_password_arn" {
+  description = "ARN of the database password secret in AWS Secrets Manager"
   type        = string
-  sensitive   = true
 } 

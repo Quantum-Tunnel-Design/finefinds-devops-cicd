@@ -1,3 +1,12 @@
+# Get database password from Secrets Manager
+data "aws_secretsmanager_secret_version" "database_password" {
+  secret_id = var.db_password_arn
+}
+
+locals {
+  db_password = jsondecode(data.aws_secretsmanager_secret_version.database_password.secret_string)
+}
+
 # Data source for existing RDS instance
 data "aws_db_instance" "existing" {
   count = var.use_existing_instance ? 1 : 0
@@ -74,7 +83,7 @@ resource "aws_db_instance" "main" {
 
   db_name  = var.db_name
   username = "finefinds_admin"
-  password = var.db_password
+  password = local.db_password
 
   vpc_security_group_ids = [local.security_group_id]
   db_subnet_group_name   = local.subnet_group_name

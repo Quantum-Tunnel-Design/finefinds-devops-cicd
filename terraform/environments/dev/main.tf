@@ -188,12 +188,6 @@ module "amplify" {
 }
 
 # Variables
-variable "db_password" {
-  description = "Password for the main database"
-  type        = string
-  sensitive   = true
-}
-
 variable "sonarqube_db_password" {
   description = "Password for the SonarQube database"
   type        = string
