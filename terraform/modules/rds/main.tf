@@ -8,6 +8,10 @@ resource "aws_db_subnet_group" "main" {
     Project     = var.project
     Terraform   = "true"
   }
+
+  lifecycle {
+    ignore_changes = [name]
+  }
 }
 
 # RDS Security Group
@@ -41,6 +45,10 @@ resource "random_password" "db_password" {
 resource "aws_secretsmanager_secret" "db_password" {
   name = "${var.project}-${var.environment}-db-password"
   description = "Database password for ${var.environment} environment"
+
+  lifecycle {
+    ignore_changes = [name]
+  }
 }
 
 resource "aws_secretsmanager_secret_version" "db_password" {
@@ -53,15 +61,15 @@ resource "aws_db_instance" "main" {
   identifier = "${var.project}-${var.environment}-db"
 
   engine         = "postgres"
-  engine_version = "14.7"
-  instance_class = var.instance_class
+  engine_version = "17.5"
+  instance_class = var.db_instance_class
 
   allocated_storage     = var.allocated_storage
   storage_type         = "gp2"
   storage_encrypted    = true
 
-  db_name  = "finefinds"
-  username = var.db_username
+  db_name  = var.db_name
+  username = "finefinds_admin"
   password = random_password.db_password.result
 
   vpc_security_group_ids = [aws_security_group.rds.id]
@@ -75,56 +83,18 @@ resource "aws_db_instance" "main" {
     Project     = var.project
     Terraform   = "true"
   }
-}
 
-# Variables
-variable "project" {
-  description = "Project name"
-  type        = string
-}
-
-variable "environment" {
-  description = "Environment name"
-  type        = string
-}
-
-variable "vpc_id" {
-  description = "VPC ID where resources will be created"
-  type        = string
-}
-
-variable "subnet_ids" {
-  description = "List of subnet IDs for the RDS instance"
-  type        = list(string)
-}
-
-variable "ecs_security_group_id" {
-  description = "Security group ID of the ECS tasks"
-  type        = string
-}
-
-variable "db_username" {
-  description = "Master username for RDS"
-  type        = string
-  default     = "admin"
-}
-
-variable "instance_class" {
-  description = "RDS instance class"
-  type        = string
-  default     = "db.t3.micro"
-}
-
-variable "allocated_storage" {
-  description = "Allocated storage in GB"
-  type        = number
-  default     = 20
-}
-
-variable "skip_final_snapshot" {
-  description = "Skip final snapshot when destroying"
-  type        = bool
-  default     = false
+  lifecycle {
+    ignore_changes = [
+      identifier,
+      engine_version,
+      password,
+      db_name,
+      username,
+      allocated_storage,
+      instance_class
+    ]
+  }
 }
 
 # Outputs

@@ -12,6 +12,10 @@ resource "aws_ecs_cluster" "main" {
     Project     = var.project
     Terraform   = "true"
   }
+
+  lifecycle {
+    ignore_changes = [name]
+  }
 }
 
 # ECS Task Definition
@@ -117,6 +121,10 @@ resource "aws_iam_role" "ecs_execution_role" {
     Project     = var.project
     Terraform   = "true"
   }
+
+  lifecycle {
+    ignore_changes = [name]
+  }
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
@@ -144,6 +152,10 @@ resource "aws_iam_role" "ecs_task_role" {
     Environment = var.environment
     Project     = var.project
     Terraform   = "true"
+  }
+
+  lifecycle {
+    ignore_changes = [name]
   }
 }
 
@@ -176,17 +188,21 @@ resource "aws_security_group" "ecs_tasks" {
 
 # Load Balancer Target Group
 resource "aws_lb_target_group" "app" {
-  name     = "${var.project}-${var.environment}-tg"
-  port     = var.container_port
-  protocol = "HTTP"
-  vpc_id   = var.vpc_id
+  name        = "${var.project}-${var.environment}-tg"
+  port        = var.container_port
+  protocol    = "HTTP"
+  vpc_id      = var.vpc_id
+  target_type = "ip"
 
   health_check {
-    interval            = 30
-    path                = "/"
-    protocol            = "HTTP"
-    timeout             = 5
+    enabled             = true
     healthy_threshold   = 2
+    interval            = 30
+    matcher            = "200"
+    path               = "/health"
+    port               = "traffic-port"
+    protocol           = "HTTP"
+    timeout            = 5
     unhealthy_threshold = 2
   }
 
@@ -194,6 +210,10 @@ resource "aws_lb_target_group" "app" {
     Environment = var.environment
     Project     = var.project
     Terraform   = "true"
+  }
+
+  lifecycle {
+    ignore_changes = [name]
   }
 }
 

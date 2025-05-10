@@ -9,11 +9,11 @@ module "vpc" {
   project     = var.project
   environment = var.environment
 
-  # Development uses minimal resources
+  # Development uses minimal resources but maintains high availability
   vpc_cidr             = "10.3.0.0/16"
-  availability_zones   = ["${var.aws_region}a"]
-  private_subnet_cidrs = ["10.3.1.0/24"]
-  public_subnet_cidrs  = ["10.3.101.0/24"]
+  availability_zones   = ["${var.aws_region}a", "${var.aws_region}b"]
+  private_subnet_cidrs = ["10.3.1.0/24", "10.3.2.0/24"]
+  public_subnet_cidrs  = ["10.3.101.0/24", "10.3.102.0/24"]
 }
 
 # ALB Module
@@ -24,6 +24,7 @@ module "alb" {
   environment = var.environment
   vpc_id      = module.vpc.vpc_id
   subnet_ids  = module.vpc.public_subnet_ids
+  target_group_arn = module.ecs.target_group_arn
 }
 
 # ECS Module
@@ -36,17 +37,17 @@ module "ecs" {
   subnet_ids  = module.vpc.private_subnet_ids
 
   # Development uses minimal resources
-  task_cpu            = 256
-  task_memory         = 512
+  task_cpu              = 256
+  task_memory           = 512
   service_desired_count = 1
-  container_name      = var.container_name
-  container_port      = var.container_port
-  ecr_repository_url  = var.ecr_repository_url
-  image_tag           = var.image_tag
-  database_url_arn    = module.rds.db_password_arn
-  mongodb_uri_arn     = module.mongodb.mongodb_password_arn
+  container_name        = var.container_name
+  container_port        = var.container_port
+  ecr_repository_url    = var.ecr_repository_url
+  image_tag             = var.image_tag
+  database_url_arn      = module.rds.db_password_arn
+  mongodb_uri_arn       = module.mongodb.mongodb_password_arn
   alb_security_group_id = module.alb.alb_security_group_id
-  aws_region          = var.aws_region
+  aws_region            = var.aws_region
 }
 
 # RDS Module
@@ -59,12 +60,11 @@ module "rds" {
   subnet_ids  = module.vpc.private_subnet_ids
 
   ecs_security_group_id = module.ecs.ecs_tasks_security_group_id
-  db_username          = var.db_username
-
-  # Development uses minimal resources
-  instance_class      = "db.t3.micro"
-  allocated_storage   = 20
-  skip_final_snapshot = true
+  db_username           = var.db_username
+  db_name               = "finefinds"
+  db_instance_class     = "db.t3.micro"
+  allocated_storage     = 20
+  skip_final_snapshot   = true
 }
 
 # Cognito Module
@@ -87,12 +87,12 @@ module "s3" {
 module "mongodb" {
   source = "../../modules/mongodb"
 
-  project     = var.project
-  environment = var.environment
-  vpc_id      = module.vpc.vpc_id
-  subnet_ids  = module.vpc.private_subnet_ids
+  project               = var.project
+  environment           = var.environment
+  vpc_id                = module.vpc.vpc_id
+  subnet_ids            = module.vpc.private_subnet_ids
   ecs_security_group_id = module.ecs.ecs_tasks_security_group_id
-  admin_username = var.mongodb_admin_username
+  admin_username        = var.mongodb_admin_username
 
   # Development uses minimal resources
   instance_type = "t3.micro"
@@ -102,18 +102,17 @@ module "mongodb" {
 module "sonarqube" {
   source = "../../modules/sonarqube"
 
-  project     = var.project
-  environment = var.environment
-  vpc_id      = module.vpc.vpc_id
-  aws_region  = var.aws_region
-  db_instance_class  = "db.t3.small"
-  db_username        = var.sonarqube_db_username
-  db_subnet_group_name = module.rds.db_subnet_group_name
+  project               = var.project
+  environment           = var.environment
+  vpc_id                = module.vpc.vpc_id
+  subnet_ids            = module.vpc.private_subnet_ids
+  aws_region            = var.aws_region
+  db_instance_class     = "db.t3.small"
+  db_username           = var.sonarqube_db_username
+  db_subnet_group_name  = module.rds.db_subnet_group_name
   alb_security_group_id = module.alb.alb_security_group_id
-  db_password_arn    = module.sonarqube.sonarqube_password_arn
-  db_password        = module.sonarqube.sonarqube_password
-  alb_dns_name       = module.alb.alb_dns_name
-  db_endpoint        = module.rds.db_instance_endpoint
+  alb_dns_name          = module.alb.alb_dns_name
+  db_endpoint           = module.rds.db_instance_endpoint
 }
 
 # Monitoring Module
