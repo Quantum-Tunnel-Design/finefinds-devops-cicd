@@ -7,14 +7,14 @@ if ! command -v aws &> /dev/null; then
 fi
 
 # Check if required environment variables are set
-if [ -z "$AWS_ACCOUNT_ID" ] || [ -z "$GITHUB_ORG" ] || [ -z "$GITHUB_REPO" ]; then
-    echo "Please set AWS_ACCOUNT_ID, GITHUB_ORG, and GITHUB_REPO environment variables"
+if [ -z "$AWS_ACCOUNT_ID" ] || [ -z "$REPO_ORG" ] || [ -z "$REPO_NAME" ]; then
+    echo "Please set AWS_ACCOUNT_ID, REPO_ORG, and REPO_NAME environment variables"
     exit 1
 fi
 
 echo "=== Environment Configuration ==="
-echo "GitHub Organization: $GITHUB_ORG"
-echo "GitHub Repository: $GITHUB_REPO"
+echo "GitHub Organization: $REPO_ORG"
+echo "GitHub Repository: $REPO_NAME"
 echo "AWS Account ID: $AWS_ACCOUNT_ID"
 echo "================================"
 
@@ -110,7 +110,7 @@ create_environment_role() {
             "Action": "sts:AssumeRoleWithWebIdentity",
             "Condition": {
                 "StringLike": {
-                    "token.actions.githubusercontent.com:sub": "repo:${GITHUB_ORG}/${GITHUB_REPO}:environment:${env}"
+                    "token.actions.githubusercontent.com:sub": "repo:${REPO_ORG}/${REPO_NAME}:environment:${env}"
                 }
             }
         }

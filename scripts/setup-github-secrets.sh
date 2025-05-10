@@ -6,168 +6,67 @@ if ! command -v gh &> /dev/null; then
     exit 1
 fi
 
-# Check if required environment variables are set
-if [ -z "$SONAR_TOKEN" ] || [ -z "$SONAR_HOST_URL" ]; then
-    echo "Please set SONAR_TOKEN and SONAR_HOST_URL environment variables"
-    exit 1
-fi
+# Source the environment variables
+source ./scripts/export-env.sh
 
-# Define valid environments
-VALID_BRANCHES=("main" "dev" "qa" "staging" "sandbox")
-VALID_ENVS=("prod" "dev" "qa" "staging" "sandbox")
-
-# Function to convert to uppercase (POSIX compliant)
-to_upper() {
-    echo "$1" | tr '[:lower:]' '[:upper:]'
-}
-
-# Function to get environment name from branch
-get_env_from_branch() {
-    local branch=$1
-    case "$branch" in
-        "main")
-            echo "prod"
-            ;;
-        "dev"|"qa"|"staging"|"sandbox")
-            echo "$branch"
-            ;;
-        *)
-            echo ""
-            ;;
-    esac
-}
-
-# Function to validate environment names
-validate_environments() {
-    for branch in "${VALID_BRANCHES[@]}"; do
-        local env
-        env=$(get_env_from_branch "$branch")
-        if [ -z "$env" ]; then
-            echo "Error: Invalid branch name: $branch"
-            exit 1
-        fi
-    done
-}
-
-# Function to create environment if it doesn't exist
-create_environment() {
-    local env=$1
-    echo "Creating environment: $env"
-    
-    # Check if environment exists
-    if ! gh api "repos/:owner/:repo/environments/$env" &> /dev/null; then
-        if ! gh api repos/:owner/:repo/environments -f name="$env" &> /dev/null; then
-            echo "Error: Failed to create environment: $env"
-            return 1
-        fi
-    fi
-    return 0
-}
-
-# Function to set a secret with error handling
-set_secret() {
-    local name=$1
-    local value=$2
-    local env=$3
-    
-    if ! gh secret set "$name" --body "$value" --env "$env" &> /dev/null; then
-        echo "Error: Failed to set secret $name for environment $env"
-        return 1
-    fi
-    return 0
-}
-
-# Function to set secrets for an environment
+# Function to set secrets for a specific environment
 set_environment_secrets() {
-    local branch=$1
-    local env
-    local aws_access_key_var
-    local aws_secret_key_var
-    local errors=0
-    
-    env=$(get_env_from_branch "$branch")
-    aws_access_key_var="AWS_$(to_upper "$env")_ACCESS_KEY"
-    aws_secret_key_var="AWS_$(to_upper "$env")_SECRET_KEY"
-    
+    local env=$1
     echo "Setting secrets for environment: $env"
     
-    # Create environment if it doesn't exist
-    if ! create_environment "$env"; then
-        echo "Error: Failed to create environment $env"
-        return 1
-    fi
-    
     # Set SonarQube secrets
-    echo "Setting SonarQube secrets for $env"
-    if ! set_secret "SONAR_TOKEN" "$SONAR_TOKEN" "$env"; then
-        errors=$((errors + 1))
-    fi
-    if ! set_secret "SONAR_HOST_URL" "$SONAR_HOST_URL" "$env"; then
-        errors=$((errors + 1))
-    fi
+    gh secret set SONAR_TOKEN -b"$SONAR_TOKEN" --env "$env"
+    gh secret set SONAR_HOST_URL -b"$SONAR_HOST_URL" --env "$env"
     
-    # Set AWS secrets
-    echo "Setting AWS secrets for $env"
-    if [ -n "${!aws_access_key_var}" ] && [ -n "${!aws_secret_key_var}" ]; then
-        if ! set_secret "AWS_ACCESS_KEY_ID" "${!aws_access_key_var}" "$env"; then
-            errors=$((errors + 1))
-        fi
-        if ! set_secret "AWS_SECRET_ACCESS_KEY" "${!aws_secret_key_var}" "$env"; then
-            errors=$((errors + 1))
-        fi
-    else
-        echo "Warning: AWS credentials not set for $env environment"
-    fi
+    # Set AWS Account ID and Region (common for all environments)
+    gh secret set AWS_ACCOUNT_ID -b"$AWS_ACCOUNT_ID" --env "$env"
+    gh secret set AWS_REGION -b"$AWS_REGION" --env "$env"
     
-    # Set AWS region
-    if ! set_secret "AWS_REGION" "us-east-1" "$env"; then
-        errors=$((errors + 1))
-    fi
+    # Set environment-specific AWS credentials
+    case "$env" in
+        "prod")
+            gh secret set AWS_ACCESS_KEY_ID -b"$AWS_PROD_ACCESS_KEY" --env "$env"
+            gh secret set AWS_SECRET_ACCESS_KEY -b"$AWS_PROD_SECRET_KEY" --env "$env"
+            ;;
+        "staging")
+            gh secret set AWS_ACCESS_KEY_ID -b"$AWS_STAGING_ACCESS_KEY" --env "$env"
+            gh secret set AWS_SECRET_ACCESS_KEY -b"$AWS_STAGING_SECRET_KEY" --env "$env"
+            ;;
+        "dev")
+            gh secret set AWS_ACCESS_KEY_ID -b"$AWS_DEV_ACCESS_KEY" --env "$env"
+            gh secret set AWS_SECRET_ACCESS_KEY -b"$AWS_DEV_SECRET_KEY" --env "$env"
+            ;;
+        "qa")
+            gh secret set AWS_ACCESS_KEY_ID -b"$AWS_QA_ACCESS_KEY" --env "$env"
+            gh secret set AWS_SECRET_ACCESS_KEY -b"$AWS_QA_SECRET_KEY" --env "$env"
+            ;;
+        "sandbox")
+            gh secret set AWS_ACCESS_KEY_ID -b"$AWS_SANDBOX_ACCESS_KEY" --env "$env"
+            gh secret set AWS_SECRET_ACCESS_KEY -b"$AWS_SANDBOX_SECRET_KEY" --env "$env"
+            ;;
+    esac
     
-    # Verify secrets
-    echo "Verifying secrets for $env"
-    if ! gh secret list --env "$env" &> /dev/null; then
-        echo "Error: Failed to list secrets for environment $env"
-        errors=$((errors + 1))
-    fi
+    # Set repository information (using non-GITHUB_ prefixed names)
+    gh secret set REPO_ORG -b"$REPO_ORG" --env "$env"
+    gh secret set REPO_NAME -b"$REPO_NAME" --env "$env"
     
-    return $errors
+    echo "✅ Secrets set for $env environment"
 }
 
-# Validate environments
-validate_environments
+# Create environments if they don't exist
+echo "Creating environments..."
+gh api repos/:owner/:repo/environments -f name="prod" || true
+gh api repos/:owner/:repo/environments -f name="staging" || true
+gh api repos/:owner/:repo/environments -f name="dev" || true
+gh api repos/:owner/:repo/environments -f name="qa" || true
+gh api repos/:owner/:repo/environments -f name="sandbox" || true
 
-# Set up secrets for each environment
-total_errors=0
+# Set secrets for each environment
+echo "Setting up secrets for each environment..."
+set_environment_secrets "prod"
+set_environment_secrets "staging"
+set_environment_secrets "dev"
+set_environment_secrets "qa"
+set_environment_secrets "sandbox"
 
-echo "Setting up secrets for production (main) environment"
-if ! set_environment_secrets "main"; then
-    total_errors=$((total_errors + 1))
-fi
-
-echo "Setting up secrets for staging environment"
-if ! set_environment_secrets "staging"; then
-    total_errors=$((total_errors + 1))
-fi
-
-echo "Setting up secrets for development environment"
-if ! set_environment_secrets "dev"; then
-    total_errors=$((total_errors + 1))
-fi
-
-echo "Setting up secrets for QA environment"
-if ! set_environment_secrets "qa"; then
-    total_errors=$((total_errors + 1))
-fi
-
-echo "Setting up secrets for sandbox environment"
-if ! set_environment_secrets "sandbox"; then
-    total_errors=$((total_errors + 1))
-fi
-
-if [ $total_errors -eq 0 ]; then
-    echo "GitHub secrets setup completed successfully!"
-else
-    echo "GitHub secrets setup completed with $total_errors errors"
-    exit 1
-fi 
+echo "✅ GitHub secrets setup completed for all environments!" 

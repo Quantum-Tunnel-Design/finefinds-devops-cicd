@@ -30,27 +30,45 @@ resource "aws_security_group" "rds" {
   }
 }
 
+# Generate random password for RDS
+resource "random_password" "db_password" {
+  length           = 16
+  special          = true
+  override_special = "!#$%&*()-_=+[]{}<>:?"
+}
+
+# Store the password in Secrets Manager
+resource "aws_secretsmanager_secret" "db_password" {
+  name = "${var.project}-${var.environment}-db-password"
+  description = "Database password for ${var.environment} environment"
+}
+
+resource "aws_secretsmanager_secret_version" "db_password" {
+  secret_id     = aws_secretsmanager_secret.db_password.id
+  secret_string = random_password.db_password.result
+}
+
 # RDS Instance
-resource "aws_db_instance" "postgres" {
-  identifier           = "${var.project}-${var.environment}-db"
-  engine              = "postgres"
-  engine_version      = var.engine_version
-  instance_class      = var.instance_class
-  allocated_storage   = var.allocated_storage
-  storage_type        = var.storage_type
-  db_name             = var.db_name
-  username            = var.db_username
-  password            = var.db_password
-  skip_final_snapshot = var.skip_final_snapshot
+resource "aws_db_instance" "main" {
+  identifier = "${var.project}-${var.environment}-db"
+
+  engine         = "postgres"
+  engine_version = "14.7"
+  instance_class = var.instance_class
+
+  allocated_storage     = var.allocated_storage
+  storage_type         = "gp2"
+  storage_encrypted    = true
+
+  db_name  = "finefinds"
+  username = var.db_username
+  password = random_password.db_password.result
 
   vpc_security_group_ids = [aws_security_group.rds.id]
   db_subnet_group_name   = aws_db_subnet_group.main.name
 
-  backup_retention_period = var.backup_retention_period
-  backup_window          = var.backup_window
-  maintenance_window     = var.maintenance_window
-
-  multi_az = var.environment == "production"
+  backup_retention_period = 7
+  skip_final_snapshot    = var.skip_final_snapshot
 
   tags = {
     Environment = var.environment
@@ -85,12 +103,6 @@ variable "ecs_security_group_id" {
   type        = string
 }
 
-variable "engine_version" {
-  description = "PostgreSQL engine version"
-  type        = string
-  default     = "14.7"
-}
-
 variable "instance_class" {
   description = "RDS instance class"
   type        = string
@@ -103,70 +115,35 @@ variable "allocated_storage" {
   default     = 20
 }
 
-variable "storage_type" {
-  description = "Storage type"
-  type        = string
-  default     = "gp2"
-}
-
-variable "db_name" {
-  description = "Name of the database"
-  type        = string
-  default     = "finefinds"
-}
-
-variable "db_username" {
-  description = "Master username"
-  type        = string
-}
-
-variable "db_password" {
-  description = "Master password"
-  type        = string
-  sensitive   = true
-}
-
 variable "skip_final_snapshot" {
   description = "Skip final snapshot when destroying"
   type        = bool
   default     = false
 }
 
-variable "backup_retention_period" {
-  description = "Backup retention period in days"
-  type        = number
-  default     = 7
-}
-
-variable "backup_window" {
-  description = "Backup window"
-  type        = string
-  default     = "03:00-04:00"
-}
-
-variable "maintenance_window" {
-  description = "Maintenance window"
-  type        = string
-  default     = "Mon:04:00-Mon:05:00"
-}
-
 # Outputs
 output "db_instance_id" {
   description = "ID of the RDS instance"
-  value       = aws_db_instance.postgres.id
+  value       = aws_db_instance.main.id
 }
 
 output "db_instance_endpoint" {
   description = "Endpoint of the RDS instance"
-  value       = aws_db_instance.postgres.endpoint
+  value       = aws_db_instance.main.endpoint
 }
 
 output "db_instance_name" {
   description = "Name of the RDS instance"
-  value       = aws_db_instance.postgres.name
+  value       = aws_db_instance.main.name
 }
 
 output "db_instance_port" {
   description = "Port of the RDS instance"
-  value       = aws_db_instance.postgres.port
+  value       = aws_db_instance.main.port
+}
+
+output "db_password_arn" {
+  description = "ARN of the database password in Secrets Manager"
+  value       = aws_secretsmanager_secret.db_password.arn
+  sensitive   = true
 } 

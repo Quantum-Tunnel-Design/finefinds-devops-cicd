@@ -96,29 +96,58 @@ resource "aws_efs_access_point" "sonarqube" {
   }
 }
 
-# RDS for SonarQube database
+# Generate random password for SonarQube
+resource "random_password" "sonarqube_password" {
+  length           = 16
+  special          = true
+  override_special = "!#$%&*()-_=+[]{}<>:?"
+}
+
+# Store the password in Secrets Manager
+resource "aws_secretsmanager_secret" "sonarqube_password" {
+  name = "${var.project}-${var.environment}-sonarqube-password"
+  description = "SonarQube password for ${var.environment} environment"
+}
+
+resource "aws_secretsmanager_secret_version" "sonarqube_password" {
+  secret_id     = aws_secretsmanager_secret.sonarqube_password.id
+  secret_string = random_password.sonarqube_password.result
+}
+
+# SonarQube RDS Instance
 resource "aws_db_instance" "sonarqube" {
-  identifier           = "sonarqube-${var.environment}"
-  engine              = "postgres"
-  engine_version      = "13.7"
-  instance_class      = local.config.db_instance_class
-  allocated_storage   = 20
-  storage_type        = "gp2"
-  db_name             = "sonarqube"
-  username            = var.db_username
-  password            = var.db_password
-  skip_final_snapshot = var.environment != "prod"
+  identifier = "${var.project}-${var.environment}-sonarqube"
 
-  vpc_security_group_ids = [aws_security_group.sonarqube_db.id]
+  engine         = "postgres"
+  engine_version = "14.7"
+  instance_class = var.db_instance_class
+
+  allocated_storage     = 20
+  storage_type         = "gp2"
+  storage_encrypted    = true
+
+  db_name  = "sonarqube"
+  username = var.db_username
+  password = random_password.sonarqube_password.result
+
   db_subnet_group_name   = var.db_subnet_group_name
+  vpc_security_group_ids = [aws_security_group.sonarqube.id]
 
-  backup_retention_period = local.config.backup_retention
-  multi_az               = local.config.multi_az
+  backup_retention_period = 7
+  skip_final_snapshot    = true
 
   tags = {
-    Name        = "sonarqube-${var.environment}"
     Environment = var.environment
+    Project     = var.project
+    Terraform   = "true"
   }
+}
+
+# Output the password ARN
+output "sonarqube_password_arn" {
+  description = "ARN of the SonarQube password in Secrets Manager"
+  value       = aws_secretsmanager_secret.sonarqube_password.arn
+  sensitive   = true
 }
 
 # Security group for SonarQube database

@@ -25,6 +25,43 @@ resource "aws_security_group" "mongodb" {
   }
 }
 
+# Generate random password for MongoDB
+resource "random_password" "mongodb_password" {
+  length           = 16
+  special          = true
+  override_special = "!#$%&*()-_=+[]{}<>:?"
+}
+
+# Store the password in Secrets Manager
+resource "aws_secretsmanager_secret" "mongodb_password" {
+  name = "${var.project}-${var.environment}-mongodb-password"
+  description = "MongoDB password for ${var.environment} environment"
+}
+
+resource "aws_secretsmanager_secret_version" "mongodb_password" {
+  secret_id     = aws_secretsmanager_secret.mongodb_password.id
+  secret_string = random_password.mongodb_password.result
+}
+
+# MongoDB Instance
+resource "aws_docdb_cluster" "main" {
+  cluster_identifier = "${var.project}-${var.environment}-mongodb"
+  engine            = "docdb"
+  master_username   = "admin"
+  master_password   = random_password.mongodb_password.result
+
+  db_subnet_group_name   = aws_docdb_subnet_group.main.name
+  vpc_security_group_ids = [aws_security_group.mongodb.id]
+
+  skip_final_snapshot = true
+
+  tags = {
+    Environment = var.environment
+    Project     = var.project
+    Terraform   = "true"
+  }
+}
+
 # EC2 Instance
 resource "aws_instance" "mongodb" {
   ami           = var.ami_id
@@ -161,4 +198,11 @@ output "endpoint" {
 output "security_group_id" {
   description = "Security group ID of the MongoDB instance"
   value       = aws_security_group.mongodb.id
+}
+
+# Output the password ARN
+output "mongodb_password_arn" {
+  description = "ARN of the MongoDB password in Secrets Manager"
+  value       = aws_secretsmanager_secret.mongodb_password.arn
+  sensitive   = true
 } 
