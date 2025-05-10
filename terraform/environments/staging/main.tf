@@ -130,6 +130,14 @@ module "monitoring" {
   environment = var.environment
   aws_region  = var.aws_region
   alert_email = var.alert_email
+  
+  name_prefix       = local.name_prefix
+  ecs_cluster_name  = module.ecs.cluster_name
+  ecs_service_name  = module.ecs.service_name
+  rds_instance_id   = module.rds.db_instance_id
+  alb_arn_suffix    = module.alb.alb_arn_suffix
+
+  tags = local.common_tags
 }
 
 # SonarQube Module

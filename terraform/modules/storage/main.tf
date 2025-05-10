@@ -4,7 +4,7 @@ resource "aws_db_instance" "main" {
   engine              = "postgres"
   engine_version      = "14.7"
   instance_class      = var.db_instance_class
-  allocated_storage   = 20
+  allocated_storage   = var.allocated_storage
   storage_type        = "gp2"
   storage_encrypted   = true
 
@@ -20,7 +20,7 @@ resource "aws_db_instance" "main" {
   maintenance_window     = "Mon:04:00-Mon:05:00"
 
   multi_az               = var.environment == "prod"
-  skip_final_snapshot    = var.environment != "prod"
+  skip_final_snapshot    = var.skip_final_snapshot
   deletion_protection    = var.environment == "prod"
 
   tags = var.tags
