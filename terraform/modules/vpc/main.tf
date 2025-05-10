@@ -4,12 +4,12 @@ resource "aws_vpc" "main" {
   enable_dns_hostnames = true
   enable_dns_support   = true
 
-  tags = {
-    Name        = "${var.project}-${var.environment}-vpc"
-    Environment = var.environment
-    Project     = var.project
-    Terraform   = "true"
-  }
+  tags = merge(
+    {
+      Name = "${var.project}-${var.environment}-vpc"
+    },
+    var.tags
+  )
 
   lifecycle {
     create_before_destroy = true

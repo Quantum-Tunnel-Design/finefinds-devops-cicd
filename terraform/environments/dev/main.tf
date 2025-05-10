@@ -9,10 +9,9 @@ module "vpc" {
   project     = var.project
   environment = var.environment
   vpc_cidr    = local.vpc_cidr
-  azs         = local.azs
+  availability_zones = local.azs
   public_subnet_cidrs  = local.public_subnet_cidrs
   private_subnet_cidrs = local.private_subnet_cidrs
-
   tags = local.common_tags
 }
 
