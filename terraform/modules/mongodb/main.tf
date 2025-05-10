@@ -36,6 +36,10 @@ resource "random_password" "mongodb_password" {
 resource "aws_secretsmanager_secret" "mongodb_password" {
   name = "${var.project}-${var.environment}-mongodb-password"
   description = "MongoDB password for ${var.environment} environment"
+
+  lifecycle {
+    ignore_changes = [name]
+  }
 }
 
 resource "aws_secretsmanager_secret_version" "mongodb_password" {
@@ -53,13 +57,17 @@ resource "aws_docdb_subnet_group" "main" {
     Project     = var.project
     Terraform   = "true"
   }
+
+  lifecycle {
+    ignore_changes = [name]
+  }
 }
 
 # MongoDB Instance
 resource "aws_docdb_cluster" "main" {
   cluster_identifier = "${var.project}-${var.environment}-mongodb"
   engine            = "docdb"
-  master_username   = var.admin_username
+  master_username   = var.admin_username != "admin" ? var.admin_username : "mongoadmin"
   master_password   = random_password.mongodb_password.result
 
   db_subnet_group_name   = aws_docdb_subnet_group.main.name
@@ -71,6 +79,15 @@ resource "aws_docdb_cluster" "main" {
     Environment = var.environment
     Project     = var.project
     Terraform   = "true"
+  }
+
+  lifecycle {
+    ignore_changes = [
+      cluster_identifier,
+      master_username,
+      master_password,
+      engine_version
+    ]
   }
 }
 
@@ -211,4 +228,59 @@ output "mongodb_password_arn" {
   description = "ARN of the MongoDB password in Secrets Manager"
   value       = aws_secretsmanager_secret.mongodb_password.arn
   sensitive   = true
+}
+
+# IAM Roles
+resource "aws_iam_role" "ecs_execution_role" {
+  name = "${var.project}-${var.environment}-mongodb-execution-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Environment = var.environment
+    Project     = var.project
+    Terraform   = "true"
+  }
+
+  lifecycle {
+    ignore_changes = [name]
+  }
+}
+
+resource "aws_iam_role" "ecs_task_role" {
+  name = "${var.project}-${var.environment}-mongodb-task-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Environment = var.environment
+    Project     = var.project
+    Terraform   = "true"
+  }
+
+  lifecycle {
+    ignore_changes = [name]
+  }
 } 

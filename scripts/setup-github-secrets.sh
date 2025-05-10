@@ -6,6 +6,12 @@ if ! command -v gh &> /dev/null; then
     exit 1
 fi
 
+# Check if user is authenticated
+if ! gh auth status &> /dev/null; then
+    echo "Please login to GitHub first using 'gh auth login'"
+    exit 1
+fi
+
 # Source the environment variables
 source ./scripts/export-env.sh
 
@@ -13,10 +19,6 @@ source ./scripts/export-env.sh
 set_environment_secrets() {
     local env=$1
     echo "Setting secrets for environment: $env"
-    
-    # Set SonarQube secrets
-    gh secret set SONAR_TOKEN -b"$SONAR_TOKEN" --env "$env"
-    gh secret set SONAR_HOST_URL -b"$SONAR_HOST_URL" --env "$env"
     
     # Set AWS Account ID and Region (common for all environments)
     gh secret set AWS_ACCOUNT_ID -b"$AWS_ACCOUNT_ID" --env "$env"
@@ -69,4 +71,31 @@ set_environment_secrets "dev"
 set_environment_secrets "qa"
 set_environment_secrets "sandbox"
 
-echo "✅ GitHub secrets setup completed for all environments!" 
+echo "✅ GitHub secrets setup completed for all environments!"
+
+# Function to set secrets for a repository
+set_repo_secrets() {
+    local repo=$1
+    echo "Setting secrets for repository: $repo"
+    
+    # Set GitHub token
+    gh secret set GITHUB_TOKEN --body "$TF_VAR_github_token" --repo "$repo"
+    
+    # Set environment-specific variables
+    gh secret set VITE_GRAPHQL_ENDPOINT --body "https://api.${TF_VAR_environment}.finefinds.com/graphql" --repo "$repo"
+    gh secret set VITE_ENVIRONMENT --body "$TF_VAR_environment" --repo "$repo"
+    
+    # Only set SonarQube secrets for non-devops repositories
+    if [[ "$repo" != *"finefinds-devops-cicd"* ]]; then
+        gh secret set SONAR_TOKEN --body "$TF_VAR_sonar_token" --repo "$repo"
+        gh secret set VITE_SONARQUBE_URL --body "https://sonarqube.${TF_VAR_environment}.finefinds.com" --repo "$repo"
+    fi
+}
+
+# Set secrets for client web app
+set_repo_secrets "Quantum-Tunnel-Design/finefinds-client-web-app"
+
+# Set secrets for admin dashboard
+set_repo_secrets "Quantum-Tunnel-Design/finefinds-admin"
+
+echo "GitHub secrets have been set successfully!" 

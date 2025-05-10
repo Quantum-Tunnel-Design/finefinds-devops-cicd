@@ -1,6 +1,6 @@
 output "sonarqube_url" {
   description = "URL of the SonarQube server"
-  value       = "http://${var.alb_dns_name}"
+  value       = "https://sonarqube.${var.environment}.finefinds.com"
 }
 
 output "sonarqube_initial_password" {

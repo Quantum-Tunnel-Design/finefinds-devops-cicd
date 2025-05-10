@@ -1,12 +1,16 @@
 # CloudWatch Log Group
 resource "aws_cloudwatch_log_group" "ecs" {
   name              = "/ecs/${var.project}-${var.environment}"
-  retention_in_days = var.log_retention_days
+  retention_in_days = 30
 
   tags = {
     Environment = var.environment
     Project     = var.project
     Terraform   = "true"
+  }
+
+  lifecycle {
+    ignore_changes = [name]
   }
 }
 
@@ -80,7 +84,7 @@ resource "aws_grafana_workspace" "main" {
 
 # IAM Role for Grafana
 resource "aws_iam_role" "grafana" {
-  name = "grafana-${var.environment}"
+  name = "${var.project}-${var.environment}-grafana"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -94,6 +98,16 @@ resource "aws_iam_role" "grafana" {
       }
     ]
   })
+
+  tags = {
+    Environment = var.environment
+    Project     = var.project
+    Terraform   = "true"
+  }
+
+  lifecycle {
+    ignore_changes = [name]
+  }
 }
 
 # IAM Policy for Grafana

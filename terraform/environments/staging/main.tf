@@ -24,29 +24,25 @@ module "alb" {
   environment = var.environment
   vpc_id      = module.vpc.vpc_id
   subnet_ids  = module.vpc.public_subnet_ids
+  target_group_arn = module.ecs.target_group_arn
 }
 
 # ECS Module
 module "ecs" {
   source = "../../modules/ecs"
 
-  project     = var.project
-  environment = var.environment
-  vpc_id      = module.vpc.vpc_id
-  subnet_ids  = module.vpc.private_subnet_ids
-
-  # Staging uses moderate resources
-  task_cpu            = 512
-  task_memory         = 1024
-  service_desired_count = 2
-  container_name      = var.container_name
-  container_port      = var.container_port
-  ecr_repository_url  = var.ecr_repository_url
-  image_tag           = var.image_tag
-  database_url_arn    = var.database_url_arn
-  mongodb_uri_arn     = var.mongodb_uri_arn
-  alb_security_group_id = module.alb.alb_security_group_id
-  aws_region          = var.aws_region
+  project            = var.project
+  environment        = var.environment
+  vpc_id            = module.vpc.vpc_id
+  subnet_ids        = module.vpc.private_subnet_ids
+  container_name    = var.container_name
+  container_port    = var.container_port
+  ecr_repository_url = var.ecr_repository_url
+  image_tag         = var.image_tag
+  alb_security_group_id = module.alb.security_group_id
+  database_url_arn  = module.rds.db_password_arn
+  mongodb_uri_arn   = module.mongodb.mongodb_password_arn
+  aws_region        = var.aws_region
 }
 
 # RDS Module
@@ -57,15 +53,12 @@ module "rds" {
   environment = var.environment
   vpc_id      = module.vpc.vpc_id
   subnet_ids  = module.vpc.private_subnet_ids
-
-  ecs_security_group_id = module.ecs.ecs_tasks_security_group_id
-  db_username          = var.db_username
-  db_password          = var.db_password
-
-  # Staging uses moderate resources
-  instance_class      = "db.t3.small"
-  allocated_storage   = 50
-  skip_final_snapshot = false
+  ecs_security_group_id = module.ecs.security_group_id
+  db_username = var.db_username
+  db_instance_class = "db.t3.micro"
+  allocated_storage = 20
+  skip_final_snapshot = true
+  db_name = "finefinds"
 }
 
 # Cognito Module
@@ -100,9 +93,8 @@ module "mongodb" {
   environment = var.environment
   vpc_id      = module.vpc.vpc_id
   subnet_ids  = module.vpc.private_subnet_ids
-
-  # Staging uses moderate resources
-  instance_type = "t3.medium"
+  ecs_security_group_id = module.ecs.security_group_id
+  admin_username = var.mongodb_admin_username
 }
 
 # Monitoring Module
@@ -112,90 +104,38 @@ module "monitoring" {
   project     = var.project
   environment = var.environment
   aws_region  = var.aws_region
+  alert_email = var.alert_email
 }
 
 # SonarQube Module
 module "sonarqube" {
   source = "../../modules/sonarqube"
 
-  environment         = var.environment
-  vpc_id             = module.vpc.vpc_id
-  aws_region         = var.aws_region
-  db_instance_class  = "db.t3.medium"
-  db_username        = var.sonarqube_db_username
-  db_password        = var.sonarqube_db_password
-  db_password_arn    = var.sonarqube_db_password_arn
+  project     = var.project
+  environment = var.environment
+  vpc_id      = module.vpc.vpc_id
+  subnet_ids  = module.vpc.private_subnet_ids
+  aws_region  = var.aws_region
+  db_instance_class = "db.t3.micro"
+  db_username = var.sonarqube_db_username
+  alb_security_group_id = module.alb.security_group_id
+  alb_dns_name = module.alb.dns_name
+  db_endpoint = module.rds.endpoint
   db_subnet_group_name = module.rds.db_subnet_group_name
-  alb_security_group_id = module.alb.alb_security_group_id
 }
 
-# Variables
-variable "project" {
-  description = "Project name"
-  type        = string
-  default     = "finefinds"
-}
+# Amplify Module
+module "amplify" {
+  source = "../../modules/amplify"
 
-variable "environment" {
-  description = "Environment name"
-  type        = string
-  default     = "staging"
-}
-
-variable "aws_region" {
-  description = "AWS region"
-  type        = string
-  default     = "us-east-1"
-}
-
-variable "container_name" {
-  description = "Name of the container"
-  type        = string
-  default     = "app"
-}
-
-variable "container_port" {
-  description = "Port exposed by the container"
-  type        = number
-  default     = 3000
-}
-
-variable "ecr_repository_url" {
-  description = "URL of the ECR repository"
-  type        = string
-}
-
-variable "image_tag" {
-  description = "Tag of the container image to deploy"
-  type        = string
-  default     = "latest"
-}
-
-variable "database_url_arn" {
-  description = "ARN of the database URL secret"
-  type        = string
-}
-
-variable "mongodb_uri_arn" {
-  description = "ARN of the MongoDB URI secret"
-  type        = string
-}
-
-variable "alb_security_group_id" {
-  description = "Security group ID of the ALB"
-  type        = string
-  default     = null
-}
-
-variable "db_username" {
-  description = "Master username for RDS"
-  type        = string
-}
-
-variable "db_password" {
-  description = "Master password for RDS"
-  type        = string
-  sensitive   = true
+  project     = var.project
+  environment = var.environment
+  github_token = var.github_token
+  client_repository = var.client_repository
+  admin_repository = var.admin_repository
+  sonar_token = var.sonar_token
+  graphql_endpoint = "https://api.${var.environment}.finefinds.com/graphql"
+  sonarqube_url = module.sonarqube.sonarqube_url
 }
 
 # Outputs

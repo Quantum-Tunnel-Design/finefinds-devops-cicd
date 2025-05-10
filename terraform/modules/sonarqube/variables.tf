@@ -1,3 +1,8 @@
+variable "project" {
+  description = "Project name"
+  type        = string
+}
+
 variable "environment" {
   description = "Environment name"
   type        = string
@@ -6,6 +11,11 @@ variable "environment" {
 variable "vpc_id" {
   description = "VPC ID where resources will be created"
   type        = string
+}
+
+variable "subnet_ids" {
+  description = "List of subnet IDs for the SonarQube instance"
+  type        = list(string)
 }
 
 variable "aws_region" {
@@ -34,17 +44,7 @@ variable "db_instance_class" {
 variable "db_username" {
   description = "Username for SonarQube database"
   type        = string
-}
-
-variable "db_password" {
-  description = "Password for SonarQube database"
-  type        = string
-  sensitive   = true
-}
-
-variable "db_password_arn" {
-  description = "ARN of the secret containing the database password"
-  type        = string
+  default     = "sonarqube"
 }
 
 variable "db_subnet_group_name" {
@@ -57,11 +57,6 @@ variable "alb_security_group_id" {
   type        = string
 }
 
-variable "project" {
-  description = "Project name"
-  type        = string
-}
-
 variable "alb_dns_name" {
   description = "DNS name of the ALB"
   type        = string
@@ -70,4 +65,16 @@ variable "alb_dns_name" {
 variable "db_endpoint" {
   description = "Endpoint of the SonarQube database"
   type        = string
+}
+
+variable "allocated_storage" {
+  description = "Allocated storage in GB"
+  type        = number
+  default     = 20
+}
+
+variable "skip_final_snapshot" {
+  description = "Skip final snapshot when destroying"
+  type        = bool
+  default     = false
 } 

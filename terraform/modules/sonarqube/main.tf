@@ -1,9 +1,10 @@
+# ECS Task Definition
 resource "aws_ecs_task_definition" "sonarqube" {
   family                   = "sonarqube-${var.environment}"
   requires_compatibilities = ["FARGATE"]
   network_mode            = "awsvpc"
-  cpu                     = local.config.task_cpu
-  memory                  = local.config.task_memory
+  cpu                     = var.task_cpu
+  memory                  = var.task_memory
   execution_role_arn      = aws_iam_role.ecs_execution_role.arn
   task_role_arn           = aws_iam_role.ecs_task_role.arn
 
@@ -39,7 +40,7 @@ resource "aws_ecs_task_definition" "sonarqube" {
       secrets = [
         {
           name      = "SONAR_JDBC_PASSWORD"
-          valueFrom = var.db_password_arn
+          valueFrom = aws_secretsmanager_secret.sonarqube_password.arn
         }
       ]
       logConfiguration = {
@@ -73,8 +74,14 @@ resource "aws_efs_file_system" "sonarqube" {
   encrypted      = true
 
   tags = {
-    Name        = "sonarqube-${var.environment}"
+    Name        = "${var.project}-${var.environment}-sonarqube"
     Environment = var.environment
+    Project     = var.project
+    Terraform   = "true"
+  }
+
+  lifecycle {
+    ignore_changes = [creation_token]
   }
 }
 
@@ -106,7 +113,11 @@ resource "random_password" "sonarqube_password" {
 # Store the password in Secrets Manager
 resource "aws_secretsmanager_secret" "sonarqube_password" {
   name = "${var.project}-${var.environment}-sonarqube-password"
-  description = "SonarQube password for ${var.environment} environment"
+  description = "SonarQube database password for ${var.environment} environment"
+
+  lifecycle {
+    ignore_changes = [name]
+  }
 }
 
 resource "aws_secretsmanager_secret_version" "sonarqube_password" {
@@ -114,12 +125,12 @@ resource "aws_secretsmanager_secret_version" "sonarqube_password" {
   secret_string = random_password.sonarqube_password.result
 }
 
-# SonarQube RDS Instance
+# RDS Instance for SonarQube
 resource "aws_db_instance" "sonarqube" {
   identifier = "${var.project}-${var.environment}-sonarqube"
 
   engine         = "postgres"
-  engine_version = "14.7"
+  engine_version = "17.5"
   instance_class = var.db_instance_class
 
   allocated_storage     = 20
@@ -127,11 +138,11 @@ resource "aws_db_instance" "sonarqube" {
   storage_encrypted    = true
 
   db_name  = "sonarqube"
-  username = var.db_username
+  username = "sonarqube_admin"
   password = random_password.sonarqube_password.result
 
+  vpc_security_group_ids = [aws_security_group.sonarqube_db.id]
   db_subnet_group_name   = var.db_subnet_group_name
-  vpc_security_group_ids = [aws_security_group.sonarqube.id]
 
   backup_retention_period = 7
   skip_final_snapshot    = true
@@ -140,6 +151,18 @@ resource "aws_db_instance" "sonarqube" {
     Environment = var.environment
     Project     = var.project
     Terraform   = "true"
+  }
+
+  lifecycle {
+    ignore_changes = [
+      identifier,
+      engine_version,
+      password,
+      db_name,
+      username,
+      allocated_storage,
+      instance_class
+    ]
   }
 }
 
@@ -197,7 +220,7 @@ resource "aws_security_group" "sonarqube" {
 
 # IAM Roles
 resource "aws_iam_role" "ecs_execution_role" {
-  name = "${var.project}-${var.environment}-ecs-execution-role"
+  name = "${var.project}-${var.environment}-sonarqube-execution-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -217,6 +240,10 @@ resource "aws_iam_role" "ecs_execution_role" {
     Project     = var.project
     Terraform   = "true"
   }
+
+  lifecycle {
+    ignore_changes = [name]
+  }
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
@@ -225,7 +252,7 @@ resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
 }
 
 resource "aws_iam_role" "ecs_task_role" {
-  name = "${var.project}-${var.environment}-ecs-task-role"
+  name = "${var.project}-${var.environment}-sonarqube-task-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -244,6 +271,10 @@ resource "aws_iam_role" "ecs_task_role" {
     Environment = var.environment
     Project     = var.project
     Terraform   = "true"
+  }
+
+  lifecycle {
+    ignore_changes = [name]
   }
 }
 
