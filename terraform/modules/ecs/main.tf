@@ -1,6 +1,6 @@
 # ECS Cluster
 resource "aws_ecs_cluster" "main" {
-  name = "${var.project}-${var.environment}-cluster"
+  name = "${var.project}-${var.environment}"
 
   setting {
     name  = "containerInsights"
@@ -8,15 +8,15 @@ resource "aws_ecs_cluster" "main" {
   }
 
   tags = {
+    Name        = "${var.project}-${var.environment}"
     Environment = var.environment
     Project     = var.project
-    Terraform   = "true"
   }
 }
 
 # ECS Task Execution Role
 resource "aws_iam_role" "ecs_task_execution_role" {
-  name = "${var.project}-${var.environment}-ecs-task-execution-role"
+  name = "${var.project}-${var.environment}-task-execution-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -34,7 +34,6 @@ resource "aws_iam_role" "ecs_task_execution_role" {
   tags = {
     Environment = var.environment
     Project     = var.project
-    Terraform   = "true"
   }
 }
 
@@ -45,7 +44,7 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
 
 # ECS Task Role
 resource "aws_iam_role" "ecs_task_role" {
-  name = "${var.project}-${var.environment}-ecs-task-role"
+  name = "${var.project}-${var.environment}-task-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -63,41 +62,46 @@ resource "aws_iam_role" "ecs_task_role" {
   tags = {
     Environment = var.environment
     Project     = var.project
-    Terraform   = "true"
   }
 }
 
 # ECS Task Definition
 resource "aws_ecs_task_definition" "app" {
-  family                   = "${var.project}-${var.environment}-app"
-  network_mode            = "awsvpc"
+  family                   = "${var.project}-${var.environment}"
   requires_compatibilities = ["FARGATE"]
-  cpu                     = var.task_cpu
-  memory                  = var.task_memory
+  network_mode            = "awsvpc"
+  cpu                     = 256
+  memory                  = 512
   execution_role_arn      = aws_iam_role.ecs_task_execution_role.arn
   task_role_arn           = aws_iam_role.ecs_task_role.arn
 
   container_definitions = jsonencode([
     {
-      name      = var.container_name
-      image     = "${var.ecr_repository_url}:${var.image_tag}"
-      essential = true
-
+      name  = "app"
+      image = "${var.ecr_repository_url}:latest"
       portMappings = [
         {
-          containerPort = var.container_port
-          hostPort      = var.container_port
+          containerPort = 3000
+          hostPort      = 3000
           protocol      = "tcp"
         }
       ]
-
       environment = [
         {
           name  = "NODE_ENV"
           value = var.environment
         }
       ]
-
+      secrets = [
+        {
+          name      = "DATABASE_URL"
+          valueFrom = var.database_url_arn
+        },
+        {
+          name      = "MONGODB_URI"
+          valueFrom = var.mongodb_uri_arn
+        }
+      ]
       logConfiguration = {
         logDriver = "awslogs"
         options = {
@@ -112,16 +116,15 @@ resource "aws_ecs_task_definition" "app" {
   tags = {
     Environment = var.environment
     Project     = var.project
-    Terraform   = "true"
   }
 }
 
 # ECS Service
 resource "aws_ecs_service" "app" {
-  name            = "${var.project}-${var.environment}-service"
+  name            = "${var.project}-${var.environment}"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.app.arn
-  desired_count   = var.service_desired_count
+  desired_count   = 1
   launch_type     = "FARGATE"
 
   network_configuration {
@@ -132,20 +135,16 @@ resource "aws_ecs_service" "app" {
 
   load_balancer {
     target_group_arn = var.alb_target_group_arn
-    container_name   = var.container_name
-    container_port   = var.container_port
-  }
-
-  deployment_circuit_breaker {
-    enable   = true
-    rollback = true
+    container_name   = "app"
+    container_port   = 3000
   }
 
   tags = {
     Environment = var.environment
     Project     = var.project
-    Terraform   = "true"
   }
+
+  depends_on = [aws_ecs_task_definition.app]
 }
 
 # CloudWatch Log Group
@@ -160,138 +159,15 @@ resource "aws_cloudwatch_log_group" "ecs" {
   }
 }
 
-# Outputs
-output "cluster_id" {
-  description = "ID of the ECS cluster"
-  value       = aws_ecs_cluster.main.id
-}
-
-output "cluster_name" {
-  description = "Name of the ECS cluster"
-  value       = aws_ecs_cluster.main.name
-}
-
-output "service_name" {
-  description = "Name of the ECS service"
-  value       = aws_ecs_service.app.name
-}
-
-output "task_definition_arn" {
-  description = "ARN of the task definition"
-  value       = aws_ecs_task_definition.app.arn
-}
-
-# Variables
-variable "project" {
-  description = "Project name"
-  type        = string
-}
-
-variable "environment" {
-  description = "Environment name"
-  type        = string
-}
-
-variable "vpc_id" {
-  description = "VPC ID where resources will be created"
-  type        = string
-}
-
-variable "subnet_ids" {
-  description = "List of subnet IDs for the ECS tasks"
-  type        = list(string)
-}
-
-variable "task_cpu" {
-  description = "CPU units for the task"
-  type        = number
-  default     = 256
-}
-
-variable "task_memory" {
-  description = "Memory for the task"
-  type        = number
-  default     = 512
-}
-
-variable "service_desired_count" {
-  description = "Desired number of tasks"
-  type        = number
-  default     = 1
-}
-
-variable "container_name" {
-  description = "Name of the container"
-  type        = string
-  default     = "app"
-}
-
-variable "container_port" {
-  description = "Port exposed by the container"
-  type        = number
-  default     = 3000
-}
-
-variable "ecr_repository_url" {
-  description = "URL of the ECR repository"
-  type        = string
-}
-
-variable "image_tag" {
-  description = "Tag of the container image to deploy"
-  type        = string
-  default     = "latest"
-}
-
-variable "database_url_arn" {
-  description = "ARN of the database URL secret"
-  type        = string
-}
-
-variable "mongodb_uri_arn" {
-  description = "ARN of the MongoDB URI secret"
-  type        = string
-}
-
-variable "alb_security_group_id" {
-  description = "Security group ID of the ALB"
-  type        = string
-}
-
-variable "aws_region" {
-  description = "AWS region"
-  type        = string
-}
-
-variable "use_existing_roles" {
-  description = "Whether to use existing IAM roles"
-  type        = bool
-  default     = true
-}
-
-variable "private_subnet_ids" {
-  description = "List of private subnet IDs for the ECS tasks"
-  type        = list(string)
-}
-
-variable "ecs_security_group_id" {
-  description = "Security group ID for ECS tasks"
-  type        = string
-}
-
-variable "alb_target_group_arn" {
-  description = "ARN of the ALB target group"
-  type        = string
-}
-
+# Security Group for ECS Tasks
 resource "aws_security_group" "ecs_tasks" {
   name        = "${var.project}-${var.environment}-ecs-tasks-sg"
   description = "Security group for ECS tasks"
   vpc_id      = var.vpc_id
 
   ingress {
-    from_port       = var.container_port
-    to_port         = var.container_port
+    from_port       = 3000
+    to_port         = 3000
     protocol        = "tcp"
     security_groups = [var.alb_security_group_id]
   }
@@ -310,9 +186,10 @@ resource "aws_security_group" "ecs_tasks" {
   }
 }
 
+# Target Group for ALB
 resource "aws_lb_target_group" "app" {
   name        = "${var.project}-${var.environment}-tg"
-  port        = var.container_port
+  port        = 3000
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
   target_type = "ip"
