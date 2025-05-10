@@ -67,7 +67,12 @@ jobs:
         echo "=== Creating Terraform Plan ==="
         cd terraform/environments/${{ github.ref_name }}
         echo "Working directory: $(pwd)"
-        terraform plan -out=tfplan -detailed-exitcode
+        terraform plan \
+          -var="github_token=${{ secrets.SOURCE_TOKEN }}" \
+          -var="client_repository=${{ secrets.CLIENT_REPOSITORY }}" \
+          -var="admin_repository=${{ secrets.ADMIN_REPOSITORY }}" \
+          -var="sonar_token=${{ secrets.SONAR_TOKEN }}" \
+          -out=tfplan -detailed-exitcode
         echo "Terraform plan completed"
         echo "========================="
 
@@ -77,7 +82,12 @@ jobs:
         echo "=== Applying Terraform Changes ==="
         cd terraform/environments/${{ github.ref_name }}
         echo "Working directory: $(pwd)"
-        terraform apply -auto-approve
+        terraform apply \
+          -var="github_token=${{ secrets.SOURCE_TOKEN }}" \
+          -var="client_repository=${{ secrets.CLIENT_REPOSITORY }}" \
+          -var="admin_repository=${{ secrets.ADMIN_REPOSITORY }}" \
+          -var="sonar_token=${{ secrets.SONAR_TOKEN }}" \
+          -auto-approve
         echo "Terraform apply completed"
         echo "============================="
 
