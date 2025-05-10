@@ -9,11 +9,11 @@ module "vpc" {
   project     = var.project
   environment = var.environment
 
-  # Dev uses minimal resources
+  # Dev uses minimal resources but requires 2 AZs for AWS services
   vpc_cidr             = "10.0.0.0/16"
-  availability_zones   = ["${var.aws_region}a"]
-  private_subnet_cidrs = ["10.0.1.0/24"]
-  public_subnet_cidrs  = ["10.0.101.0/24"]
+  availability_zones   = ["${var.aws_region}a", "${var.aws_region}b"]
+  private_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24"]
+  public_subnet_cidrs  = ["10.0.101.0/24", "10.0.102.0/24"]
 }
 
 # ALB Module
