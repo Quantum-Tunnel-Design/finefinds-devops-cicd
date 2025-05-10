@@ -82,27 +82,6 @@ variable "aws_secret_access_key" {
   default     = ""
 }
 
-variable "project" {
-  description = "Project name"
-  type        = string
-}
-
-variable "environment" {
-  description = "Environment name"
-  type        = string
-}
-
-variable "secret_suffix" {
-  description = "Suffix for secret names"
-  type        = string
-}
-
-variable "use_existing_secrets" {
-  description = "Whether to use existing secrets"
-  type        = bool
-  default     = true
-}
-
 variable "tags" {
   description = "Tags to apply to all resources"
   type        = map(string)
