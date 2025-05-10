@@ -174,6 +174,29 @@ resource "aws_security_group" "ecs_tasks" {
   }
 }
 
+# Load Balancer Target Group
+resource "aws_lb_target_group" "app" {
+  name     = "${var.project}-${var.environment}-tg"
+  port     = var.container_port
+  protocol = "HTTP"
+  vpc_id   = var.vpc_id
+
+  health_check {
+    interval            = 30
+    path                = "/"
+    protocol            = "HTTP"
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+  }
+
+  tags = {
+    Environment = var.environment
+    Project     = var.project
+    Terraform   = "true"
+  }
+}
+
 # Variables
 variable "project" {
   description = "Project name"
@@ -275,4 +298,9 @@ output "service_name" {
 output "task_definition_arn" {
   description = "ARN of the task definition"
   value       = aws_ecs_task_definition.app.arn
+}
+
+output "ecs_tasks_security_group_id" {
+  description = "Security group ID for ECS tasks"
+  value       = aws_security_group.ecs_tasks.id
 } 

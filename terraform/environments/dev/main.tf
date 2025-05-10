@@ -83,17 +83,6 @@ module "s3" {
   environment = var.environment
 }
 
-# Secrets Manager Module
-module "secrets" {
-  source = "../../modules/secrets"
-
-  project     = var.project
-  environment = var.environment
-  database_url = var.database_url
-  mongodb_uri  = var.mongodb_uri
-  jwt_secret   = var.jwt_secret
-}
-
 # MongoDB Module
 module "mongodb" {
   source = "../../modules/mongodb"
@@ -102,6 +91,8 @@ module "mongodb" {
   environment = var.environment
   vpc_id      = module.vpc.vpc_id
   subnet_ids  = module.vpc.private_subnet_ids
+  ecs_security_group_id = module.ecs.ecs_tasks_security_group_id
+  admin_username = var.mongodb_admin_username
 
   # Development uses minimal resources
   instance_type = "t3.micro"
@@ -119,6 +110,10 @@ module "sonarqube" {
   db_username        = var.sonarqube_db_username
   db_subnet_group_name = module.rds.db_subnet_group_name
   alb_security_group_id = module.alb.alb_security_group_id
+  db_password_arn    = module.sonarqube.sonarqube_password_arn
+  db_password        = module.sonarqube.sonarqube_password
+  alb_dns_name       = module.alb.alb_dns_name
+  db_endpoint        = module.rds.db_instance_endpoint
 }
 
 # Monitoring Module
@@ -128,6 +123,7 @@ module "monitoring" {
   project     = var.project
   environment = var.environment
   aws_region  = var.aws_region
+  alert_email = var.alert_email
 }
 
 # Variables
@@ -164,30 +160,13 @@ variable "container_port" {
 variable "ecr_repository_url" {
   description = "URL of the ECR repository"
   type        = string
+  default     = "123456789012.dkr.ecr.us-east-1.amazonaws.com/finefinds"
 }
 
 variable "image_tag" {
   description = "Tag of the container image to deploy"
   type        = string
   default     = "latest"
-}
-
-variable "database_url" {
-  description = "Database connection URL"
-  type        = string
-  sensitive   = true
-}
-
-variable "mongodb_uri" {
-  description = "MongoDB connection URI"
-  type        = string
-  sensitive   = true
-}
-
-variable "jwt_secret" {
-  description = "JWT signing secret"
-  type        = string
-  sensitive   = true
 }
 
 variable "alb_security_group_id" {
@@ -199,11 +178,25 @@ variable "alb_security_group_id" {
 variable "db_username" {
   description = "Master username for RDS"
   type        = string
+  default     = "admin"
 }
 
 variable "sonarqube_db_username" {
   description = "Master username for SonarQube"
   type        = string
+  default     = "sonarqube"
+}
+
+variable "alert_email" {
+  description = "Email address for alerts"
+  type        = string
+  default     = "amal.c.gamage@gmail.com"
+}
+
+variable "mongodb_admin_username" {
+  description = "MongoDB admin username"
+  type        = string
+  default     = "admin"
 }
 
 # Outputs

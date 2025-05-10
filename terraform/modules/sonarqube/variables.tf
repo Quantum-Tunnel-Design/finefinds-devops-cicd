@@ -55,4 +55,19 @@ variable "db_subnet_group_name" {
 variable "alb_security_group_id" {
   description = "Security group ID of the ALB"
   type        = string
+}
+
+variable "project" {
+  description = "Project name"
+  type        = string
+}
+
+variable "alb_dns_name" {
+  description = "DNS name of the ALB"
+  type        = string
+}
+
+variable "db_endpoint" {
+  description = "Endpoint of the SonarQube database"
+  type        = string
 } 

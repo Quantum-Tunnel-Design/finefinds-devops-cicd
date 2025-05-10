@@ -67,7 +67,7 @@ jobs:
         echo "=== Creating Terraform Plan ==="
         cd terraform/environments/${{ github.ref_name }}
         echo "Working directory: $(pwd)"
-        terraform plan -detailed-exitcode
+        terraform plan -out=tfplan -detailed-exitcode
         echo "Terraform plan completed"
         echo "========================="
 
