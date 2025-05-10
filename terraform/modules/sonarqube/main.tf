@@ -1,12 +1,21 @@
+# Get SonarQube database password from Secrets Manager
+data "aws_secretsmanager_secret_version" "sonarqube_password" {
+  secret_id = var.db_password_arn
+}
+
+locals {
+  db_password = jsondecode(data.aws_secretsmanager_secret_version.sonarqube_password.secret_string)
+}
+
 # ECS Task Definition
 resource "aws_ecs_task_definition" "sonarqube" {
-  family                   = "sonarqube-${var.environment}"
+  family                   = "${var.project}-${var.environment}-sonarqube"
   requires_compatibilities = ["FARGATE"]
   network_mode            = "awsvpc"
   cpu                     = var.task_cpu
   memory                  = var.task_memory
-  execution_role_arn      = local.execution_role_arn
-  task_role_arn           = aws_iam_role.ecs_task_role.arn
+  execution_role_arn      = var.use_existing_roles ? data.aws_iam_role.ecs_execution_role[0].arn : aws_iam_role.ecs_execution_role[0].arn
+  task_role_arn           = var.use_existing_roles ? data.aws_iam_role.ecs_task_role[0].arn : aws_iam_role.ecs_task_role[0].arn
 
   container_definitions = jsonencode([
     {
@@ -27,26 +36,18 @@ resource "aws_ecs_task_definition" "sonarqube" {
         {
           name  = "SONAR_JDBC_USERNAME"
           value = var.db_username
-        },
-        {
-          name  = "SONAR_QUALITYGATE_WAIT"
-          value = "true"
-        },
-        {
-          name  = "SONAR_QUALITYGATE_TIMEOUT"
-          value = "300"
         }
       ]
       secrets = [
         {
           name      = "SONAR_JDBC_PASSWORD"
-          valueFrom = aws_secretsmanager_secret.sonarqube_password.arn
+          valueFrom = var.db_password_arn
         }
       ]
       logConfiguration = {
         logDriver = "awslogs"
         options = {
-          "awslogs-group"         = "/ecs/sonarqube-${var.environment}"
+          "awslogs-group"         = "/ecs/${var.project}-${var.environment}-sonarqube"
           "awslogs-region"        = var.aws_region
           "awslogs-stream-prefix" = "ecs"
         }
@@ -54,119 +55,67 @@ resource "aws_ecs_task_definition" "sonarqube" {
     }
   ])
 
-  volume {
-    name = "sonarqube_data"
-    efs_volume_configuration {
-      file_system_id          = local.efs_id
-      root_directory          = "/"
-      transit_encryption      = "ENABLED"
-      authorization_config {
-        access_point_id = aws_efs_access_point.sonarqube.id
-        iam             = "ENABLED"
-      }
-    }
-  }
-}
-
-# Data source for existing EFS
-data "aws_efs_file_system" "existing" {
-  count = var.use_existing_efs ? 1 : 0
   tags = {
-    Name = "${var.project}-${var.environment}-sonarqube"
-  }
-}
-
-# Data source for existing IAM role
-data "aws_iam_role" "existing_sonarqube_execution_role" {
-  count = var.use_existing_roles ? 1 : 0
-  name  = "${var.project}-${var.environment}-sonarqube-execution-role"
-}
-
-# EFS File System
-resource "aws_efs_file_system" "sonarqube" {
-  count = var.use_existing_efs ? 0 : 1
-  creation_token = "sonarqube-${var.environment}"
-
-  performance_mode = "generalPurpose"
-  throughput_mode  = "bursting"
-  encrypted        = true
-
-  tags = {
-    Name        = "${var.project}-${var.environment}-sonarqube"
     Environment = var.environment
     Project     = var.project
-  }
-
-  lifecycle {
-    prevent_destroy = true
+    Terraform   = "true"
   }
 }
 
-# Use existing or new EFS
-locals {
-  efs_id = var.use_existing_efs ? data.aws_efs_file_system.existing[0].id : aws_efs_file_system.sonarqube[0].id
-}
+# ECS Service
+resource "aws_ecs_service" "sonarqube" {
+  name            = "${var.project}-${var.environment}-sonarqube"
+  cluster         = aws_ecs_cluster.sonarqube.id
+  task_definition = aws_ecs_task_definition.sonarqube.arn
+  desired_count   = 1
+  launch_type     = "FARGATE"
 
-resource "aws_efs_access_point" "sonarqube" {
-  file_system_id = local.efs_id
-
-  root_directory {
-    path = "/sonarqube"
-    creation_info {
-      owner_gid   = 1000
-      owner_uid   = 1000
-      permissions = "755"
-    }
+  network_configuration {
+    subnets          = var.subnet_ids
+    security_groups  = [aws_security_group.sonarqube.id]
+    assign_public_ip = false
   }
 
-  posix_user {
-    gid = 1000
-    uid = 1000
+  load_balancer {
+    target_group_arn = aws_lb_target_group.sonarqube.arn
+    container_name   = "sonarqube"
+    container_port   = 9000
   }
 
-  lifecycle {
-    prevent_destroy = true
-  }
-}
-
-# Generate random password for SonarQube
-resource "random_password" "sonarqube_password" {
-  length           = 16
-  special          = true
-  override_special = "!#$%&*()-_=+[]{}<>:?"
-}
-
-# Store the password in Secrets Manager
-resource "aws_secretsmanager_secret" "sonarqube_password" {
-  name = "${var.project}-${var.environment}-sonarqube-password"
-  description = "SonarQube database password for ${var.environment} environment"
-
-  lifecycle {
-    ignore_changes = [name]
-    prevent_destroy = true
+  tags = {
+    Environment = var.environment
+    Project     = var.project
+    Terraform   = "true"
   }
 }
 
-resource "aws_secretsmanager_secret_version" "sonarqube_password" {
-  secret_id     = aws_secretsmanager_secret.sonarqube_password.id
-  secret_string = random_password.sonarqube_password.result
+# ECS Cluster
+resource "aws_ecs_cluster" "sonarqube" {
+  name = "${var.project}-${var.environment}-sonarqube"
 
-  lifecycle {
-    ignore_changes = [secret_string]
+  setting {
+    name  = "containerInsights"
+    value = "enabled"
+  }
+
+  tags = {
+    Environment = var.environment
+    Project     = var.project
+    Terraform   = "true"
   }
 }
 
-# Security Group for SonarQube
+# Security Group
 resource "aws_security_group" "sonarqube" {
-  name        = "${var.project}-${var.environment}-sonarqube"
-  description = "Security group for SonarQube"
+  name        = "${var.project}-${var.environment}-sonarqube-sg"
+  description = "Security group for SonarQube ECS tasks"
   vpc_id      = var.vpc_id
 
   ingress {
-    from_port   = 9000
-    to_port     = 9000
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    from_port       = 9000
+    to_port         = 9000
+    protocol        = "tcp"
+    security_groups = [var.alb_security_group_id]
   }
 
   egress {
@@ -177,19 +126,41 @@ resource "aws_security_group" "sonarqube" {
   }
 
   tags = {
-    Name        = "${var.project}-${var.environment}-sonarqube"
     Environment = var.environment
     Project     = var.project
-  }
-
-  lifecycle {
-    create_before_destroy = true
+    Terraform   = "true"
   }
 }
 
-# IAM Role for ECS Task Execution
+# Target Group
+resource "aws_lb_target_group" "sonarqube" {
+  name        = "${var.project}-${var.environment}-sonarqube-tg"
+  port        = 9000
+  protocol    = "HTTP"
+  vpc_id      = var.vpc_id
+  target_type = "ip"
+
+  health_check {
+    path                = "/"
+    port                = "traffic-port"
+    healthy_threshold   = 2
+    unhealthy_threshold = 10
+    timeout             = 30
+    interval            = 60
+    matcher             = "200-399"
+  }
+
+  tags = {
+    Environment = var.environment
+    Project     = var.project
+    Terraform   = "true"
+  }
+}
+
+# IAM Roles
 resource "aws_iam_role" "ecs_execution_role" {
-  name = "${var.project}-${var.environment}-sonarqube-execution-role"
+  count = var.use_existing_roles ? 0 : 1
+  name  = "${var.project}-${var.environment}-sonarqube-execution-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -207,22 +178,19 @@ resource "aws_iam_role" "ecs_execution_role" {
   tags = {
     Environment = var.environment
     Project     = var.project
+    Terraform   = "true"
   }
 }
 
-# Use existing or new execution role
-locals {
-  execution_role_arn = var.use_existing_roles ? data.aws_iam_role.existing_sonarqube_execution_role[0].arn : aws_iam_role.ecs_execution_role.arn
-}
-
-resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
-  role       = aws_iam_role.ecs_execution_role.name
+resource "aws_iam_role_policy_attachment" "ecs_execution_role" {
+  count      = var.use_existing_roles ? 0 : 1
+  role       = aws_iam_role.ecs_execution_role[0].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# IAM Role for ECS Task
 resource "aws_iam_role" "ecs_task_role" {
-  name = "${var.project}-${var.environment}-sonarqube-task-role"
+  count = var.use_existing_roles ? 0 : 1
+  name  = "${var.project}-${var.environment}-sonarqube-task-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -240,5 +208,34 @@ resource "aws_iam_role" "ecs_task_role" {
   tags = {
     Environment = var.environment
     Project     = var.project
+    Terraform   = "true"
   }
+}
+
+# Data sources for existing roles
+data "aws_iam_role" "ecs_execution_role" {
+  count = var.use_existing_roles ? 1 : 0
+  name  = "${var.project}-${var.environment}-sonarqube-execution-role"
+}
+
+data "aws_iam_role" "ecs_task_role" {
+  count = var.use_existing_roles ? 1 : 0
+  name  = "${var.project}-${var.environment}-sonarqube-task-role"
+}
+
+# Outputs
+output "service_name" {
+  description = "Name of the ECS service"
+  value       = aws_ecs_service.sonarqube.name
+}
+
+output "target_group_arn" {
+  description = "ARN of the target group"
+  value       = aws_lb_target_group.sonarqube.arn
+}
+
+output "security_group_id" {
+  description = "Security group ID of the SonarQube ECS tasks"
+  value       = aws_security_group.sonarqube.id
+} 
 } 

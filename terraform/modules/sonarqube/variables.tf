@@ -34,6 +34,11 @@ variable "db_username" {
   default     = "sonarqube"
 }
 
+variable "db_password_arn" {
+  description = "ARN of the SonarQube database password secret in AWS Secrets Manager"
+  type        = string
+}
+
 variable "task_cpu" {
   description = "CPU units for the ECS task"
   type        = number

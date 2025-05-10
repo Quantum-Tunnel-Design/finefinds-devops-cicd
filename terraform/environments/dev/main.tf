@@ -122,20 +122,19 @@ resource "aws_lb_target_group_attachment" "ecs" {
 module "sonarqube" {
   source = "../../modules/sonarqube"
 
-  project     = var.project
-  environment = var.environment
-  vpc_id      = local.vpc_id
-  subnet_ids  = local.private_subnets
-  aws_region  = var.aws_region
-  db_endpoint = module.rds.endpoint
+  project              = var.project
+  environment          = var.environment
+  vpc_id              = local.vpc_id
+  subnet_ids          = local.private_subnets
+  aws_region          = var.aws_region
+  db_endpoint         = module.rds.endpoint
+  db_username         = var.sonarqube_db_username
+  db_password_arn     = module.secrets.sonarqube_password_arn
   db_subnet_group_name = local.db_subnet_group_name
-  db_username = var.sonarqube_db_username
-  db_password_arn = module.secrets.sonarqube_password_arn
-  db_instance_class = "db.t3.micro"
-  allocated_storage = 20
-  skip_final_snapshot = true
+  alb_security_group_id = module.alb.security_group_id
+  alb_dns_name        = module.alb.dns_name
 
-  depends_on = [module.vpc, module.rds, module.secrets]
+  depends_on = [module.vpc, module.rds, module.alb, module.secrets]
 }
 
 # Cognito Module - No VPC dependencies
