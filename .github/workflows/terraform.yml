@@ -1,0 +1,149 @@
+name: 'Terraform'
+
+on:
+  push:
+    branches: [ main, dev, qa, staging, sandbox ]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0  # Fetch all history for better logging
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: "1.5.7"  # Specify version for consistency
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-${{ github.ref_name }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Show Environment Info
+      run: |
+        echo "=== Environment Information ==="
+        echo "Branch: ${{ github.ref_name }}"
+        echo "Environment: ${{ github.ref_name }}"
+        echo "AWS Region: ${{ secrets.AWS_REGION }}"
+        echo "AWS Account ID: ${{ secrets.AWS_ACCOUNT_ID }}"
+        echo "============================="
+
+    - name: Terraform Init
+      id: init
+      run: |
+        echo "=== Initializing Terraform ==="
+        cd terraform/environments/${{ github.ref_name }}
+        echo "Working directory: $(pwd)"
+        echo "Terraform version: $(terraform version)"
+        terraform init
+        echo "Terraform initialization completed"
+        echo "================================"
+
+    - name: Terraform Plan
+      id: plan
+      run: |
+        echo "=== Creating Terraform Plan ==="
+        cd terraform/environments/${{ github.ref_name }}
+        echo "Working directory: $(pwd)"
+        terraform plan -detailed-exitcode
+        echo "Terraform plan completed"
+        echo "========================="
+
+    - name: Terraform Apply
+      id: apply
+      run: |
+        echo "=== Applying Terraform Changes ==="
+        cd terraform/environments/${{ github.ref_name }}
+        echo "Working directory: $(pwd)"
+        terraform apply -auto-approve
+        echo "Terraform apply completed"
+        echo "============================="
+
+    - name: Get SonarQube URL
+      id: sonarqube
+      run: |
+        echo "=== Getting SonarQube URL ==="
+        cd terraform/environments/${{ github.ref_name }}
+        echo "Working directory: $(pwd)"
+        SONARQUBE_URL=$(terraform output -raw sonarqube_url)
+        echo "SonarQube URL: $SONARQUBE_URL"
+        echo "url=$SONARQUBE_URL" >> $GITHUB_OUTPUT
+        echo "============================"
+
+    - name: Setup SonarQube
+      if: github.ref_name == 'main'
+      id: sonarqube_setup
+      run: |
+        echo "=== Setting up SonarQube ==="
+        SONARQUBE_URL="${{ steps.sonarqube.outputs.url }}"
+        echo "SonarQube URL: $SONARQUBE_URL"
+        
+        # Wait for SonarQube to be ready
+        echo "Waiting for SonarQube to be ready..."
+        for i in {1..30}; do
+          if curl -s "$SONARQUBE_URL" > /dev/null; then
+            echo "✅ SonarQube is ready!"
+            break
+          fi
+          echo "⏳ Waiting... ($i/30)"
+          sleep 10
+        done
+
+        # Generate SonarQube token
+        echo "Generating SonarQube token..."
+        TOKEN=$(curl -s -X POST \
+          -u "admin:admin" \
+          -d "name=github-actions" \
+          "$SONARQUBE_URL/api/user_tokens/generate" | jq -r '.token')
+        
+        if [ -z "$TOKEN" ]; then
+          echo "❌ Failed to generate SonarQube token"
+          exit 1
+        fi
+        echo "✅ SonarQube token generated successfully"
+
+        # Set GitHub secrets
+        echo "Setting GitHub secrets..."
+        gh secret set SONAR_TOKEN -b"$TOKEN" -e"${{ github.ref_name }}"
+        gh secret set SONAR_HOST_URL -b"$SONARQUBE_URL" -e"${{ github.ref_name }}"
+        echo "✅ GitHub secrets set successfully"
+
+        echo "=== SonarQube setup completed! ==="
+
+    - name: Generate Summary Report
+      if: always()
+      run: |
+        echo "=== Deployment Summary Report ==="
+        echo "📅 Date: $(date '+%Y-%m-%d %H:%M:%S')"
+        echo "🌿 Branch: ${{ github.ref_name }}"
+        echo "🏗️ Environment: ${{ github.ref_name }}"
+        echo "🔑 AWS Region: ${{ secrets.AWS_REGION }}"
+        echo ""
+        echo "📋 Steps Status:"
+        echo "✅ Terraform Init: ${{ steps.init.outcome == 'success' && 'Success' || 'Failed' }}"
+        echo "✅ Terraform Plan: ${{ steps.plan.outcome == 'success' && 'Success' || 'Failed' }}"
+        echo "✅ Terraform Apply: ${{ steps.apply.outcome == 'success' && 'Success' || 'Failed' }}"
+        if [ "${{ github.ref_name }}" == "main" ]; then
+          echo "✅ SonarQube Setup: ${{ steps.sonarqube_setup.outcome == 'success' && 'Success' || 'Failed' }}"
+        fi
+        echo ""
+        echo "🔍 Resources:"
+        echo "🔗 SonarQube URL: ${{ steps.sonarqube.outputs.url || 'N/A' }}"
+        echo ""
+        echo "📝 Notes:"
+        echo "- Deployment completed for ${{ github.ref_name }} environment"
+        if [ "${{ github.ref_name }}" == "main" ]; then
+          echo "- SonarQube has been configured and secrets have been set"
+        fi
+        echo "================================" 

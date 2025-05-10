@@ -1,103 +1,190 @@
-# FineFinds DevOps
+# FineFinds DevOps & CI/CD
 
-This repository contains all infrastructure and deployment configurations for the FineFinds education platform.
-
-## Repository Structure
-
-```
-.
-├── terraform/              # Infrastructure as Code
-│   ├── environments/       # Environment-specific configurations
-│   │   ├── dev/
-│   │   ├── staging/
-│   │   └── prod/
-│   ├── modules/           # Reusable Terraform modules
-│   └── shared/            # Shared resources
-├── kubernetes/            # Kubernetes manifests
-├── scripts/              # Deployment and utility scripts
-└── docs/                 # Documentation
-```
+This repository contains the infrastructure and CI/CD configuration for FineFinds.
 
 ## Prerequisites
 
-- Terraform v1.5.0+
-- AWS CLI v2.0+
-- kubectl (for Kubernetes deployments)
-- jq
-- make
+- GitHub CLI (`gh`)
+- AWS CLI
+- Terraform
+- Node.js and npm
 
 ## Environment Setup
 
-1. Configure AWS credentials:
-```bash
-aws configure
-```
+### Branch to Environment Mapping
 
-2. Set up environment variables:
-```bash
-cp .env.example .env
-# Edit .env with your configuration
-```
+The repository uses a specific mapping between Git branches and deployment environments:
 
-## Usage
+| Branch Name | Environment Name | Purpose |
+|-------------|------------------|---------|
+| `main`      | `prod`          | Production environment |
+| `staging`   | `staging`       | Pre-production testing |
+| `dev`       | `dev`           | Development environment |
+| `qa`        | `qa`            | Quality assurance testing |
+| `sandbox`   | `sandbox`       | Experimental features |
 
-### Terraform
+**Note**: While the main branch is named `main`, it maps to the `prod` environment in all configurations. This is important to understand when working with:
+- GitHub Environments
+- AWS IAM Roles
+- Terraform State
+- Deployment Workflows
 
-Initialize Terraform:
-```bash
-cd terraform/environments/dev  # or staging/prod
-terraform init
-```
+### Environment Validation
 
-Plan changes:
-```bash
-terraform plan
-```
+All scripts include validation to ensure:
+1. Only valid branch names are used
+2. Environment names are consistent across all tools
+3. Branch-to-environment mappings are maintained
 
-Apply changes:
-```bash
-terraform apply
-```
+## Initial Setup
 
-### Kubernetes
+1. **GitHub Authentication**
+   ```bash
+   gh auth login
+   ```
 
-Apply Kubernetes manifests:
-```bash
-kubectl apply -f kubernetes/
-```
+2. **AWS OIDC Setup**
+   ```bash
+   export AWS_ACCOUNT_ID="your-aws-account-id"
+   export GITHUB_ORG="your-github-org"
+   export GITHUB_REPO="finefinds-devops-cicd"
+   ./scripts/setup-aws-oidc.sh
+   ```
 
-## Security
+3. **GitHub Secrets Setup**
+   ```bash
+   # Set SonarQube credentials
+   export SONAR_TOKEN="your-sonar-token"
+   export SONAR_HOST_URL="your-sonar-url"
 
-- All sensitive values are stored in AWS Secrets Manager
-- IAM roles use least privilege principle
-- Network security is enforced through security groups
-- All infrastructure changes require approval
-- Access to this repository is restricted
+   # Set AWS credentials for each environment
+   export AWS_PROD_ACCESS_KEY="your-prod-access-key"
+   export AWS_PROD_SECRET_KEY="your-prod-secret-key"
+   export AWS_STAGING_ACCESS_KEY="your-staging-access-key"
+   export AWS_STAGING_SECRET_KEY="your-staging-secret-key"
+   export AWS_DEV_ACCESS_KEY="your-dev-access-key"
+   export AWS_DEV_SECRET_KEY="your-dev-secret-key"
+   export AWS_QA_ACCESS_KEY="your-qa-access-key"
+   export AWS_QA_SECRET_KEY="your-qa-secret-key"
+   export AWS_SANDBOX_ACCESS_KEY="your-sandbox-access-key"
+   export AWS_SANDBOX_SECRET_KEY="your-sandbox-secret-key"
 
-## CI/CD
+   ./scripts/setup-github-secrets.sh
+   ```
 
-The CI/CD pipeline is configured in `.github/workflows/` and includes:
+4. **Environment Protection Rules**
+   ```bash
+   ./scripts/setup-environment-protection.sh
+   ```
 
-1. Infrastructure validation
-2. Security scanning
-3. Automated deployments
-4. Rollback procedures
+## Environment-Specific Configurations
 
-## Monitoring
+### Production (main branch → prod environment)
+- Quality Gate: Strict
+- Backup Retention: 30 days
+- Protection Rules:
+  - 30-minute wait timer
+  - 2 required reviewers
+  - Branch protection enabled
 
-- CloudWatch dashboards
-- Prometheus metrics
-- Grafana visualizations
-- Alerting via SNS
+### Staging
+- Quality Gate: Moderate
+- Backup Retention: 14 days
+- Protection Rules:
+  - 15-minute wait timer
+  - 1 required reviewer
+  - Branch protection enabled
 
-## Contributing
+### Development
+- Quality Gate: Basic
+- Backup Retention: 7 days
+- Protection Rules:
+  - No wait timer
+  - No required reviewers
+  - Branch protection enabled
 
-1. Create a feature branch
-2. Make your changes
-3. Submit a pull request
-4. Get approval from DevOps team
-5. Merge after successful validation
+### QA
+- Quality Gate: Basic
+- Backup Retention: 7 days
+- Protection Rules:
+  - No wait timer
+  - No required reviewers
+  - Branch protection enabled
 
-## License
+### Sandbox
+- Quality Gate: None
+- Backup Retention: 3 days
+- Protection Rules:
+  - No wait timer
+  - No required reviewers
+  - Branch protection enabled
 
-This repository is private and confidential. 
+## GitHub Actions Workflows
+
+### Terraform Deployment
+- Triggered on push to protected branches
+- Uses AWS OIDC for authentication
+- Environment-specific deployments
+- Branch-to-environment mapping is handled automatically
+
+### SonarQube Scan
+- Triggered on pull requests and pushes
+- Quality gates are environment-specific
+- Results are stored in SonarQube server
+
+## Security Considerations
+
+### AWS Authentication
+- Uses OIDC for GitHub Actions
+- Environment-specific IAM roles
+- Role names follow the environment mapping (e.g., `github-actions-prod` for main branch)
+
+### GitHub Secrets
+- Environment-specific secrets
+- Secrets are automatically mapped to the correct environment
+- Sensitive values are encrypted
+
+### Environment Protection
+- Branch protection rules
+- Environment-specific wait timers
+- Required reviewers based on environment
+
+## Maintenance
+
+### Rotating Secrets
+1. Generate new secrets
+2. Update GitHub secrets using the setup script
+3. Verify deployments still work
+
+### Adding New Environments
+1. Add new branch-to-environment mapping in all scripts
+2. Create new environment in GitHub
+3. Set up environment-specific secrets
+4. Configure protection rules
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Environment Name Mismatch**
+   - Error: "Environment not found"
+   - Solution: Verify branch-to-environment mapping in scripts
+
+2. **IAM Role Issues**
+   - Error: "Role not found"
+   - Solution: Check role names follow environment mapping
+
+3. **Secret Access Issues**
+   - Error: "Secret not found"
+   - Solution: Verify secrets are set for correct environment
+
+### Validation Errors
+
+If you encounter validation errors:
+1. Check the branch name is valid
+2. Verify environment mapping is correct
+3. Ensure all required variables are set
+
+## Support
+
+For issues and support, please contact the DevOps team. 

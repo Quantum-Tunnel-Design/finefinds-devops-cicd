@@ -16,6 +16,16 @@ module "vpc" {
   public_subnet_cidrs  = ["10.1.101.0/24", "10.1.102.0/24"]
 }
 
+# ALB Module
+module "alb" {
+  source = "../../modules/alb"
+
+  project     = var.project
+  environment = var.environment
+  vpc_id      = module.vpc.vpc_id
+  subnet_ids  = module.vpc.public_subnet_ids
+}
+
 # ECS Module
 module "ecs" {
   source = "../../modules/ecs"
@@ -35,7 +45,7 @@ module "ecs" {
   image_tag           = var.image_tag
   database_url_arn    = var.database_url_arn
   mongodb_uri_arn     = var.mongodb_uri_arn
-  alb_security_group_id = var.alb_security_group_id
+  alb_security_group_id = module.alb.alb_security_group_id
   aws_region          = var.aws_region
 }
 
@@ -104,6 +114,21 @@ module "monitoring" {
   aws_region  = var.aws_region
 }
 
+# SonarQube Module
+module "sonarqube" {
+  source = "../../modules/sonarqube"
+
+  environment         = var.environment
+  vpc_id             = module.vpc.vpc_id
+  aws_region         = var.aws_region
+  db_instance_class  = "db.t3.medium"
+  db_username        = var.sonarqube_db_username
+  db_password        = var.sonarqube_db_password
+  db_password_arn    = var.sonarqube_db_password_arn
+  db_subnet_group_name = module.rds.db_subnet_group_name
+  alb_security_group_id = module.alb.alb_security_group_id
+}
+
 # Variables
 variable "project" {
   description = "Project name"
@@ -159,6 +184,7 @@ variable "mongodb_uri_arn" {
 variable "alb_security_group_id" {
   description = "Security group ID of the ALB"
   type        = string
+  default     = null
 }
 
 variable "db_username" {

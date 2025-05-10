@@ -1,0 +1,165 @@
+# Local .terraform directories
+**/.terraform/*
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+
+# Crash log files
+crash.log
+crash.*.log
+
+# Exclude all .tfvars files, which are likely to contain sensitive data
+*.tfvars
+*.tfvars.json
+
+# Ignore override files as they are usually used for local development
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Ignore CLI configuration files
+.terraformrc
+terraform.rc
+
+# Ignore lock files
+.terraform.lock.hcl
+
+# Ignore Mac system files
+.DS_Store
+
+# Ignore IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Ignore local environment files
+.env
+.env.*
+
+# Ignore logs
+*.log
+
+# Ignore node modules if you have any Node.js components
+node_modules/
+
+# Ignore build outputs
+dist/
+build/
+
+# Ignore coverage reports
+coverage/
+
+# Ignore temporary files
+tmp/
+temp/
+
+# Ignore AWS credentials
+.aws/
+aws.json
+
+# Ignore any local override files
+local.tf
+local.tf.json
+
+# Ignore any backup files
+*.bak
+*.backup
+
+# Ignore sensitive files but not module code
+**/secrets.tf
+**/secrets.json
+**/passwords.tf
+**/passwords.json
+**/credentials.tf
+**/credentials.json
+**/keys.tf
+**/keys.json
+**/secrets.local.tf
+**/secrets.local.json
+**/passwords.local.tf
+**/passwords.local.json
+**/credentials.local.tf
+**/credentials.local.json
+**/keys.local.tf
+**/keys.local.json
+
+# Ignore any local development files
+local-dev/
+dev-local/
+
+# Ignore any test files
+test/
+tests/
+*_test.tf
+*_test.tf.json
+
+# Ignore any documentation build files
+docs/_build/
+site/
+
+# Ignore any generated files
+generated/
+*.generated.*
+
+# Ignore any cache directories
+.cache/
+__pycache__/
+*.pyc
+
+# Ignore any dependency directories
+vendor/
+deps/
+
+# Ignore any local configuration
+config.local.json
+config.local.yaml
+config.local.yml
+
+# Environment-specific files
+terraform/environments/*/terraform.tfvars
+terraform/environments/*/backend.tf
+terraform/environments/*/.terraform/
+terraform/environments/*/.terraform.lock.hcl
+
+# SonarQube specific
+.sonar/
+sonar-project.properties
+sonar-project.properties.local
+
+# GitHub Actions specific
+.github/workflows/*.local.yml
+.github/workflows/*.dev.yml
+
+# Scripts with sensitive data
+scripts/*.local.sh
+scripts/*.dev.sh
+
+# Local development overrides
+*local-override*
+*dev-override*
+
+# Terraform plan outputs
+*.tfplan
+*plan.out
+*plan.json
+
+# Terraform variables
+*.auto.tfvars
+*.auto.tfvars.json
+
+# Terraform backend configuration
+backend.hcl
+backend.local.hcl
+
+# Terraform provider configuration
+provider.tf
+provider.local.tf
+
+# Terraform workspace configuration
+.terraform.workspace 
+
+scripts/export-env.sh

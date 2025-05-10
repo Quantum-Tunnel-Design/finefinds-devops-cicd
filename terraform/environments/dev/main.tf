@@ -16,6 +16,16 @@ module "vpc" {
   public_subnet_cidrs  = ["10.3.101.0/24"]
 }
 
+# ALB Module
+module "alb" {
+  source = "../../modules/alb"
+
+  project     = var.project
+  environment = var.environment
+  vpc_id      = module.vpc.vpc_id
+  subnet_ids  = module.vpc.public_subnet_ids
+}
+
 # ECS Module
 module "ecs" {
   source = "../../modules/ecs"
@@ -33,9 +43,9 @@ module "ecs" {
   container_port      = var.container_port
   ecr_repository_url  = var.ecr_repository_url
   image_tag           = var.image_tag
-  database_url_arn    = var.database_url_arn
-  mongodb_uri_arn     = var.mongodb_uri_arn
-  alb_security_group_id = var.alb_security_group_id
+  database_url_arn    = module.secrets.database_url_arn
+  mongodb_uri_arn     = module.secrets.mongodb_uri_arn
+  alb_security_group_id = module.alb.alb_security_group_id
   aws_region          = var.aws_region
 }
 
@@ -80,6 +90,10 @@ module "secrets" {
 
   project     = var.project
   environment = var.environment
+  database_url = var.database_url
+  mongodb_uri  = var.mongodb_uri
+  jwt_secret   = var.jwt_secret
+  cognito_client_secret = var.cognito_client_secret
 }
 
 # MongoDB Module
@@ -93,6 +107,21 @@ module "mongodb" {
 
   # Development uses minimal resources
   instance_type = "t3.micro"
+}
+
+# SonarQube Module
+module "sonarqube" {
+  source = "../../modules/sonarqube"
+
+  environment         = var.environment
+  vpc_id             = module.vpc.vpc_id
+  aws_region         = var.aws_region
+  db_instance_class  = "db.t3.small"
+  db_username        = var.sonarqube_db_username
+  db_password        = var.sonarqube_db_password
+  db_password_arn    = var.sonarqube_db_password_arn
+  db_subnet_group_name = module.rds.db_subnet_group_name
+  alb_security_group_id = module.alb.alb_security_group_id
 }
 
 # Monitoring Module
@@ -146,19 +175,34 @@ variable "image_tag" {
   default     = "latest"
 }
 
-variable "database_url_arn" {
-  description = "ARN of the database URL secret"
+variable "database_url" {
+  description = "Database connection URL"
   type        = string
+  sensitive   = true
 }
 
-variable "mongodb_uri_arn" {
-  description = "ARN of the MongoDB URI secret"
+variable "mongodb_uri" {
+  description = "MongoDB connection URI"
   type        = string
+  sensitive   = true
+}
+
+variable "jwt_secret" {
+  description = "JWT signing secret"
+  type        = string
+  sensitive   = true
+}
+
+variable "cognito_client_secret" {
+  description = "Cognito client secret"
+  type        = string
+  sensitive   = true
 }
 
 variable "alb_security_group_id" {
   description = "Security group ID of the ALB"
   type        = string
+  default     = null
 }
 
 variable "db_username" {
@@ -172,17 +216,23 @@ variable "db_password" {
   sensitive   = true
 }
 
+variable "sonarqube_db_username" {
+  description = "Master username for SonarQube"
+  type        = string
+}
+
+variable "sonarqube_db_password" {
+  description = "Master password for SonarQube"
+  type        = string
+  sensitive   = true
+}
+
+variable "sonarqube_db_password_arn" {
+  description = "ARN of the SonarQube database password"
+  type        = string
+}
+
 # Outputs
-output "vpc_id" {
-  description = "ID of the VPC"
-  value       = module.vpc.vpc_id
-}
-
-output "ecs_cluster_name" {
-  description = "Name of the ECS cluster"
-  value       = module.ecs.cluster_name
-}
-
 output "ecs_service_name" {
   description = "Name of the ECS service"
   value       = module.ecs.service_name
