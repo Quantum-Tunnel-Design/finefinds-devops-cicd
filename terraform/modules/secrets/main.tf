@@ -1,24 +1,24 @@
 # Database URL Secret
 data "aws_secretsmanager_secret" "database_url" {
-  name = "finefinds/${var.environment}/db-password"
+  name = "${var.project}-${var.environment}-db-password"
 }
 
 data "aws_secretsmanager_secret_version" "database_url" {
   secret_id = data.aws_secretsmanager_secret.database_url.id
 }
 
-# SonarQube Database Password Secret
-data "aws_secretsmanager_secret" "sonarqube_db_password" {
-  name = "finefinds/${var.environment}/sonarqube-db-password"
+# MongoDB Password Secret
+data "aws_secretsmanager_secret" "mongodb_password" {
+  name = "${var.project}-${var.environment}-mongodb-password"
 }
 
-data "aws_secretsmanager_secret_version" "sonarqube_db_password" {
-  secret_id = data.aws_secretsmanager_secret.sonarqube_db_password.id
+data "aws_secretsmanager_secret_version" "mongodb_password" {
+  secret_id = data.aws_secretsmanager_secret.mongodb_password.id
 }
 
 # JWT Secret
 data "aws_secretsmanager_secret" "jwt_secret" {
-  name = "finefinds/${var.environment}/jwt-secret"
+  name = "${var.project}-${var.environment}-jwt-secret"
 }
 
 data "aws_secretsmanager_secret_version" "jwt_secret" {
@@ -37,20 +37,20 @@ variable "environment" {
 }
 
 # Outputs
-output "database_password" {
-  description = "Database password"
-  value       = data.aws_secretsmanager_secret_version.database_url.secret_string
+output "database_url_arn" {
+  description = "ARN of the database password in Secrets Manager"
+  value       = data.aws_secretsmanager_secret.database_url.arn
   sensitive   = true
 }
 
-output "sonarqube_db_password" {
-  description = "SonarQube database password"
-  value       = data.aws_secretsmanager_secret_version.sonarqube_db_password.secret_string
+output "mongodb_uri_arn" {
+  description = "ARN of the MongoDB password in Secrets Manager"
+  value       = data.aws_secretsmanager_secret.mongodb_password.arn
   sensitive   = true
 }
 
-output "jwt_secret" {
-  description = "JWT signing secret"
-  value       = data.aws_secretsmanager_secret_version.jwt_secret.secret_string
+output "jwt_secret_arn" {
+  description = "ARN of the JWT secret in Secrets Manager"
+  value       = data.aws_secretsmanager_secret.jwt_secret.arn
   sensitive   = true
 } 

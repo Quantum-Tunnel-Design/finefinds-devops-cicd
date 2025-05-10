@@ -43,8 +43,8 @@ module "ecs" {
   container_port      = var.container_port
   ecr_repository_url  = var.ecr_repository_url
   image_tag           = var.image_tag
-  database_url_arn    = module.secrets.database_url_arn
-  mongodb_uri_arn     = module.secrets.mongodb_uri_arn
+  database_url_arn    = module.rds.db_password_arn
+  mongodb_uri_arn     = module.mongodb.mongodb_password_arn
   alb_security_group_id = module.alb.alb_security_group_id
   aws_region          = var.aws_region
 }
