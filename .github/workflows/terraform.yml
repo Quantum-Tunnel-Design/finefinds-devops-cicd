@@ -157,4 +157,38 @@ jobs:
         if [ "${{ github.ref_name }}" == "main" ]; then
           echo "- SonarQube has been configured and secrets have been set"
         fi
-        echo "================================" 
+        echo "================================"
+
+    - name: Update Trust Policy
+      run: |
+        # Set environment variables
+        export ENV_NAME="${{ github.ref_name == 'main' && 'prod' || github.ref_name }}"
+        export AWS_ACCOUNT_ID="${{ secrets.AWS_ACCOUNT_ID }}"
+        export GITHUB_REPOSITORY="${{ github.repository }}"
+        
+        # Create trust policy JSON
+        cat > trust-policy.json << EOF
+        {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Principal": {
+                        "Federated": "arn:aws:iam::${AWS_ACCOUNT_ID}:oidc-provider/token.actions.githubusercontent.com"
+                    },
+                    "Action": "sts:AssumeRoleWithWebIdentity",
+                    "Condition": {
+                        "StringLike": {
+                            "token.actions.githubusercontent.com:sub": "repo:${GITHUB_REPOSITORY}:environment:${ENV_NAME}"
+                        }
+                    }
+                }
+            ]
+        }
+        EOF
+        
+        # Update the trust policy
+        aws iam update-assume-role-policy --role-name "github-actions-${ENV_NAME}" --policy-document file://trust-policy.json
+        
+        # Clean up
+        rm trust-policy.json 
