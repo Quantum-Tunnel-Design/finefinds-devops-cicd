@@ -18,7 +18,7 @@ variable "admin_repository" {
   type        = string
 }
 
-variable "github_token" {
+variable "source_token" {
   description = "GitHub personal access token for repository access"
   type        = string
   sensitive   = true
