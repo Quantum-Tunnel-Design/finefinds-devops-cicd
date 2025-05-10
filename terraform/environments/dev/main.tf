@@ -55,10 +55,10 @@ module "rds" {
   environment = var.environment
   vpc_id      = local.vpc_id
   subnet_ids  = local.private_subnets
-  vpc_cidr    = local.vpc_cidr
-  subnet_group_name = local.db_subnet_group_name
+  db_password = var.db_password
+  ecs_security_group_id = module.ecs.security_group_id
 
-  depends_on = [module.vpc]
+  depends_on = [module.vpc, module.ecs]
 }
 
 # MongoDB Module - Depends only on VPC
