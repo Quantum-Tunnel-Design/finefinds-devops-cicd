@@ -3,8 +3,6 @@ name: 'Terraform'
 on:
   push:
     branches: [ main, dev, qa, staging, sandbox ]
-  pull_request:
-    branches: [ main, dev, qa, staging, sandbox ]
 
 permissions:
   id-token: write
@@ -38,13 +36,11 @@ jobs:
         terraform plan
 
     - name: Terraform Apply
-      if: github.event_name == 'push'
       run: |
         cd terraform/environments/${{ github.ref_name }}
         terraform apply -auto-approve
 
     - name: Get SonarQube URL
-      if: github.event_name == 'push'
       id: sonarqube
       run: |
         cd terraform/environments/${{ github.ref_name }}
@@ -52,7 +48,7 @@ jobs:
         echo "url=$SONARQUBE_URL" >> $GITHUB_OUTPUT
 
     - name: Setup SonarQube
-      if: github.event_name == 'push' && github.ref_name == 'main'
+      if: github.ref_name == 'main'
       run: |
         # Wait for SonarQube to be ready
         echo "Waiting for SonarQube to be ready..."
