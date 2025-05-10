@@ -1,6 +1,6 @@
 # ECR Repository
-resource "aws_ecr_repository" "app" {
-  name = "${var.project}-${var.environment}-app"
+resource "aws_ecr_repository" "main" {
+  name = "${var.project}-${var.environment}"
   
   image_scanning_configuration {
     scan_on_push = true
@@ -8,16 +8,12 @@ resource "aws_ecr_repository" "app" {
 
   image_tag_mutability = "MUTABLE"
 
-  tags = {
-    Name        = "${var.project}-${var.environment}-app"
-    Environment = var.environment
-    Project     = var.project
-  }
+  tags = var.tags
 }
 
 # ECR Repository Policy
-resource "aws_ecr_repository_policy" "app" {
-  repository = aws_ecr_repository.app.name
+resource "aws_ecr_repository_policy" "main" {
+  repository = aws_ecr_repository.main.name
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -26,7 +22,7 @@ resource "aws_ecr_repository_policy" "app" {
         Sid    = "AllowPullFromECSTasks"
         Effect = "Allow"
         Principal = {
-          Service = "ecs-tasks.amazonaws.com"
+          AWS = var.ecs_task_role_arn
         }
         Action = [
           "ecr:GetDownloadUrlForLayer",
@@ -39,8 +35,8 @@ resource "aws_ecr_repository_policy" "app" {
 }
 
 # ECR Lifecycle Policy
-resource "aws_ecr_lifecycle_policy" "app" {
-  repository = aws_ecr_repository.app.name
+resource "aws_ecr_lifecycle_policy" "main" {
+  repository = aws_ecr_repository.main.name
 
   policy = jsonencode({
     rules = [

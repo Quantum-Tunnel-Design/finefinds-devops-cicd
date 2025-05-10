@@ -138,15 +138,16 @@ module "sonarqube" {
 
   aws_region = var.aws_region
   alb_security_group_id = module.alb.security_group_id
+  alb_dns_name = module.alb.alb_dns_name
 
+  db_endpoint = module.rds.db_instance_endpoint
   db_username = local.db_username
   db_password_arn = module.secrets.db_password_arn
   sonarqube_password_arn = module.secrets.sonarqube_password_arn
+  db_subnet_group_name = module.rds.db_subnet_group_name
 
   task_cpu    = local.task_cpu
   task_memory = local.task_memory
-
-  sonarqube_url = "https://${module.alb.alb_dns_name}/sonarqube"
 
   tags = local.common_tags
 }
@@ -194,28 +195,36 @@ module "amplify" {
 }
 
 # Variables
-variable "sonarqube_db_password" {
-  description = "Password for the SonarQube database"
-  type        = string
-  sensitive   = true
-}
-
 variable "secret_suffix" {
   description = "Suffix for secret names"
   type        = string
   default     = "20250510212247"
 }
 
-variable "mongodb_password" {
-  description = "Password for the MongoDB instance"
-  type        = string
-  sensitive   = true
-}
-
 # Outputs
 output "vpc_id" {
   description = "ID of the VPC"
   value       = module.vpc.vpc_id
+}
+
+output "alb_dns_name" {
+  description = "DNS name of the ALB"
+  value       = module.alb.alb_dns_name
+}
+
+output "sonarqube_url" {
+  description = "URL of the SonarQube instance"
+  value       = module.sonarqube.sonarqube_url
+}
+
+output "ecr_repository_url" {
+  description = "URL of the ECR repository"
+  value       = module.ecr.repository_url
+}
+
+output "rds_security_group_id" {
+  description = "ID of the RDS security group"
+  value       = module.rds.security_group_id
 }
 
 output "ecs_cluster_name" {

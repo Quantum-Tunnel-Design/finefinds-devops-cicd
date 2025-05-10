@@ -171,12 +171,6 @@ locals {
   cluster_endpoint = var.use_existing_cluster ? var.existing_cluster_endpoint : (var.use_existing_instance ? data.aws_instance.existing_mongodb[0].private_ip : aws_docdb_cluster.main.endpoint)
 }
 
-# Outputs
-output "endpoint" {
-  description = "MongoDB endpoint"
-  value       = local.cluster_endpoint
-}
-
 # IAM Roles
 resource "aws_iam_role" "ecs_execution_role" {
   name = "${var.project}-${var.environment}-mongodb-execution-role"

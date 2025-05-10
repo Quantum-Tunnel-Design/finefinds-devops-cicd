@@ -4,6 +4,7 @@ locals {
     Environment = var.environment
     Project     = var.project
     Terraform   = "true"
+    ManagedBy   = "terraform"
   }
 
   # VPC Configuration
@@ -28,14 +29,15 @@ locals {
   mongodb_name       = "${var.project}-${var.environment}-mongodb"
   sonarqube_name     = "${var.project}-${var.environment}-sonarqube"
 
-  # Secret Names
-  db_password_secret_name     = "${var.project}/${var.environment}/db-password"
-  mongodb_password_secret_name = "${var.project}/${var.environment}/mongodb-password"
-  sonarqube_password_secret_name = "${var.project}/${var.environment}/sonarqube-password"
+  # Secret Names with timestamp suffix
+  db_password_secret_name     = "${var.project}/${var.environment}/db-password-${var.secret_suffix}"
+  mongodb_password_secret_name = "${var.project}/${var.environment}/mongodb-password-${var.secret_suffix}"
+  sonarqube_password_secret_name = "${var.project}/${var.environment}/sonarqube-password-${var.secret_suffix}"
 
   # Database Configuration
   db_username = "admin"
   db_name     = "finefinds"
+  db_port     = 5432
 
   # Container Configuration
   container_port = 3000
@@ -49,4 +51,11 @@ locals {
   health_check_timeout  = 5
   health_check_healthy_threshold   = 2
   health_check_unhealthy_threshold = 2
+
+  # SonarQube Configuration
+  sonarqube_port = 9000
+  sonarqube_path = "/"
+
+  # MongoDB Configuration
+  mongodb_port = 27017
 } 
