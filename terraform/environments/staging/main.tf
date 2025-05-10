@@ -130,7 +130,7 @@ module "amplify" {
 
   project     = var.project
   environment = var.environment
-  github_token = var.github_token
+  github_token = var.source_token
   client_repository = var.client_repository
   admin_repository = var.admin_repository
   sonar_token = var.sonar_token

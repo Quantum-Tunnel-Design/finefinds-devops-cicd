@@ -2,7 +2,7 @@ resource "aws_amplify_app" "client" {
   name        = "${var.project}-${var.environment}-client"
   description = "FineFinds client web application"
   repository  = var.client_repository
-  access_token = var.github_token
+  access_token = var.source_token
 
   # Enable branch auto-build
   enable_branch_auto_build = true
@@ -51,7 +51,7 @@ resource "aws_amplify_app" "admin" {
   name        = "${var.project}-${var.environment}-admin"
   description = "FineFinds admin dashboard"
   repository  = var.admin_repository
-  access_token = var.github_token
+  access_token = var.source_token
 
   # Enable branch auto-build
   enable_branch_auto_build = true

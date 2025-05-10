@@ -23,6 +23,8 @@ set_environment_secrets() {
     # Set AWS Account ID and Region (common for all environments)
     gh secret set AWS_ACCOUNT_ID -b"$AWS_ACCOUNT_ID" --env "$env"
     gh secret set AWS_REGION -b"$AWS_REGION" --env "$env"
+    gh secret set CLIENT_REPOSITORY -b"$CLIENT_REPOSITORY" --env "$env"
+    gh secret set CLIENT_REPOSITORY -b"$ADMIN_REPOSITORY" --env "$env"
     
     # Set environment-specific AWS credentials
     case "$env" in
@@ -79,7 +81,7 @@ set_repo_secrets() {
     echo "Setting secrets for repository: $repo"
     
     # Set GitHub token
-    gh secret set GITHUB_TOKEN --body "$TF_VAR_github_token" --repo "$repo"
+    gh secret set SOURCE_TOKEN --body "$TF_VAR_github_token" --repo "$repo"
     
     # Set environment-specific variables
     gh secret set VITE_GRAPHQL_ENDPOINT --body "https://api.${TF_VAR_environment}.finefinds.com/graphql" --repo "$repo"
