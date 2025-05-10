@@ -2,14 +2,15 @@ name: SonarQube Scan
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, dev, qa, staging, sandbox ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, dev, qa, staging, sandbox ]
 
 jobs:
   sonarqube-scan:
     name: SonarQube Scan
     runs-on: ubuntu-latest
+    environment: ${{ github.ref_name }}
     
     steps:
       - name: Checkout code
@@ -33,13 +34,14 @@ jobs:
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         with:
           args: >
-            -Dsonar.projectKey=finefinds
-            -Dsonar.projectName=FineFinds
+            -Dsonar.projectKey=finefinds-${{ github.ref_name }}
+            -Dsonar.projectName=FineFinds-${{ github.ref_name }}
             -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
             -Dsonar.coverage.exclusions=**/*.test.js,**/*.spec.js,**/__tests__/**
             -Dsonar.testExecutionReportPaths=test-report.xml
             -Dsonar.qualitygate.wait=true
             -Dsonar.qualitygate.timeout=300
+            -Dsonar.qualitygate.conditions=${{ github.ref_name == 'main' && 'coverage >= 80,duplicated_lines_density <= 3' || github.ref_name == 'staging' && 'coverage >= 70,duplicated_lines_density <= 5' || 'coverage >= 60,duplicated_lines_density <= 7' }}
 
       - name: Check Quality Gate status
         uses: SonarSource/sonarqube-quality-gate-action@master

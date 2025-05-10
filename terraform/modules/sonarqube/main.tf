@@ -2,8 +2,8 @@ resource "aws_ecs_task_definition" "sonarqube" {
   family                   = "sonarqube-${var.environment}"
   requires_compatibilities = ["FARGATE"]
   network_mode            = "awsvpc"
-  cpu                     = var.task_cpu
-  memory                  = var.task_memory
+  cpu                     = local.config.task_cpu
+  memory                  = local.config.task_memory
   execution_role_arn      = aws_iam_role.ecs_execution_role.arn
   task_role_arn           = aws_iam_role.ecs_task_role.arn
 
@@ -26,6 +26,14 @@ resource "aws_ecs_task_definition" "sonarqube" {
         {
           name  = "SONAR_JDBC_USERNAME"
           value = var.db_username
+        },
+        {
+          name  = "SONAR_QUALITYGATE_WAIT"
+          value = "true"
+        },
+        {
+          name  = "SONAR_QUALITYGATE_TIMEOUT"
+          value = "300"
         }
       ]
       secrets = [
@@ -93,7 +101,7 @@ resource "aws_db_instance" "sonarqube" {
   identifier           = "sonarqube-${var.environment}"
   engine              = "postgres"
   engine_version      = "13.7"
-  instance_class      = var.db_instance_class
+  instance_class      = local.config.db_instance_class
   allocated_storage   = 20
   storage_type        = "gp2"
   db_name             = "sonarqube"
@@ -104,8 +112,8 @@ resource "aws_db_instance" "sonarqube" {
   vpc_security_group_ids = [aws_security_group.sonarqube_db.id]
   db_subnet_group_name   = var.db_subnet_group_name
 
-  backup_retention_period = 7
-  multi_az               = var.environment == "prod"
+  backup_retention_period = local.config.backup_retention
+  multi_az               = local.config.multi_az
 
   tags = {
     Name        = "sonarqube-${var.environment}"
