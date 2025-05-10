@@ -273,7 +273,7 @@ module "amplify" {
 variable "secret_suffix" {
   description = "Suffix for secret names"
   type        = string
-  default     = formatdate("YYYYMMDDHHmmss", timestamp())
+  default     = "latest"
 }
 
 # Outputs
