@@ -170,11 +170,6 @@ variable "existing_cluster_security_group_id" {
   default     = ""
 }
 
-variable "vpc_id" {
-  description = "VPC ID where resources will be created"
-  type        = string
-}
-
 variable "subnet_ids" {
   description = "List of subnet IDs for resources"
   type        = list(string)
