@@ -29,11 +29,6 @@ locals {
   mongodb_name       = "${var.project}-${var.environment}-mongodb"
   sonarqube_name     = "${var.project}-${var.environment}-sonarqube"
 
-  # Secret Names with timestamp suffix
-  db_password_secret_name     = "${var.project}/${var.environment}/db-password-${var.secret_suffix}"
-  mongodb_password_secret_name = "${var.project}/${var.environment}/mongodb-password-${var.secret_suffix}"
-  sonarqube_password_secret_name = "${var.project}/${var.environment}/sonarqube-password-${var.secret_suffix}"
-
   # Database Configuration
   db_username = "admin"
   db_name     = "finefinds"

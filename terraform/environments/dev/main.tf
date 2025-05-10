@@ -22,10 +22,8 @@ module "secrets" {
 
   project     = var.project
   environment = var.environment
-  db_password_secret_name     = local.db_password_secret_name
-  mongodb_password_secret_name = local.mongodb_password_secret_name
-  sonarqube_password_secret_name = local.sonarqube_password_secret_name
-
+  secret_suffix = var.secret_suffix
+  use_existing_secrets = true
   tags = local.common_tags
 }
 
