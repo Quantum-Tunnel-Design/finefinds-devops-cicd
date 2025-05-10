@@ -7,6 +7,11 @@ data "aws_instance" "existing_mongodb" {
   }
 }
 
+# Get MongoDB password from Secrets Manager
+data "aws_secretsmanager_secret_version" "mongodb_password" {
+  secret_id = var.mongodb_password_arn
+}
+
 # Security Group
 resource "aws_security_group" "mongodb" {
   count       = (var.use_existing_cluster || var.use_existing_instance) ? 0 : 1
@@ -61,6 +66,7 @@ resource "aws_docdb_subnet_group" "main" {
 locals {
   subnet_group_name = var.use_existing_subnet_group ? "${var.project}-${var.environment}-docdb-subnet-group" : aws_docdb_subnet_group.main[0].name
   security_group_id = var.use_existing_cluster ? var.existing_security_group_id : (var.use_existing_instance ? var.existing_instance_security_group_id : aws_security_group.mongodb[0].id)
+  mongodb_password  = jsondecode(data.aws_secretsmanager_secret_version.mongodb_password.secret_string)
 }
 
 # MongoDB Instance (DocumentDB)
@@ -69,7 +75,7 @@ resource "aws_docdb_cluster" "main" {
   cluster_identifier = "${var.project}-${var.environment}-docdb"
   engine            = "docdb"
   master_username   = var.admin_username
-  master_password   = var.mongodb_password
+  master_password   = local.mongodb_password
   skip_final_snapshot = true
 
   vpc_security_group_ids = [aws_security_group.mongodb[0].id]

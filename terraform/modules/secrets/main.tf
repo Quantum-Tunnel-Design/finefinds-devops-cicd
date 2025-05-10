@@ -128,10 +128,12 @@ output "database_password_arn" {
   description = "ARN of the database password secret"
 }
 
+# Output the ARN for use in other modules
 output "mongodb_password_arn" {
-  value       = local.mongodb_password_arn
   description = "ARN of the MongoDB password secret"
-}
+  value       = data.aws_secretsmanager_secret.mongodb_password.arn
+  sensitive   = true
+} 
 
 output "sonarqube_password_arn" {
   value       = local.sonarqube_password_arn
@@ -254,10 +256,3 @@ data "aws_secretsmanager_secret" "mongodb_password" {
 data "aws_secretsmanager_secret_version" "mongodb_password" {
   secret_id = data.aws_secretsmanager_secret.mongodb_password.id
 }
-
-# Output the ARN for use in other modules
-output "mongodb_password_arn" {
-  description = "ARN of the MongoDB password secret"
-  value       = data.aws_secretsmanager_secret.mongodb_password.arn
-  sensitive   = true
-} 
