@@ -1,36 +1,23 @@
-# Generate random values for secrets
+# Generate random passwords
 resource "random_password" "jwt_secret" {
-  length           = 32
-  special          = true
-  override_special = "!#$%&*()-_=+[]{}<>:?"
+  length  = 32
+  special = true
 }
 
 resource "random_password" "database_password" {
-  length           = 32
-  special          = true
-  override_special = "!#$%&*()-_=+[]{}<>:?"
+  length  = 32
+  special = true
 }
 
 resource "random_password" "mongodb_password" {
-  length           = 32
-  special          = true
-  override_special = "!#$%&*()-_=+[]{}<>:?"
+  length  = 32
+  special = true
 }
 
-# JWT Secret
+# Create JWT secret
 resource "aws_secretsmanager_secret" "jwt_secret" {
-  name = "${var.project}-${var.environment}-jwt-secret"
-  description = "JWT secret for ${var.environment} environment"
-
-  tags = {
-    Environment = var.environment
-    Project     = var.project
-    Terraform   = "true"
-  }
-
-  lifecycle {
-    ignore_changes = [name]
-  }
+  name        = "${var.project}-${var.environment}-jwt-secret-${formatdate("YYYYMMDDHHmmss", timestamp())}"
+  description = "JWT secret for ${var.project} ${var.environment} environment"
 }
 
 resource "aws_secretsmanager_secret_version" "jwt_secret" {
@@ -38,20 +25,10 @@ resource "aws_secretsmanager_secret_version" "jwt_secret" {
   secret_string = random_password.jwt_secret.result
 }
 
-# Database Password Secret
+# Create database URL secret
 resource "aws_secretsmanager_secret" "database_url" {
-  name = "${var.project}-${var.environment}-db-password"
-  description = "Database password for ${var.environment} environment"
-
-  tags = {
-    Environment = var.environment
-    Project     = var.project
-    Terraform   = "true"
-  }
-
-  lifecycle {
-    ignore_changes = [name]
-  }
+  name        = "${var.project}-${var.environment}-db-password-${formatdate("YYYYMMDDHHmmss", timestamp())}"
+  description = "Database password for ${var.project} ${var.environment} environment"
 }
 
 resource "aws_secretsmanager_secret_version" "database_url" {
@@ -59,20 +36,10 @@ resource "aws_secretsmanager_secret_version" "database_url" {
   secret_string = random_password.database_password.result
 }
 
-# MongoDB Password Secret
+# Create MongoDB password secret
 resource "aws_secretsmanager_secret" "mongodb_password" {
-  name = "${var.project}-${var.environment}-mongodb-password"
-  description = "MongoDB password for ${var.environment} environment"
-
-  tags = {
-    Environment = var.environment
-    Project     = var.project
-    Terraform   = "true"
-  }
-
-  lifecycle {
-    ignore_changes = [name]
-  }
+  name        = "${var.project}-${var.environment}-mongodb-password-${formatdate("YYYYMMDDHHmmss", timestamp())}"
+  description = "MongoDB password for ${var.project} ${var.environment} environment"
 }
 
 resource "aws_secretsmanager_secret_version" "mongodb_password" {
@@ -92,32 +59,35 @@ variable "environment" {
 }
 
 # Outputs
+output "jwt_secret_arn" {
+  value       = aws_secretsmanager_secret.jwt_secret.arn
+  description = "ARN of the JWT secret"
+}
+
 output "database_url_arn" {
-  description = "ARN of the database password in Secrets Manager"
   value       = aws_secretsmanager_secret.database_url.arn
-  sensitive   = true
+  description = "ARN of the database URL secret"
 }
 
 output "mongodb_uri_arn" {
-  description = "ARN of the MongoDB password in Secrets Manager"
   value       = aws_secretsmanager_secret.mongodb_password.arn
-  sensitive   = true
+  description = "ARN of the MongoDB password secret"
 }
 
-output "jwt_secret_arn" {
-  description = "ARN of the JWT secret in Secrets Manager"
-  value       = aws_secretsmanager_secret.jwt_secret.arn
+output "jwt_secret" {
+  value       = random_password.jwt_secret.result
+  description = "Generated JWT secret"
   sensitive   = true
 }
 
 output "database_password" {
-  description = "Generated database password"
   value       = random_password.database_password.result
+  description = "Generated database password"
   sensitive   = true
 }
 
 output "mongodb_password" {
-  description = "Generated MongoDB password"
   value       = random_password.mongodb_password.result
+  description = "Generated MongoDB password"
   sensitive   = true
 } 
