@@ -68,7 +68,7 @@ jobs:
         cd terraform/environments/${{ github.ref_name }}
         echo "Working directory: $(pwd)"
         terraform plan \
-          -var="github_token=${{ secrets.SOURCE_TOKEN }}" \
+          -var="source_token=${{ secrets.SOURCE_TOKEN }}" \
           -var="client_repository=${{ secrets.CLIENT_REPOSITORY }}" \
           -var="admin_repository=${{ secrets.ADMIN_REPOSITORY }}" \
           -var="sonar_token=${{ secrets.SONAR_TOKEN }}" \
@@ -83,7 +83,7 @@ jobs:
         cd terraform/environments/${{ github.ref_name }}
         echo "Working directory: $(pwd)"
         terraform apply \
-          -var="github_token=${{ secrets.SOURCE_TOKEN }}" \
+          -var="source_token=${{ secrets.SOURCE_TOKEN }}" \
           -var="client_repository=${{ secrets.CLIENT_REPOSITORY }}" \
           -var="admin_repository=${{ secrets.ADMIN_REPOSITORY }}" \
           -var="sonar_token=${{ secrets.SONAR_TOKEN }}" \
