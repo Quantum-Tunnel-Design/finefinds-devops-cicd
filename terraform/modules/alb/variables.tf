@@ -72,4 +72,10 @@ variable "health_check_unhealthy_threshold" {
   description = "Number of consecutive failed health checks required"
   type        = number
   default     = 2
+}
+
+variable "certificate_arn" {
+  description = "ARN of the SSL certificate in AWS Certificate Manager"
+  type        = string
+  default     = null
 } 
