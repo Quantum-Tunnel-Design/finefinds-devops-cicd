@@ -1,10 +1,10 @@
 # Get database password from Secrets Manager
-data "aws_secretsmanager_secret_version" "database_password" {
+data "aws_secretsmanager_secret_version" "db_password" {
   secret_id = var.db_password_arn
 }
 
 locals {
-  db_password = jsondecode(data.aws_secretsmanager_secret_version.database_password.secret_string)
+  db_password = jsondecode(data.aws_secretsmanager_secret_version.db_password.secret_string)
 }
 
 # Data source for existing RDS instance
@@ -19,37 +19,34 @@ data "aws_db_subnet_group" "existing" {
   name  = "${var.project}-${var.environment}-db-subnet-group"
 }
 
-# RDS Subnet Group
-resource "aws_db_subnet_group" "main" {
-  count      = var.use_existing_subnet_group ? 0 : 1
-  name       = "${var.project}-${var.environment}-db-subnet-group"
-  subnet_ids = var.subnet_ids
-
-  tags = {
-    Environment = var.environment
-    Project     = var.project
-    Terraform   = "true"
-  }
-
-  lifecycle {
-    ignore_changes = [name]
-    prevent_destroy = true
-  }
-}
-
 # RDS Security Group
 resource "aws_security_group" "rds" {
-  count       = var.use_existing_instance ? 0 : 1
-  name        = "${var.project}-${var.environment}-rds-sg"
-  description = "Allow inbound traffic for RDS"
+  name        = var.security_group_name
+  description = "Security group for RDS instance"
   vpc_id      = var.vpc_id
 
   ingress {
     protocol    = "tcp"
     from_port   = 5432
     to_port     = 5432
-    cidr_blocks = ["10.0.0.0/8"]  # Allow from VPC CIDR
+    cidr_blocks = var.vpc_cidr_blocks
   }
+
+  tags = {
+    Name        = var.security_group_name
+    Environment = var.environment
+    Project     = var.project
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# RDS Subnet Group
+resource "aws_db_subnet_group" "main" {
+  name       = "${var.project}-${var.environment}-rds-subnet-group"
+  subnet_ids = var.subnet_ids
 
   tags = {
     Environment = var.environment
@@ -62,34 +59,21 @@ resource "aws_security_group" "rds" {
   }
 }
 
-# Use existing or new subnet group
-locals {
-  subnet_group_name = var.use_existing_subnet_group ? data.aws_db_subnet_group.existing[0].name : aws_db_subnet_group.main[0].name
-  security_group_id = var.use_existing_instance ? var.existing_security_group_id : aws_security_group.rds[0].id
-}
-
 # RDS Instance
 resource "aws_db_instance" "main" {
-  count = var.use_existing_instance ? 0 : 1
-  identifier = "${var.project}-${var.environment}-db"
+  identifier           = var.name
+  engine              = "postgres"
+  engine_version      = "14.7"
+  instance_class      = var.db_instance_class
+  allocated_storage   = var.allocated_storage
+  storage_type        = "gp3"
+  db_name             = var.db_name
+  username            = var.db_username
+  password            = local.db_password
+  skip_final_snapshot = var.skip_final_snapshot
 
-  engine         = "postgres"
-  engine_version = "17.5"
-  instance_class = var.db_instance_class
-
-  allocated_storage     = var.allocated_storage
-  storage_type         = "gp2"
-  storage_encrypted    = true
-
-  db_name  = var.db_name
-  username = "finefinds_admin"
-  password = local.db_password
-
-  vpc_security_group_ids = [local.security_group_id]
-  db_subnet_group_name   = local.subnet_group_name
-
-  backup_retention_period = 7
-  skip_final_snapshot    = var.skip_final_snapshot
+  vpc_security_group_ids = [aws_security_group.rds.id]
+  db_subnet_group_name   = aws_db_subnet_group.main.name
 
   tags = {
     Environment = var.environment
@@ -98,16 +82,7 @@ resource "aws_db_instance" "main" {
   }
 
   lifecycle {
-    ignore_changes = [
-      identifier,
-      engine_version,
-      password,
-      db_name,
-      username,
-      allocated_storage,
-      instance_class
-    ]
-    prevent_destroy = true
+    create_before_destroy = true
   }
 }
 
@@ -141,5 +116,5 @@ output "db_instance_port" {
 
 output "db_subnet_group_name" {
   description = "Name of the DB subnet group"
-  value       = local.subnet_group_name
+  value       = aws_db_subnet_group.main.name
 } 

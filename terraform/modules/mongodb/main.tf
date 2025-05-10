@@ -177,11 +177,6 @@ output "endpoint" {
   value       = local.cluster_endpoint
 }
 
-output "security_group_id" {
-  description = "Security group ID of the MongoDB instance"
-  value       = var.existing_security_group_id
-}
-
 # IAM Roles
 resource "aws_iam_role" "ecs_execution_role" {
   name = "${var.project}-${var.environment}-mongodb-execution-role"
