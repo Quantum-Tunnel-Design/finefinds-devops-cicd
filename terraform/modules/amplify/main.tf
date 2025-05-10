@@ -116,7 +116,7 @@ resource "aws_amplify_branch" "client_dev" {
 resource "aws_amplify_branch" "client_qa" {
   app_id      = aws_amplify_app.client.id
   branch_name = "qa"
-  stage       = "QA"
+  stage       = "BETA"
   framework   = "React"
 
   enable_auto_build = true
@@ -132,7 +132,7 @@ resource "aws_amplify_branch" "client_qa" {
 resource "aws_amplify_branch" "client_staging" {
   app_id      = aws_amplify_app.client.id
   branch_name = "staging"
-  stage       = "STAGING"
+  stage       = "BETA"
   framework   = "React"
 
   enable_auto_build = true
@@ -181,7 +181,7 @@ resource "aws_amplify_branch" "admin_dev" {
 resource "aws_amplify_branch" "admin_qa" {
   app_id      = aws_amplify_app.admin.id
   branch_name = "qa"
-  stage       = "QA"
+  stage       = "BETA"
   framework   = "React"
 
   enable_auto_build = true
@@ -197,7 +197,7 @@ resource "aws_amplify_branch" "admin_qa" {
 resource "aws_amplify_branch" "admin_staging" {
   app_id      = aws_amplify_app.admin.id
   branch_name = "staging"
-  stage       = "STAGING"
+  stage       = "BETA"
   framework   = "React"
 
   enable_auto_build = true

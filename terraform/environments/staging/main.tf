@@ -40,6 +40,9 @@ module "ecs" {
   ecr_repository_url = var.ecr_repository_url
   image_tag         = var.image_tag
   alb_security_group_id = module.alb.security_group_id
+  database_url_arn  = module.rds.db_password_arn
+  mongodb_uri_arn   = module.mongodb.mongodb_password_arn
+  aws_region        = var.aws_region
 }
 
 # RDS Module
@@ -101,6 +104,7 @@ module "monitoring" {
   project     = var.project
   environment = var.environment
   aws_region  = var.aws_region
+  alert_email = var.alert_email
 }
 
 # SonarQube Module
@@ -117,6 +121,7 @@ module "sonarqube" {
   alb_security_group_id = module.alb.security_group_id
   alb_dns_name = module.alb.dns_name
   db_endpoint = module.rds.endpoint
+  db_subnet_group_name = module.rds.db_subnet_group_name
 }
 
 # Amplify Module
@@ -129,100 +134,8 @@ module "amplify" {
   client_repository = var.client_repository
   admin_repository = var.admin_repository
   sonar_token = var.sonar_token
-}
-
-# Variables
-variable "project" {
-  description = "Project name"
-  type        = string
-  default     = "finefinds"
-}
-
-variable "environment" {
-  description = "Environment name"
-  type        = string
-  default     = "staging"
-}
-
-variable "aws_region" {
-  description = "AWS region"
-  type        = string
-  default     = "us-east-1"
-}
-
-variable "container_name" {
-  description = "Name of the container"
-  type        = string
-  default     = "app"
-}
-
-variable "container_port" {
-  description = "Port exposed by the container"
-  type        = number
-  default     = 3000
-}
-
-variable "ecr_repository_url" {
-  description = "URL of the ECR repository"
-  type        = string
-}
-
-variable "image_tag" {
-  description = "Tag of the container image to deploy"
-  type        = string
-  default     = "latest"
-}
-
-variable "database_url_arn" {
-  description = "ARN of the database URL secret"
-  type        = string
-}
-
-variable "mongodb_uri_arn" {
-  description = "ARN of the MongoDB URI secret"
-  type        = string
-}
-
-variable "alb_security_group_id" {
-  description = "Security group ID of the ALB"
-  type        = string
-  default     = null
-}
-
-variable "db_username" {
-  description = "Master username for RDS"
-  type        = string
-}
-
-variable "db_password" {
-  description = "Master password for RDS"
-  type        = string
-  sensitive   = true
-}
-
-variable "mongodb_admin_username" {
-  description = "Admin username for MongoDB"
-  type        = string
-}
-
-variable "github_token" {
-  description = "GitHub token for Amplify"
-  type        = string
-}
-
-variable "client_repository" {
-  description = "Client repository for Amplify"
-  type        = string
-}
-
-variable "admin_repository" {
-  description = "Admin repository for Amplify"
-  type        = string
-}
-
-variable "sonar_token" {
-  description = "SonarQube token for Amplify"
-  type        = string
+  graphql_endpoint = "https://api.${var.environment}.finefinds.com/graphql"
+  sonarqube_url = module.sonarqube.sonarqube_url
 }
 
 # Outputs
