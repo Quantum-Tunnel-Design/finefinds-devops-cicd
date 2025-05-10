@@ -30,11 +30,7 @@ resource "aws_cognito_user_pool" "main" {
     allow_admin_create_user_only = false
   }
 
-  tags = {
-    Environment = var.environment
-    Project     = var.project
-    Terraform   = "true"
-  }
+  tags = var.tags
 
   lifecycle {
     ignore_changes = [name]

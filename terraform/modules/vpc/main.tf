@@ -25,12 +25,12 @@ resource "aws_subnet" "public" {
 
   map_public_ip_on_launch = true
 
-  tags = {
-    Name        = "${var.project}-${var.environment}-public-${count.index + 1}"
-    Environment = var.environment
-    Project     = var.project
-    Terraform   = "true"
-  }
+  tags = merge(
+    {
+      Name = "${var.project}-${var.environment}-public-${count.index + 1}"
+    },
+    var.tags
+  )
 
   lifecycle {
     create_before_destroy = true
@@ -44,12 +44,12 @@ resource "aws_subnet" "private" {
   cidr_block        = var.private_subnet_cidrs[count.index]
   availability_zone = var.availability_zones[count.index]
 
-  tags = {
-    Name        = "${var.project}-${var.environment}-private-${count.index + 1}"
-    Environment = var.environment
-    Project     = var.project
-    Terraform   = "true"
-  }
+  tags = merge(
+    {
+      Name = "${var.project}-${var.environment}-private-${count.index + 1}"
+    },
+    var.tags
+  )
 
   lifecycle {
     create_before_destroy = true
@@ -60,12 +60,12 @@ resource "aws_subnet" "private" {
 resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
 
-  tags = {
-    Name        = "${var.project}-${var.environment}-igw"
-    Environment = var.environment
-    Project     = var.project
-    Terraform   = "true"
-  }
+  tags = merge(
+    {
+      Name = "${var.project}-${var.environment}-igw"
+    },
+    var.tags
+  )
 
   lifecycle {
     create_before_destroy = true
@@ -77,12 +77,12 @@ resource "aws_eip" "nat" {
   count  = length(var.availability_zones)
   domain = "vpc"
 
-  tags = {
-    Name        = "${var.project}-${var.environment}-nat-eip-${count.index + 1}"
-    Environment = var.environment
-    Project     = var.project
-    Terraform   = "true"
-  }
+  tags = merge(
+    {
+      Name = "${var.project}-${var.environment}-nat-eip-${count.index + 1}"
+    },
+    var.tags
+  )
 
   lifecycle {
     create_before_destroy = true
@@ -95,12 +95,12 @@ resource "aws_nat_gateway" "main" {
   allocation_id = aws_eip.nat[count.index].id
   subnet_id     = aws_subnet.public[count.index].id
 
-  tags = {
-    Name        = "${var.project}-${var.environment}-nat-${count.index + 1}"
-    Environment = var.environment
-    Project     = var.project
-    Terraform   = "true"
-  }
+  tags = merge(
+    {
+      Name = "${var.project}-${var.environment}-nat-${count.index + 1}"
+    },
+    var.tags
+  )
 
   depends_on = [aws_internet_gateway.main]
 
@@ -118,12 +118,12 @@ resource "aws_route_table" "public" {
     gateway_id = aws_internet_gateway.main.id
   }
 
-  tags = {
-    Name        = "${var.project}-${var.environment}-public-rt"
-    Environment = var.environment
-    Project     = var.project
-    Terraform   = "true"
-  }
+  tags = merge(
+    {
+      Name = "${var.project}-${var.environment}-public-rt"
+    },
+    var.tags
+  )
 
   lifecycle {
     create_before_destroy = true
@@ -140,12 +140,12 @@ resource "aws_route_table" "private" {
     nat_gateway_id = aws_nat_gateway.main[count.index].id
   }
 
-  tags = {
-    Name        = "${var.project}-${var.environment}-private-rt-${count.index + 1}"
-    Environment = var.environment
-    Project     = var.project
-    Terraform   = "true"
-  }
+  tags = merge(
+    {
+      Name = "${var.project}-${var.environment}-private-rt-${count.index + 1}"
+    },
+    var.tags
+  )
 
   lifecycle {
     create_before_destroy = true
@@ -181,6 +181,8 @@ resource "aws_flow_log" "main" {
   traffic_type    = "ALL"
   vpc_id          = aws_vpc.main.id
 
+  tags = var.tags
+
   lifecycle {
     create_before_destroy = true
   }
@@ -191,11 +193,7 @@ resource "aws_cloudwatch_log_group" "flow_logs" {
   name              = "/vpc/${var.project}-${var.environment}/flow-logs"
   retention_in_days = 30
 
-  tags = {
-    Environment = var.environment
-    Project     = var.project
-    Terraform   = "true"
-  }
+  tags = var.tags
 
   lifecycle {
     create_before_destroy = true
@@ -219,11 +217,7 @@ resource "aws_iam_role" "flow_logs" {
     ]
   })
 
-  tags = {
-    Environment = var.environment
-    Project     = var.project
-    Terraform   = "true"
-  }
+  tags = var.tags
 
   lifecycle {
     create_before_destroy = true

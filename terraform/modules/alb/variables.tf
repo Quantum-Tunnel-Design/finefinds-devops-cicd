@@ -78,4 +78,10 @@ variable "certificate_arn" {
   description = "ARN of the SSL certificate in AWS Certificate Manager"
   type        = string
   default     = null
+}
+
+variable "tags" {
+  description = "Tags to apply to all resources"
+  type        = map(string)
+  default     = {}
 } 

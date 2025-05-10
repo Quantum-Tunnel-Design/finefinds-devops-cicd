@@ -38,4 +38,26 @@ variable "certificate_arn" {
   description = "ARN of the certificate for the Cognito domain"
   type        = string
   default     = ""
+}
+
+variable "project" {
+  description = "Project name"
+  type        = string
+}
+
+variable "environment" {
+  description = "Environment name"
+  type        = string
+}
+
+variable "use_existing_roles" {
+  description = "Whether to use existing IAM roles"
+  type        = bool
+  default     = false
+}
+
+variable "tags" {
+  description = "Tags to apply to all resources"
+  type        = map(string)
+  default     = {}
 } 

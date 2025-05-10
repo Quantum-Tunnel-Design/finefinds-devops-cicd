@@ -22,7 +22,7 @@ resource "aws_cloudwatch_log_group" "ecs" {
 
 # CloudWatch Dashboard
 resource "aws_cloudwatch_dashboard" "main" {
-  dashboard_name = "finefinds-${var.environment}"
+  dashboard_name = "${var.project}-${var.environment}-dashboard"
 
   dashboard_body = jsonencode({
     widgets = [
@@ -34,8 +34,8 @@ resource "aws_cloudwatch_dashboard" "main" {
         height = 6
         properties = {
           metrics = [
-            ["AWS/ECS", "CPUUtilization", "ServiceName", "finefinds-${var.environment}", "ClusterName", "finefinds-${var.environment}"],
-            ["AWS/ECS", "MemoryUtilization", "ServiceName", "finefinds-${var.environment}", "ClusterName", "finefinds-${var.environment}"]
+            ["AWS/ECS", "CPUUtilization", "ServiceName", "${var.project}-${var.environment}-service", "ClusterName", "${var.project}-${var.environment}-cluster"],
+            ["AWS/ECS", "MemoryUtilization", "ServiceName", "${var.project}-${var.environment}-service", "ClusterName", "${var.project}-${var.environment}-cluster"]
           ]
           period = 300
           stat   = "Average"
@@ -51,8 +51,8 @@ resource "aws_cloudwatch_dashboard" "main" {
         height = 6
         properties = {
           metrics = [
-            ["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "finefinds-${var.environment}"],
-            ["AWS/RDS", "FreeableMemory", "DBInstanceIdentifier", "finefinds-${var.environment}"]
+            ["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "${var.project}-${var.environment}-db"],
+            ["AWS/RDS", "FreeableMemory", "DBInstanceIdentifier", "${var.project}-${var.environment}-db"]
           ]
           period = 300
           stat   = "Average"
@@ -62,6 +62,8 @@ resource "aws_cloudwatch_dashboard" "main" {
       }
     ]
   })
+
+  tags = var.tags
 }
 
 # Prometheus Workspace
@@ -362,4 +364,51 @@ resource "aws_sns_topic_subscription" "email" {
   topic_arn = aws_sns_topic.alerts.arn
   protocol  = "email"
   endpoint  = var.alert_email
+}
+
+# IAM Role for CloudWatch
+resource "aws_iam_role" "cloudwatch" {
+  count = var.use_existing_roles ? 0 : 1
+  name  = "${var.project}-${var.environment}-cloudwatch-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "monitoring.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = var.tags
+}
+
+# IAM Policy for CloudWatch
+resource "aws_iam_role_policy" "cloudwatch" {
+  count = var.use_existing_roles ? 0 : 1
+  name  = "${var.project}-${var.environment}-cloudwatch-policy"
+  role  = aws_iam_role.cloudwatch[0].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "cloudwatch:PutMetricData",
+          "cloudwatch:GetMetricStatistics",
+          "cloudwatch:ListMetrics",
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogStreams"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
 } 

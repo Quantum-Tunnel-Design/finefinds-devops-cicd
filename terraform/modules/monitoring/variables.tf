@@ -52,4 +52,10 @@ variable "use_existing_roles" {
   description = "Whether to use existing IAM roles"
   type        = bool
   default     = false
+}
+
+variable "tags" {
+  description = "Tags to apply to all resources"
+  type        = map(string)
+  default     = {}
 } 

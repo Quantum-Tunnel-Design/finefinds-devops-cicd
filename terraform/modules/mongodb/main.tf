@@ -18,26 +18,30 @@ locals {
 
 # MongoDB Security Group
 resource "aws_security_group" "mongodb" {
-  name        = var.security_group_name
-  description = "Security group for MongoDB instance"
+  name        = "${var.project}-${var.environment}-mongodb-sg"
+  description = "Security group for MongoDB"
   vpc_id      = var.vpc_id
 
   ingress {
-    protocol    = "tcp"
     from_port   = 27017
     to_port     = 27017
-    cidr_blocks = var.vpc_cidr_blocks
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = {
-    Name        = var.security_group_name
-    Environment = var.environment
-    Project     = var.project
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
-  lifecycle {
-    create_before_destroy = true
-  }
+  tags = merge(
+    {
+      Name = "${var.project}-${var.environment}-mongodb-sg"
+    },
+    var.tags
+  )
 }
 
 # MongoDB Subnet Group
@@ -99,12 +103,14 @@ resource "aws_docdb_cluster_instance" "main" {
 
 # EC2 Instance for MongoDB
 resource "aws_instance" "mongodb" {
-  count         = (var.use_existing_cluster || var.use_existing_instance) ? 0 : 1
-  ami           = var.ami_id
+  ami           = data.aws_ami.amazon_linux_2.id
   instance_type = var.instance_type
   subnet_id     = var.subnet_ids[0]
 
-  vpc_security_group_ids = [var.existing_security_group_id]
+  vpc_security_group_ids = concat(
+    [aws_security_group.mongodb.id],
+    var.security_group_ids
+  )
 
   root_block_device {
     volume_size = var.volume_size
@@ -113,35 +119,25 @@ resource "aws_instance" "mongodb" {
 
   user_data = <<-EOF
               #!/bin/bash
-              # Install MongoDB
-              wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | sudo apt-key add -
-              echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/6.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-6.0.list
-              sudo apt-get update
-              sudo apt-get install -y mongodb-org
-              sudo systemctl start mongod
-              sudo systemctl enable mongod
-
-              # Configure MongoDB
-              sudo sed -i 's/bindIp: 127.0.0.1/bindIp: 0.0.0.0/' /etc/mongod.conf
-              sudo systemctl restart mongod
-
-              # Create admin user
-              mongosh --eval '
-                db = db.getSiblingDB("admin");
-                db.createUser({
-                  user: "${var.admin_username}",
-                  pwd: "${local.mongodb_password}",
-                  roles: [ { role: "userAdminAnyDatabase", db: "admin" } ]
-                });
-              '
+              yum update -y
+              yum install -y docker
+              systemctl start docker
+              systemctl enable docker
+              docker run -d \
+                --name mongodb \
+                -p 27017:27017 \
+                -v /data/db:/data/db \
+                mongo:latest
               EOF
 
-  tags = {
-    Name        = "${var.project}-${var.environment}-mongodb"
-    Environment = var.environment
-    Project     = var.project
-    Terraform   = "true"
-  }
+  iam_instance_profile = aws_iam_instance_profile.mongodb.name
+
+  tags = merge(
+    {
+      Name = "${var.project}-${var.environment}-mongodb"
+    },
+    var.tags
+  )
 }
 
 # EBS Volume for Data
@@ -225,5 +221,70 @@ resource "aws_iam_role" "ecs_task_role" {
   lifecycle {
     ignore_changes = [name]
     prevent_destroy = true
+  }
+}
+
+# IAM Role for MongoDB
+resource "aws_iam_role" "mongodb" {
+  count = var.use_existing_roles ? 0 : 1
+  name  = "${var.project}-${var.environment}-mongodb-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = var.tags
+}
+
+# IAM Instance Profile for MongoDB
+resource "aws_iam_instance_profile" "mongodb" {
+  name = "${var.project}-${var.environment}-mongodb-profile"
+  role = aws_iam_role.mongodb[0].name
+}
+
+# IAM Policy for MongoDB
+resource "aws_iam_role_policy" "mongodb" {
+  count = var.use_existing_roles ? 0 : 1
+  name  = "${var.project}-${var.environment}-mongodb-policy"
+  role  = aws_iam_role.mongodb[0].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:DescribeTags",
+          "ec2:DescribeInstances",
+          "ec2:DescribeInstanceStatus"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# Data source for Amazon Linux 2 AMI
+data "aws_ami" "amazon_linux_2" {
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
   }
 } 

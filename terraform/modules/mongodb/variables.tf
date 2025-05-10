@@ -9,12 +9,12 @@ variable "environment" {
 }
 
 variable "vpc_id" {
-  description = "ID of the VPC"
+  description = "VPC ID where MongoDB will be deployed"
   type        = string
 }
 
 variable "subnet_ids" {
-  description = "List of subnet IDs for MongoDB"
+  description = "List of subnet IDs where MongoDB will be deployed"
   type        = list(string)
 }
 
@@ -55,15 +55,15 @@ variable "ami_id" {
 }
 
 variable "instance_type" {
-  description = "Instance type for the MongoDB EC2 instance"
+  description = "EC2 instance type for MongoDB"
   type        = string
-  default     = "t3.micro"
+  default     = "t3.medium"
 }
 
 variable "volume_size" {
-  description = "Size of the root volume in GB"
+  description = "Size of the EBS volume in GB"
   type        = number
-  default     = 8
+  default     = 20
 }
 
 variable "data_volume_size" {
@@ -120,4 +120,22 @@ variable "skip_final_snapshot" {
   description = "Whether to skip the final snapshot when destroying"
   type        = bool
   default     = true
+}
+
+variable "security_group_ids" {
+  description = "List of security group IDs to attach to MongoDB"
+  type        = list(string)
+  default     = []
+}
+
+variable "use_existing_roles" {
+  description = "Whether to use existing IAM roles"
+  type        = bool
+  default     = false
+}
+
+variable "tags" {
+  description = "Tags to apply to all resources"
+  type        = map(string)
+  default     = {}
 } 

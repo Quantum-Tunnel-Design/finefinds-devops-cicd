@@ -9,12 +9,12 @@ variable "environment" {
 }
 
 variable "vpc_id" {
-  description = "ID of the VPC"
+  description = "VPC ID where SonarQube will be deployed"
   type        = string
 }
 
 variable "subnet_ids" {
-  description = "List of subnet IDs for SonarQube"
+  description = "List of subnet IDs where SonarQube will be deployed"
   type        = list(string)
 }
 
