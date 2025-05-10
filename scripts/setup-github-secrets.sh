@@ -24,7 +24,8 @@ set_environment_secrets() {
     gh secret set AWS_ACCOUNT_ID -b"$AWS_ACCOUNT_ID" --env "$env"
     gh secret set AWS_REGION -b"$AWS_REGION" --env "$env"
     gh secret set CLIENT_REPOSITORY -b"$CLIENT_REPOSITORY" --env "$env"
-    gh secret set CLIENT_REPOSITORY -b"$ADMIN_REPOSITORY" --env "$env"
+    gh secret set ADMIN_REPOSITORY -b"$ADMIN_REPOSITORY" --env "$env"
+    gh secret set SOURCE_TOKEN -b"$TF_VAR_github_token" --env "$env"
     
     # Set environment-specific AWS credentials
     case "$env" in

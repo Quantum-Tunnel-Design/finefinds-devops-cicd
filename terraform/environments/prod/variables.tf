@@ -64,7 +64,7 @@ variable "mongodb_admin_username" {
   default     = "admin"
 }
 
-variable "github_token" {
+variable "source_token" {
   description = "GitHub personal access token for repository access"
   type        = string
   sensitive   = true
