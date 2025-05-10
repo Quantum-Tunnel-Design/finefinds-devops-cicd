@@ -1,34 +1,52 @@
 locals {
-  # VPC and Network
-  vpc_id             = module.vpc.vpc_id
-  private_subnet_ids = module.vpc.private_subnet_ids
-  public_subnet_ids  = module.vpc.public_subnet_ids
-  vpc_cidr          = "10.0.0.0/16"
-  
-  # Shared security group CIDR blocks
-  vpc_cidr_blocks = ["10.0.0.0/8"]
-  
-  # Shared subnet group names
-  db_subnet_group_name = "${var.project}-${var.environment}-db-subnet-group"
-  
-  # Shared tags
+  # Common tags
   common_tags = {
     Environment = var.environment
     Project     = var.project
     Terraform   = "true"
   }
 
-  # Security group names
-  alb_sg_name = "${var.project}-${var.environment}-alb-sg"
-  ecs_sg_name = "${var.project}-${var.environment}-ecs-sg"
-  rds_sg_name = "${var.project}-${var.environment}-rds-sg"
-  mongo_sg_name = "${var.project}-${var.environment}-mongo-sg"
-  sonarqube_sg_name = "${var.project}-${var.environment}-sonarqube-sg"
+  # VPC Configuration
+  vpc_cidr = "10.0.0.0/16"
+  azs      = ["us-east-1a", "us-east-1b"]
 
-  # Resource names
-  alb_name = "${var.project}-${var.environment}-alb"
-  ecs_cluster_name = "${var.project}-${var.environment}"
-  rds_name = "${var.project}-${var.environment}-db"
-  mongodb_name = "${var.project}-${var.environment}-mongo"
-  sonarqube_name = "${var.project}-${var.environment}-sonarqube"
+  # Subnet CIDRs
+  public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24"]
+  private_subnet_cidrs = ["10.0.3.0/24", "10.0.4.0/24"]
+
+  # Security Group Names
+  alb_sg_name        = "${var.project}-${var.environment}-alb-sg"
+  ecs_sg_name        = "${var.project}-${var.environment}-ecs-sg"
+  rds_sg_name        = "${var.project}-${var.environment}-rds-sg"
+  mongodb_sg_name    = "${var.project}-${var.environment}-mongodb-sg"
+  sonarqube_sg_name  = "${var.project}-${var.environment}-sonarqube-sg"
+
+  # Resource Names
+  alb_name           = "${var.project}-${var.environment}-alb"
+  ecs_cluster_name   = "${var.project}-${var.environment}-ecs"
+  rds_name           = "${var.project}-${var.environment}-rds"
+  mongodb_name       = "${var.project}-${var.environment}-mongodb"
+  sonarqube_name     = "${var.project}-${var.environment}-sonarqube"
+
+  # Secret Names
+  db_password_secret_name     = "${var.project}/${var.environment}/db-password"
+  mongodb_password_secret_name = "${var.project}/${var.environment}/mongodb-password"
+  sonarqube_password_secret_name = "${var.project}/${var.environment}/sonarqube-password"
+
+  # Database Configuration
+  db_username = "admin"
+  db_name     = "finefinds"
+
+  # Container Configuration
+  container_port = 3000
+  task_cpu       = 256
+  task_memory    = 512
+
+  # Health Check Configuration
+  health_check_path     = "/health"
+  health_check_port     = "traffic-port"
+  health_check_interval = 30
+  health_check_timeout  = 5
+  health_check_healthy_threshold   = 2
+  health_check_unhealthy_threshold = 2
 } 

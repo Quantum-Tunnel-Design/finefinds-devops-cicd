@@ -18,6 +18,21 @@ variable "subnet_ids" {
   type        = list(string)
 }
 
+variable "name" {
+  description = "Name of the SonarQube instance"
+  type        = string
+}
+
+variable "security_group_name" {
+  description = "Name of the SonarQube security group"
+  type        = string
+}
+
+variable "vpc_cidr_blocks" {
+  description = "List of VPC CIDR blocks to allow traffic from"
+  type        = list(string)
+}
+
 variable "aws_region" {
   description = "AWS region"
   type        = string
@@ -29,26 +44,30 @@ variable "db_endpoint" {
 }
 
 variable "db_username" {
-  description = "Master username for SonarQube database"
+  description = "Username for the SonarQube database"
   type        = string
-  default     = "sonarqube"
 }
 
 variable "db_password_arn" {
-  description = "ARN of the SonarQube database password secret in AWS Secrets Manager"
+  description = "ARN of the database password secret in AWS Secrets Manager"
+  type        = string
+}
+
+variable "sonarqube_password_arn" {
+  description = "ARN of the SonarQube password secret in AWS Secrets Manager"
   type        = string
 }
 
 variable "task_cpu" {
-  description = "CPU units for the ECS task"
+  description = "CPU units for the SonarQube task"
   type        = number
-  default     = 1024
+  default     = 256
 }
 
 variable "task_memory" {
-  description = "Memory for the ECS task in MB"
+  description = "Memory for the SonarQube task in MB"
   type        = number
-  default     = 2048
+  default     = 512
 }
 
 variable "use_existing_efs" {
@@ -87,11 +106,17 @@ variable "skip_final_snapshot" {
 }
 
 variable "alb_security_group_id" {
-  description = "Security group ID of the ALB"
+  description = "ID of the ALB security group"
   type        = string
 }
 
 variable "alb_dns_name" {
   description = "DNS name of the ALB"
   type        = string
+}
+
+variable "tags" {
+  description = "Tags to apply to all resources"
+  type        = map(string)
+  default     = {}
 } 

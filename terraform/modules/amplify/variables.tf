@@ -8,8 +8,13 @@ variable "environment" {
   type        = string
 }
 
+variable "aws_region" {
+  description = "AWS region"
+  type        = string
+}
+
 variable "client_repository" {
-  description = "GitHub repository URL for the client web app"
+  description = "GitHub repository URL for the client application"
   type        = string
 }
 
@@ -29,13 +34,8 @@ variable "graphql_endpoint" {
   type        = string
 }
 
-variable "sonarqube_url" {
-  description = "SonarQube server URL"
-  type        = string
-}
-
-variable "sonar_token" {
-  description = "SonarQube authentication token"
-  type        = string
-  sensitive   = true
+variable "tags" {
+  description = "Tags to apply to all resources"
+  type        = map(string)
+  default     = {}
 } 

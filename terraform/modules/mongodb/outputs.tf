@@ -1,16 +1,26 @@
-output "cluster_id" {
-  description = "The cluster identifier"
-  value       = aws_docdb_cluster.main.id
-}
-
-output "cluster_endpoint" {
-  description = "The cluster endpoint"
+output "endpoint" {
+  description = "Endpoint of the MongoDB instance"
   value       = aws_docdb_cluster.main.endpoint
 }
 
-output "cluster_port" {
-  description = "The cluster port"
+output "port" {
+  description = "Port of the MongoDB instance"
   value       = aws_docdb_cluster.main.port
+}
+
+output "security_group_id" {
+  description = "ID of the MongoDB security group"
+  value       = aws_security_group.main.id
+}
+
+output "cluster_identifier" {
+  description = "Identifier of the MongoDB cluster"
+  value       = aws_docdb_cluster.main.cluster_identifier
+}
+
+output "subnet_group_name" {
+  description = "Name of the DB subnet group"
+  value       = aws_docdb_subnet_group.main.name
 }
 
 output "cluster_reader_endpoint" {
@@ -26,14 +36,4 @@ output "cluster_master_username" {
 output "cluster_master_password_arn" {
   description = "The ARN of the master password secret"
   value       = var.mongodb_password_arn
-}
-
-output "security_group_id" {
-  description = "The security group ID"
-  value       = aws_security_group.mongodb.id
-}
-
-output "subnet_group_name" {
-  description = "The subnet group name"
-  value       = aws_docdb_subnet_group.main.name
 } 

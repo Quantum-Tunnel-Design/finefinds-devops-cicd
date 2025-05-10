@@ -9,12 +9,12 @@ variable "environment" {
 }
 
 variable "vpc_id" {
-  description = "VPC ID where resources will be created"
+  description = "ID of the VPC"
   type        = string
 }
 
 variable "subnet_ids" {
-  description = "List of subnet IDs for the RDS instance"
+  description = "List of subnet IDs for RDS"
   type        = list(string)
 }
 
@@ -37,7 +37,7 @@ variable "use_existing_subnet_group" {
 }
 
 variable "db_username" {
-  description = "Master username for RDS"
+  description = "Username for the RDS instance"
   type        = string
   default     = "admin"
 }
@@ -55,7 +55,7 @@ variable "allocated_storage" {
 }
 
 variable "skip_final_snapshot" {
-  description = "Whether to skip the final snapshot when destroying the instance"
+  description = "Whether to skip the final snapshot when destroying"
   type        = bool
   default     = true
 }
@@ -84,4 +84,10 @@ variable "security_group_name" {
 variable "vpc_cidr_blocks" {
   description = "List of VPC CIDR blocks to allow traffic from"
   type        = list(string)
+}
+
+variable "tags" {
+  description = "Tags to apply to all resources"
+  type        = map(string)
+  default     = {}
 } 

@@ -1,10 +1,14 @@
 # Get database password from Secrets Manager
+data "aws_secretsmanager_secret" "db_password" {
+  arn = var.db_password_arn
+}
+
 data "aws_secretsmanager_secret_version" "db_password" {
-  secret_id = var.db_password_arn
+  secret_id = data.aws_secretsmanager_secret.db_password.id
 }
 
 locals {
-  db_password = jsondecode(data.aws_secretsmanager_secret_version.db_password.secret_string)
+  db_password = jsondecode(data.aws_secretsmanager_secret_version.db_password.secret_string)["password"]
 }
 
 # Data source for existing RDS instance
@@ -20,23 +24,31 @@ data "aws_db_subnet_group" "existing" {
 }
 
 # RDS Security Group
-resource "aws_security_group" "rds" {
+resource "aws_security_group" "main" {
   name        = var.security_group_name
   description = "Security group for RDS instance"
   vpc_id      = var.vpc_id
 
   ingress {
-    protocol    = "tcp"
-    from_port   = 5432
-    to_port     = 5432
-    cidr_blocks = var.vpc_cidr_blocks
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    cidr_blocks     = var.vpc_cidr_blocks
   }
 
-  tags = {
-    Name        = var.security_group_name
-    Environment = var.environment
-    Project     = var.project
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
+
+  tags = merge(
+    var.tags,
+    {
+      Name = var.security_group_name
+    }
+  )
 
   lifecycle {
     create_before_destroy = true
@@ -45,18 +57,10 @@ resource "aws_security_group" "rds" {
 
 # RDS Subnet Group
 resource "aws_db_subnet_group" "main" {
-  name       = "${var.project}-${var.environment}-rds-subnet-group"
+  name       = "${var.name}-subnet-group"
   subnet_ids = var.subnet_ids
 
-  tags = {
-    Environment = var.environment
-    Project     = var.project
-    Terraform   = "true"
-  }
-
-  lifecycle {
-    create_before_destroy = true
-  }
+  tags = var.tags
 }
 
 # RDS Instance
@@ -66,20 +70,24 @@ resource "aws_db_instance" "main" {
   engine_version      = "14.7"
   instance_class      = var.db_instance_class
   allocated_storage   = var.allocated_storage
-  storage_type        = "gp3"
+  storage_type        = "gp2"
   db_name             = var.db_name
   username            = var.db_username
   password            = local.db_password
   skip_final_snapshot = var.skip_final_snapshot
 
-  vpc_security_group_ids = [aws_security_group.rds.id]
+  vpc_security_group_ids = [aws_security_group.main.id]
   db_subnet_group_name   = aws_db_subnet_group.main.name
 
-  tags = {
-    Environment = var.environment
-    Project     = var.project
-    Terraform   = "true"
-  }
+  backup_retention_period = 7
+  backup_window          = "03:00-04:00"
+  maintenance_window     = "Mon:04:00-Mon:05:00"
+
+  multi_az               = false
+  publicly_accessible    = false
+  deletion_protection    = true
+
+  tags = var.tags
 
   lifecycle {
     create_before_destroy = true
