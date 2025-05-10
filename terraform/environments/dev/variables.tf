@@ -179,4 +179,5 @@ variable "subnet_ids" {
 variable "certificate_arn" {
   description = "ARN of the SSL certificate for the ALB"
   type        = string
+  default     = null
 }
