@@ -103,6 +103,12 @@ variable "ecs_security_group_id" {
   type        = string
 }
 
+variable "db_username" {
+  description = "Master username for RDS"
+  type        = string
+  default     = "admin"
+}
+
 variable "instance_class" {
   description = "RDS instance class"
   type        = string
@@ -132,9 +138,9 @@ output "db_instance_endpoint" {
   value       = aws_db_instance.main.endpoint
 }
 
-output "db_instance_name" {
+output "db_instance_identifier" {
   description = "Name of the RDS instance"
-  value       = aws_db_instance.main.name
+  value       = aws_db_instance.main.identifier
 }
 
 output "db_instance_port" {
@@ -146,4 +152,9 @@ output "db_password_arn" {
   description = "ARN of the database password in Secrets Manager"
   value       = aws_secretsmanager_secret.db_password.arn
   sensitive   = true
+}
+
+output "db_subnet_group_name" {
+  description = "Name of the DB subnet group"
+  value       = aws_db_subnet_group.main.name
 } 

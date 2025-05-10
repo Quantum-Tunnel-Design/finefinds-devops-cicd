@@ -43,11 +43,23 @@ resource "aws_secretsmanager_secret_version" "mongodb_password" {
   secret_string = random_password.mongodb_password.result
 }
 
+# DocumentDB Subnet Group
+resource "aws_docdb_subnet_group" "main" {
+  name       = "${var.project}-${var.environment}-docdb-subnet-group"
+  subnet_ids = var.subnet_ids
+
+  tags = {
+    Environment = var.environment
+    Project     = var.project
+    Terraform   = "true"
+  }
+}
+
 # MongoDB Instance
 resource "aws_docdb_cluster" "main" {
   cluster_identifier = "${var.project}-${var.environment}-mongodb"
   engine            = "docdb"
-  master_username   = "admin"
+  master_username   = var.admin_username
   master_password   = random_password.mongodb_password.result
 
   db_subnet_group_name   = aws_docdb_subnet_group.main.name
@@ -94,7 +106,7 @@ resource "aws_instance" "mongodb" {
                 db = db.getSiblingDB("admin");
                 db.createUser({
                   user: "${var.admin_username}",
-                  pwd: "${var.admin_password}",
+                  pwd: "${random_password.mongodb_password.result}",
                   roles: [ { role: "userAdminAnyDatabase", db: "admin" } ]
                 });
               '
@@ -181,12 +193,7 @@ variable "data_volume_size" {
 variable "admin_username" {
   description = "MongoDB admin username"
   type        = string
-}
-
-variable "admin_password" {
-  description = "MongoDB admin password"
-  type        = string
-  sensitive   = true
+  default     = "admin"
 }
 
 # Outputs
@@ -200,7 +207,6 @@ output "security_group_id" {
   value       = aws_security_group.mongodb.id
 }
 
-# Output the password ARN
 output "mongodb_password_arn" {
   description = "ARN of the MongoDB password in Secrets Manager"
   value       = aws_secretsmanager_secret.mongodb_password.arn
