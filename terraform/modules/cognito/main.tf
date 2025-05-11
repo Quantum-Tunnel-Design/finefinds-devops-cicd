@@ -182,6 +182,36 @@ resource "aws_cognito_user_group" "student_group_for_client_pool" {
   }
 }
 
+resource "aws_cognito_user_group" "vendor_group_for_client_pool" {
+  name         = "vendor"
+  user_pool_id = aws_cognito_user_pool.client_pool.id
+  description  = "Vendors for Client Pool"
+  precedence   = 3
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "aws_cognito_user_group" "guest_group_for_client_pool" {
+  name         = "guest"
+  user_pool_id = aws_cognito_user_pool.client_pool.id
+  description  = "Guests for Client Pool"
+  precedence   = 4
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "aws_cognito_user_group" "tutor_group_for_client_pool" {
+  name         = "tutor"
+  user_pool_id = aws_cognito_user_pool.client_pool.id
+  description  = "Tutors for Client Pool"
+  precedence   = 5
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
 # Cognito Domain for Client Pool
 resource "aws_cognito_user_pool_domain" "client_pool_domain" {
   domain       = "${var.project}-${var.environment}-client"
