@@ -406,5 +406,5 @@ module "database" {
 
   instance_class    = local.current_env_config.db_instance_class
   allocated_storage = 20
-  db_name          = "finefinds"
+  db_name          = "finefindslk"
 }

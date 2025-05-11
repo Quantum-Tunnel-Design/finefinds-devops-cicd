@@ -67,7 +67,7 @@ locals {
 
   # Database Configuration
   db_username = "admin"
-  db_name     = "finefinds"
+  db_name     = "finefindslk"
   db_port     = 5432
 
   # Container Configuration

@@ -7,7 +7,7 @@ variable "aws_region" {
 variable "project" {
   description = "Project name"
   type        = string
-  default     = "finefinds"
+  default     = "finefindslk"
 }
 
 variable "environment" {

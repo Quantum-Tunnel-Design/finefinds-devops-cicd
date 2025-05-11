@@ -72,7 +72,7 @@ module "rds" {
   db_instance_class = "db.t3.small"
   allocated_storage = 50
   skip_final_snapshot = false
-  db_name = "finefinds"
+  db_name = "finefindslk"
 }
 
 # Cognito Module
@@ -298,7 +298,7 @@ module "monitoring" {
 variable "project" {
   description = "Project name"
   type        = string
-  default     = "finefinds"
+  default     = "finefindslk"
 }
 
 variable "environment" {

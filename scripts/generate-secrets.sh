@@ -83,6 +83,7 @@ main() {
     echo "Generating secure random strings for passwords..."
     DB_PASSWORD=$(generate_secure_string)
     MONGODB_PASSWORD=$(generate_secure_string)
+    SONARQUBE_DB_PASSWORD=$(generate_secure_string)
 
     # Set manual usernames
     echo "Setting manual usernames..."
@@ -116,6 +117,12 @@ main() {
         "finefindslk/${ENVIRONMENT}/mongodb-password" \
         "$MONGODB_PASSWORD" \
         "MongoDB password for ${ENVIRONMENT}" \
+        "$REGION"
+
+    create_or_update_secret \
+        "finefindslk/${ENVIRONMENT}/sonarqube-password" \
+        "$SONARQUBE_DB_PASSWORD" \
+        "SonarQube password for ${ENVIRONMENT}" \
         "$REGION"
 
     create_or_update_secret \

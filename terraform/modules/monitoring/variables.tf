@@ -10,7 +10,7 @@ variable "name_prefix" {
 variable "project" {
   description = "Project name"
   type        = string
-  default     = "finefinds"
+  default     = "finefindslk"
   validation {
     condition     = can(regex("^[a-z0-9-]+$", var.project))
     error_message = "The project name must contain only lowercase letters, numbers, and hyphens."

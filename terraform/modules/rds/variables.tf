@@ -63,7 +63,7 @@ variable "skip_final_snapshot" {
 variable "db_name" {
   description = "Name of the database to create"
   type        = string
-  default     = "finefinds"
+  default     = "finefindslk"
 }
 
 variable "db_password_arn" {

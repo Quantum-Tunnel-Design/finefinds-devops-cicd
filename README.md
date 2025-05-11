@@ -59,7 +59,7 @@ The infrastructure is organized into the following modules:
 
 3. Create a `terraform.tfvars` file with your configuration:
    ```hcl
-   project = "finefinds"
+   project = "finefindslk"
    environment = "dev"
    aws_region = "us-east-1"
    

@@ -103,7 +103,7 @@ variable "sonar_token" {
 variable "app_name" {
   description = "Name of the Amplify app"
   type        = string
-  default     = "finefinds"
+  default     = "finefindslk"
 }
 
 variable "branch" {

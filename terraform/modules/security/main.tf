@@ -159,11 +159,11 @@ data "aws_region" "current" {}
 
 # Secrets Manager Data Sources
 data "aws_secretsmanager_secret" "mongodb_password" {
-  name = "${var.name_prefix}-mongodb-password"
+  name = "${var.project}/${var.environment}/mongodb-password"
 }
 
 data "aws_secretsmanager_secret" "sonar_token" {
-  name = "${var.name_prefix}-sonar-token"
+  name = "${var.project}/${var.environment}/sonar-token"
 }
 
 # Get secret versions
