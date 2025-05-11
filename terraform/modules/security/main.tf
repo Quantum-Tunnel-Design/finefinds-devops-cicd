@@ -43,12 +43,12 @@ resource "aws_iam_role" "ecs_task" {
   tags = var.tags
 }
 
-# Cognito User Pool
-resource "aws_cognito_user_pool" "main" {
-  name = "${var.name_prefix}-user-pool"
+# Cognito User Pools
+resource "aws_cognito_user_pool" "client" {
+  name = "${var.name_prefix}-client-pool"
 
   auto_verified_attributes = ["email"]
-  username_attributes      = ["email"]
+  username_attributes     = ["email"]
 
   password_policy {
     minimum_length    = 8
@@ -58,32 +58,122 @@ resource "aws_cognito_user_pool" "main" {
     require_uppercase = true
   }
 
-  verification_message_template {
-    default_email_option = "CONFIRM_WITH_CODE"
+  tags = var.tags
+}
+
+resource "aws_cognito_user_pool_client" "client" {
+  name = "${var.name_prefix}-client"
+
+  user_pool_id = aws_cognito_user_pool.client.id
+
+  callback_urls = var.callback_urls
+  logout_urls   = var.logout_urls
+
+  allowed_oauth_flows = ["code"]
+  allowed_oauth_scopes = ["email", "openid", "profile"]
+  allowed_oauth_flows_user_pool_client = true
+
+  supported_identity_providers = ["COGNITO"]
+}
+
+resource "aws_cognito_user_pool" "admin" {
+  name = "${var.name_prefix}-admin-pool"
+
+  auto_verified_attributes = ["email"]
+  username_attributes     = ["email"]
+
+  password_policy {
+    minimum_length    = 8
+    require_lowercase = true
+    require_numbers   = true
+    require_symbols   = true
+    require_uppercase = true
   }
-
-  email_configuration {
-    email_sending_account = "COGNITO_DEFAULT"
-  }
-
-  admin_create_user_config {
-    allow_admin_create_user_only = false
-  }
-
-  # Use Amplify domains for callbacks
-  callback_urls = [
-    "https://${var.client_domain}/callback",
-    "https://${var.admin_domain}/callback"
-  ]
-
-  logout_urls = [
-    "https://${var.client_domain}",
-    "https://${var.admin_domain}"
-  ]
 
   tags = var.tags
 }
 
+resource "aws_cognito_user_pool_client" "admin" {
+  name = "${var.name_prefix}-admin"
+
+  user_pool_id = aws_cognito_user_pool.admin.id
+
+  callback_urls = var.callback_urls
+  logout_urls   = var.logout_urls
+
+  allowed_oauth_flows = ["code"]
+  allowed_oauth_scopes = ["email", "openid", "profile"]
+  allowed_oauth_flows_user_pool_client = true
+
+  supported_identity_providers = ["COGNITO"]
+}
+
+# Security Groups
+resource "aws_security_group" "db" {
+  name        = "${var.name_prefix}-db-sg"
+  description = "Security group for database"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = ["10.0.0.0/8"]
+  }
+
+  tags = var.tags
+}
+
+resource "aws_security_group" "mongodb" {
+  name        = "${var.name_prefix}-mongodb-sg"
+  description = "Security group for MongoDB"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    from_port   = 27017
+    to_port     = 27017
+    protocol    = "tcp"
+    cidr_blocks = ["10.0.0.0/8"]
+  }
+
+  tags = var.tags
+}
+
+resource "aws_security_group" "sonarqube" {
+  name        = "${var.name_prefix}-sonarqube-sg"
+  description = "Security group for SonarQube"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    from_port   = 9000
+    to_port     = 9000
+    protocol    = "tcp"
+    cidr_blocks = ["10.0.0.0/8"]
+  }
+
+  tags = var.tags
+}
+
+# Get current region
+data "aws_region" "current" {}
+
+# Get secret versions
+data "aws_secretsmanager_secret_version" "db_password" {
+  secret_id = var.db_password_arn
+}
+
+data "aws_secretsmanager_secret_version" "mongodb_password" {
+  secret_id = var.mongodb_password_arn
+}
+
+data "aws_secretsmanager_secret_version" "sonar_token" {
+  secret_id = var.sonar_token_arn
+}
+
+# Local variables for secrets
+locals {
+  db_password = jsondecode(data.aws_secretsmanager_secret_version.db_password.secret_string)["password"]
+  mongodb_password = try(jsondecode(data.aws_secretsmanager_secret_version.mongodb_password.secret_string)["password"], data.aws_secretsmanager_secret_version.mongodb_password.secret_string)
 # Cognito User Pool Client
 resource "aws_cognito_user_pool_client" "main" {
   name                         = "${var.name_prefix}-client"

@@ -18,6 +18,11 @@ variable "tags" {
   type        = map(string)
 }
 
+variable "vpc_id" {
+  description = "ID of the VPC"
+  type        = string
+}
+
 variable "client_domain" {
   description = "Client application domain"
   type        = string
