@@ -105,7 +105,7 @@ resource "aws_ecs_task_definition" "main" {
   container_definitions = jsonencode([
     {
       name      = "${var.name_prefix}-container"
-      image     = var.container_image
+      image     = local.container_image
       essential = true
 
       portMappings = [
@@ -338,4 +338,12 @@ resource "aws_cloudwatch_log_group" "main" {
 }
 
 # Get current region
-data "aws_region" "current" {} 
+data "aws_region" "current" {}
+
+data "aws_secretsmanager_secret_version" "container_image" {
+  secret_id = var.container_image_arn
+}
+
+locals {
+  container_image = jsondecode(data.aws_secretsmanager_secret_version.container_image.secret_string)
+} 

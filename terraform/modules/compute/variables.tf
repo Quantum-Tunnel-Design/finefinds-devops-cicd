@@ -53,11 +53,6 @@ variable "service_desired_count" {
   default     = 1
 }
 
-variable "container_image" {
-  description = "Container image to use"
-  type        = string
-}
-
 variable "container_port" {
   description = "Port exposed by the container"
   type        = number
@@ -107,4 +102,9 @@ variable "health_check_unhealthy_threshold" {
   description = "Number of consecutive failed health checks required"
   type        = number
   default     = 2
+}
+
+variable "container_image_arn" {
+  description = "ARN of the container image secret in AWS Secrets Manager"
+  type        = string
 } 

@@ -86,4 +86,9 @@ variable "tags" {
   description = "Tags to apply to all resources"
   type        = map(string)
   default     = {}
+}
+
+variable "container_image" {
+  description = "Container image URI to store in AWS Secrets Manager"
+  type        = string
 } 

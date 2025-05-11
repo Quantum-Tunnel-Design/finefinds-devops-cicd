@@ -33,12 +33,13 @@ module "vpc" {
 # Secrets Module
 module "secrets" {
   source = "../../modules/secrets"
-
+  
   project     = var.project
-  environment = var.environment
+  environment              = var.environment
+  tags                     = local.common_tags
+  
+  container_image = var.container_image
   secret_suffix = var.secret_suffix
-  use_existing_secrets = false
-  tags = local.common_tags
 }
 
 # Security Module
@@ -95,7 +96,7 @@ module "compute" {
   task_memory            = local.current_env_config.task_memory
   service_desired_count  = local.current_env_config.service_count
   container_port           = var.container_port
-  container_image        = var.container_image
+  container_image_arn    = module.secrets.container_image_arn
   certificate_arn        = module.security.certificate_arn
   rds_secret_arn           = module.security.rds_secret_arn
   mongodb_secret_arn       = module.security.mongodb_secret_arn

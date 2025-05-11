@@ -256,3 +256,19 @@ data "aws_secretsmanager_secret" "mongodb_password" {
 data "aws_secretsmanager_secret_version" "mongodb_password" {
   secret_id = data.aws_secretsmanager_secret.mongodb_password.id
 }
+
+resource "aws_secretsmanager_secret" "container_image" {
+  name        = "${var.project}/${var.environment}/container-image"
+  description = "Container image URI for ${var.environment} environment"
+  tags        = var.tags
+}
+
+resource "aws_secretsmanager_secret_version" "container_image" {
+  secret_id     = aws_secretsmanager_secret.container_image.id
+  secret_string = var.container_image
+}
+
+output "container_image_arn" {
+  description = "ARN of the container image secret"
+  value       = aws_secretsmanager_secret.container_image.arn
+}
