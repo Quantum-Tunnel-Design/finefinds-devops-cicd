@@ -71,6 +71,7 @@ jobs:
           -var="source_token=${{ secrets.SOURCE_TOKEN }}" \
           -var="client_repository=${{ secrets.CLIENT_REPOSITORY }}" \
           -var="admin_repository=${{ secrets.ADMIN_REPOSITORY }}" \
+          -var="alert_email=${{ secrets.ALERT_EMAIL }}" \
           -out=tfplan -detailed-exitcode
         echo "Terraform plan completed"
         echo "========================="
@@ -85,6 +86,7 @@ jobs:
           -var="source_token=${{ secrets.SOURCE_TOKEN }}" \
           -var="client_repository=${{ secrets.CLIENT_REPOSITORY }}" \
           -var="admin_repository=${{ secrets.ADMIN_REPOSITORY }}" \
+          -var="alert_email=${{ secrets.ALERT_EMAIL }}" \
           -auto-approve
         echo "Terraform apply completed"
         echo "============================="
