@@ -190,7 +190,7 @@ resource "aws_cloudwatch_metric_alarm" "ecs_cpu" {
   namespace           = "AWS/ECS"
   period             = "300"
   statistic          = "Average"
-  threshold          = "80"
+  threshold          = local.current_thresholds.cpu_utilization
   alarm_description  = "This metric monitors ECS CPU utilization"
   alarm_actions      = [aws_sns_topic.alerts.arn]
   ok_actions         = [aws_sns_topic.alerts.arn]
@@ -210,7 +210,7 @@ resource "aws_cloudwatch_metric_alarm" "ecs_memory" {
   namespace           = "AWS/ECS"
   period             = "300"
   statistic          = "Average"
-  threshold          = "80"
+  threshold          = local.current_thresholds.memory_utilization
   alarm_description  = "This metric monitors ECS memory utilization"
   alarm_actions      = [aws_sns_topic.alerts.arn]
   ok_actions         = [aws_sns_topic.alerts.arn]
@@ -230,7 +230,7 @@ resource "aws_cloudwatch_metric_alarm" "rds_cpu" {
   namespace           = "AWS/RDS"
   period             = "300"
   statistic          = "Average"
-  threshold          = "80"
+  threshold          = local.current_thresholds.rds_cpu
   alarm_description  = "This metric monitors RDS CPU utilization"
   alarm_actions      = [aws_sns_topic.alerts.arn]
   ok_actions         = [aws_sns_topic.alerts.arn]
@@ -277,8 +277,7 @@ resource "aws_sns_topic_subscription" "alerts" {
 
 # IAM Role for CloudWatch
 resource "aws_iam_role" "cloudwatch" {
-  count = var.use_existing_roles ? 0 : 1
-  name  = "${var.project}-${var.environment}-cloudwatch-role"
+  name = "${var.name_prefix}-cloudwatch-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -287,7 +286,7 @@ resource "aws_iam_role" "cloudwatch" {
         Action = "sts:AssumeRole"
         Effect = "Allow"
         Principal = {
-          Service = "monitoring.amazonaws.com"
+          Service = "monitoring.rds.amazonaws.com"
         }
       }
     ]
@@ -298,9 +297,8 @@ resource "aws_iam_role" "cloudwatch" {
 
 # IAM Policy for CloudWatch
 resource "aws_iam_role_policy" "cloudwatch" {
-  count = var.use_existing_roles ? 0 : 1
-  name  = "${var.project}-${var.environment}-cloudwatch-policy"
-  role  = aws_iam_role.cloudwatch[0].id
+  name = "${var.name_prefix}-cloudwatch-policy"
+  role = aws_iam_role.cloudwatch.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -310,11 +308,7 @@ resource "aws_iam_role_policy" "cloudwatch" {
         Action = [
           "cloudwatch:PutMetricData",
           "cloudwatch:GetMetricStatistics",
-          "cloudwatch:ListMetrics",
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents",
-          "logs:DescribeLogStreams"
+          "cloudwatch:ListMetrics"
         ]
         Resource = "*"
       }
@@ -324,211 +318,101 @@ resource "aws_iam_role_policy" "cloudwatch" {
 
 # CloudWatch Log Groups
 resource "aws_cloudwatch_log_group" "alb" {
-  count             = var.enable_cloudwatch ? 1 : 0
   name              = "/aws/alb/${var.name_prefix}"
   retention_in_days = var.log_retention_days
 
-  tags = merge(
-    var.tags,
-    {
-      Name = "${var.name_prefix}-alb-logs"
-    }
-  )
+  tags = var.tags
 }
 
 resource "aws_cloudwatch_log_group" "ecs" {
-  count             = var.enable_cloudwatch ? 1 : 0
   name              = "/aws/ecs/${var.name_prefix}"
   retention_in_days = var.log_retention_days
 
-  tags = merge(
-    var.tags,
-    {
-      Name = "${var.name_prefix}-ecs-logs"
-    }
-  )
+  tags = var.tags
 }
 
 resource "aws_cloudwatch_log_group" "rds" {
-  count             = var.enable_cloudwatch ? 1 : 0
   name              = "/aws/rds/${var.name_prefix}"
   retention_in_days = var.log_retention_days
 
-  tags = merge(
-    var.tags,
-    {
-      Name = "${var.name_prefix}-rds-logs"
-    }
-  )
+  tags = var.tags
 }
 
-# CloudWatch Alarms
+# CloudWatch Alarms for ALB
 resource "aws_cloudwatch_metric_alarm" "alb_5xx" {
-  count               = var.enable_cloudwatch ? 1 : 0
-  alarm_name          = "${var.name_prefix}-alb-5xx"
+  alarm_name          = "${var.name_prefix}-alb-5xx-errors"
   comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 2
+  evaluation_periods  = "2"
   metric_name         = "HTTPCode_ELB_5XX_Count"
   namespace           = "AWS/ApplicationELB"
-  period             = 300
+  period             = "300"
   statistic          = "Sum"
-  threshold          = 10
+  threshold          = "10"
   alarm_description  = "This metric monitors ALB 5XX errors"
-  alarm_actions      = [aws_sns_topic.alerts[0].arn]
-  ok_actions         = [aws_sns_topic.alerts[0].arn]
+  alarm_actions      = [aws_sns_topic.alerts.arn]
+  ok_actions         = [aws_sns_topic.alerts.arn]
 
   dimensions = {
-    LoadBalancer = split("/", var.alb_arn)[1]
+    LoadBalancer = "${var.name_prefix}-alb"
   }
 
-  tags = merge(
-    var.tags,
-    {
-      Name = "${var.name_prefix}-alb-5xx-alarm"
-    }
-  )
+  tags = var.tags
 }
 
-resource "aws_cloudwatch_metric_alarm" "ecs_cpu" {
-  count               = var.enable_cloudwatch ? 1 : 0
-  alarm_name          = "${var.name_prefix}-ecs-cpu"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 2
-  metric_name         = "CPUUtilization"
-  namespace           = "AWS/ECS"
-  period             = 300
-  statistic          = "Average"
-  threshold          = 80
-  alarm_description  = "This metric monitors ECS CPU utilization"
-  alarm_actions      = [aws_sns_topic.alerts[0].arn]
-  ok_actions         = [aws_sns_topic.alerts[0].arn]
-
-  dimensions = {
-    ClusterName = split("/", var.ecs_cluster_arn)[1]
-    ServiceName = split("/", var.ecs_service_arn)[2]
-  }
-
-  tags = merge(
-    var.tags,
-    {
-      Name = "${var.name_prefix}-ecs-cpu-alarm"
-    }
-  )
-}
-
-resource "aws_cloudwatch_metric_alarm" "rds_cpu" {
-  count               = var.enable_cloudwatch ? 1 : 0
-  alarm_name          = "${var.name_prefix}-rds-cpu"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 2
-  metric_name         = "CPUUtilization"
-  namespace           = "AWS/RDS"
-  period             = 300
-  statistic          = "Average"
-  threshold          = 80
-  alarm_description  = "This metric monitors RDS CPU utilization"
-  alarm_actions      = [aws_sns_topic.alerts[0].arn]
-  ok_actions         = [aws_sns_topic.alerts[0].arn]
-
-  dimensions = {
-    DBInstanceIdentifier = var.rds_instance_id
-  }
-
-  tags = merge(
-    var.tags,
-    {
-      Name = "${var.name_prefix}-rds-cpu-alarm"
-    }
-  )
-}
-
-# SNS Topic for Alerts
-resource "aws_sns_topic" "alerts" {
-  count = var.enable_cloudwatch ? 1 : 0
-  name  = "${var.name_prefix}-alerts"
-
-  tags = merge(
-    var.tags,
-    {
-      Name = "${var.name_prefix}-alerts"
-    }
-  )
-}
-
-# X-Ray
+# X-Ray Group
 resource "aws_xray_group" "main" {
-  count       = var.enable_xray ? 1 : 0
-  group_name  = "${var.name_prefix}-group"
-  filter_expression = "service(\"${var.name_prefix}-service\")"
+  group_name        = "${var.name_prefix}-xray"
+  filter_expression = "service(\"${var.name_prefix}\")"
 
-  tags = merge(
-    var.tags,
-    {
-      Name = "${var.name_prefix}-xray-group"
-    }
-  )
+  tags = var.tags
 }
 
 # CloudTrail
 resource "aws_cloudtrail" "main" {
-  count                         = var.enable_cloudtrail ? 1 : 0
   name                          = "${var.name_prefix}-trail"
-  s3_bucket_name               = aws_s3_bucket.cloudtrail[0].id
+  s3_bucket_name               = aws_s3_bucket.cloudtrail.id
   include_global_service_events = true
   is_multi_region_trail        = true
   enable_logging               = true
+  cloud_watch_logs_group_arn   = "${aws_cloudwatch_log_group.cloudtrail.arn}:*"
+  cloud_watch_logs_role_arn    = aws_iam_role.cloudtrail.arn
 
-  cloud_watch_logs_group_arn = "${aws_cloudwatch_log_group.cloudtrail[0].arn}:*"
-  cloud_watch_logs_role_arn  = aws_iam_role.cloudtrail[0].arn
-
-  tags = merge(
-    var.tags,
-    {
-      Name = "${var.name_prefix}-trail"
-    }
-  )
+  tags = var.tags
 }
 
 # S3 Bucket for CloudTrail
 resource "aws_s3_bucket" "cloudtrail" {
-  count  = var.enable_cloudtrail ? 1 : 0
-  bucket = "${var.name_prefix}-cloudtrail-logs"
+  bucket = "${var.name_prefix}-cloudtrail"
 
-  tags = merge(
-    var.tags,
-    {
-      Name = "${var.name_prefix}-cloudtrail-logs"
-    }
-  )
+  tags = var.tags
 }
 
+# S3 Bucket Versioning
 resource "aws_s3_bucket_versioning" "cloudtrail" {
-  count  = var.enable_cloudtrail ? 1 : 0
-  bucket = aws_s3_bucket.cloudtrail[0].id
+  bucket = aws_s3_bucket.cloudtrail.id
 
   versioning_configuration {
     status = "Enabled"
   }
 }
 
+# S3 Bucket Lifecycle Configuration
 resource "aws_s3_bucket_lifecycle_configuration" "cloudtrail" {
-  count  = var.enable_cloudtrail ? 1 : 0
-  bucket = aws_s3_bucket.cloudtrail[0].id
+  bucket = aws_s3_bucket.cloudtrail.id
 
   rule {
-    id     = "expire_old_logs"
+    id     = "cleanup"
     status = "Enabled"
 
     expiration {
-      days = var.log_retention_days
+      days = 90
     }
   }
 }
 
-# CloudTrail IAM Role
+# IAM Role for CloudTrail
 resource "aws_iam_role" "cloudtrail" {
-  count = var.enable_cloudtrail ? 1 : 0
-  name  = "${var.name_prefix}-cloudtrail-role"
+  name = "${var.name_prefix}-cloudtrail-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -543,18 +427,13 @@ resource "aws_iam_role" "cloudtrail" {
     ]
   })
 
-  tags = merge(
-    var.tags,
-    {
-      Name = "${var.name_prefix}-cloudtrail-role"
-    }
-  )
+  tags = var.tags
 }
 
+# IAM Policy for CloudTrail
 resource "aws_iam_role_policy" "cloudtrail" {
-  count = var.enable_cloudtrail ? 1 : 0
-  name  = "${var.name_prefix}-cloudtrail-policy"
-  role  = aws_iam_role.cloudtrail[0].id
+  name = "${var.name_prefix}-cloudtrail-policy"
+  role = aws_iam_role.cloudtrail.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -562,10 +441,11 @@ resource "aws_iam_role_policy" "cloudtrail" {
       {
         Effect = "Allow"
         Action = [
+          "logs:CreateLogGroup",
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
-        Resource = "${aws_cloudwatch_log_group.cloudtrail[0].arn}:*"
+        Resource = "${aws_cloudwatch_log_group.cloudtrail.arn}:*"
       }
     ]
   })
@@ -573,14 +453,8 @@ resource "aws_iam_role_policy" "cloudtrail" {
 
 # CloudWatch Log Group for CloudTrail
 resource "aws_cloudwatch_log_group" "cloudtrail" {
-  count             = var.enable_cloudtrail ? 1 : 0
   name              = "/aws/cloudtrail/${var.name_prefix}"
   retention_in_days = var.log_retention_days
 
-  tags = merge(
-    var.tags,
-    {
-      Name = "${var.name_prefix}-cloudtrail-logs"
-    }
-  )
+  tags = var.tags
 } 

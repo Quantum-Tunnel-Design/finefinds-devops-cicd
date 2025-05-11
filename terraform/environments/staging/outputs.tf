@@ -1,17 +1,17 @@
 # VPC Outputs
 output "vpc_id" {
   description = "ID of the VPC"
-  value       = module.vpc.vpc_id
+  value       = module.networking.vpc_id
 }
 
 output "public_subnet_ids" {
   description = "List of public subnet IDs"
-  value       = module.vpc.public_subnet_ids
+  value       = module.networking.public_subnet_ids
 }
 
 output "private_subnet_ids" {
   description = "List of private subnet IDs"
-  value       = module.vpc.private_subnet_ids
+  value       = module.networking.private_subnet_ids
 }
 
 # Database Outputs
@@ -37,29 +37,29 @@ output "db_username" {
 }
 
 # Compute Outputs
-output "ecs_cluster_name" {
+output "cluster_name" {
   description = "Name of the ECS cluster"
-  value       = module.compute.ecs_cluster_name
+  value       = module.compute.cluster_name
 }
 
-output "ecs_cluster_arn" {
+output "cluster_arn" {
   description = "ARN of the ECS cluster"
-  value       = module.compute.ecs_cluster_arn
+  value       = module.compute.cluster_arn
 }
 
-output "ecs_service_name" {
+output "service_name" {
   description = "Name of the ECS service"
-  value       = module.compute.ecs_service_name
+  value       = module.compute.service_name
 }
 
-output "ecs_service_arn" {
+output "service_arn" {
   description = "ARN of the ECS service"
-  value       = module.compute.ecs_service_arn
+  value       = module.compute.service_arn
 }
 
-output "ecs_task_definition_arn" {
+output "task_definition_arn" {
   description = "ARN of the ECS task definition"
-  value       = module.compute.ecs_task_definition_arn
+  value       = module.compute.task_definition_arn
 }
 
 output "alb_dns_name" {
@@ -84,7 +84,7 @@ output "kms_key_id" {
 }
 
 # Monitoring Outputs
-output "monitoring_dashboard_url" {
-  description = "URL of the CloudWatch dashboard"
-  value       = module.monitoring.dashboard_url
+output "log_group_name" {
+  description = "Name of the CloudWatch log group"
+  value       = module.compute.log_group_name
 } 
