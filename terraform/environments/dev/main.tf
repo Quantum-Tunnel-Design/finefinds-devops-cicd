@@ -138,11 +138,10 @@ module "cicd" {
   source = "../../modules/cicd"
   
   name_prefix = var.name_prefix
-  project     = var.project
   environment = var.environment
   tags        = var.tags
   
-  repository_url = var.client_repository_arn != null ? var.client_repository_arn : module.secrets.client_repository_arn
+  client_repository_url = var.client_repository_arn != null ? var.client_repository_arn : module.secrets.client_repository_arn
   admin_repository_url = var.admin_repository_arn != null ? var.admin_repository_arn : module.secrets.admin_repository_arn
   source_token = var.source_token_arn != null ? var.source_token_arn : module.secrets.source_token_arn
   api_url = module.compute.alb_dns_name

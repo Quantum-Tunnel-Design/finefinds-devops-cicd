@@ -8,8 +8,13 @@ variable "environment" {
   type        = string
 }
 
-variable "repository_url" {
-  description = "URL of the Git repository"
+variable "client_repository_url" {
+  description = "URL of the client Git repository"
+  type        = string
+}
+
+variable "admin_repository_url" {
+  description = "URL of the admin Git repository"
   type        = string
 }
 
