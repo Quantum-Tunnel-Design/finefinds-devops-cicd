@@ -1,12 +1,12 @@
-output "rds_endpoint" {
-  description = "Endpoint of the RDS instance"
-  value       = aws_db_instance.main.endpoint
-}
-
-output "rds_port" {
-  description = "Port of the RDS instance"
-  value       = aws_db_instance.main.port
-}
+# output "rds_endpoint" { # REMOVED
+#   description = "Endpoint of the RDS instance"
+#   value       = aws_db_instance.main.endpoint
+# }
+# 
+# output "rds_port" { # REMOVED
+#   description = "Port of the RDS instance"
+#   value       = aws_db_instance.main.port
+# }
 
 # output "mongodb_private_ip" { # REMOVED
 #   description = "Private IP of the MongoDB instance"

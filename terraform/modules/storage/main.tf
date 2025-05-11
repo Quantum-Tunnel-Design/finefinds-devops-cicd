@@ -1,55 +1,3 @@
-# RDS Instance
-resource "aws_db_instance" "main" {
-  identifier           = "${var.name_prefix}-rds"
-  engine              = "postgres"
-  engine_version      = "14.7"
-  instance_class      = var.db_instance_class
-  allocated_storage   = var.allocated_storage
-  storage_type        = "gp2"
-  storage_encrypted   = true
-
-  db_name             = var.db_name
-  username            = var.db_username
-  password            = var.db_password
-
-  vpc_security_group_ids = [aws_security_group.rds.id]
-  db_subnet_group_name   = aws_db_subnet_group.main.name
-
-  backup_retention_period = 7
-  backup_window          = "03:00-04:00"
-  maintenance_window     = "Mon:04:00-Mon:05:00"
-
-  multi_az               = var.environment == "prod"
-  skip_final_snapshot    = var.skip_final_snapshot
-  deletion_protection    = var.environment == "prod"
-
-  tags = var.tags
-}
-
-# RDS Subnet Group
-resource "aws_db_subnet_group" "main" {
-  name       = "${var.name_prefix}-rds-subnet-group"
-  subnet_ids = var.private_subnet_ids
-
-  tags = var.tags
-}
-
-# RDS Security Group
-resource "aws_security_group" "rds" {
-  name        = "${var.name_prefix}-rds-sg"
-  description = "Security group for RDS instance"
-  vpc_id      = var.vpc_id
-
-  ingress {
-    from_port   = 5432
-    to_port     = 5432
-    protocol    = "tcp"
-    cidr_blocks = var.vpc_cidr_blocks
-  }
-
-  tags = var.tags
-}
-
 # S3 Buckets
 resource "aws_s3_bucket" "buckets" {
   for_each = var.bucket_names
@@ -77,8 +25,8 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "buckets" {
 
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-      kms_master_key_id = var.kms_key_id
+      sse_algorithm     = var.kms_key_id != null ? "aws:kms" : "AES256"
+      kms_master_key_id = var.kms_key_id != null ? var.kms_key_id : null
     }
   }
 }
@@ -99,7 +47,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "buckets" {
       status = "Enabled"
 
       filter {
-        prefix = each.value.prefix
+        prefix = each.value.prefix # Ensure 'prefix' is a valid attribute in var.lifecycle_rules.transitions objects, or use a default/empty string.
       }
 
       transition {
@@ -114,7 +62,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "buckets" {
     status = "Enabled"
 
     filter {
-      prefix = each.value.prefix
+      prefix = each.value.prefix # Ensure 'prefix' is a valid attribute in var.lifecycle_rules object that 'each.value' refers to.
     }
 
     expiration {
@@ -152,9 +100,9 @@ resource "aws_s3_bucket_public_access_block" "buckets" {
 
 # S3 Bucket Policy
 resource "aws_s3_bucket_policy" "buckets" {
-  for_each = {
+  for_each = {    
     for k, v in aws_s3_bucket.buckets : k => v
-    if k == "uploads" || k == "static"
+    if (k == "uploads" || k == "static") && var.cloudfront_distribution_arn != null
   }
 
   bucket = each.value.id
