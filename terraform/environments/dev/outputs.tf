@@ -54,13 +54,13 @@ output "alb_dns_name" {
 }
 
 output "cognito_user_pool_id" {
-  description = "ID of the Cognito user pool"
-  value       = module.security.cognito_user_pool_id
+  description = "ID of the Client Cognito User Pool"
+  value       = module.cognito.client_user_pool_id
 }
 
 output "cognito_user_pool_client_id" {
-  description = "ID of the Cognito user pool client"
-  value       = module.security.cognito_user_pool_client_id
+  description = "ID of the Client App Cognito User Pool Client"
+  value       = module.cognito.client_app_client_id
 }
 
 output "kms_key_id" {

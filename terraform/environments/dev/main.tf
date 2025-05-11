@@ -125,8 +125,8 @@ module "cicd" {
   admin_repository_url = var.admin_repository_arn != null ? var.admin_repository_arn : module.secrets.admin_repository_arn
   source_token = module.secrets.source_token_arn
   api_url = module.compute.alb_dns_name
-  cognito_domain = module.security.cognito_domain
-  cognito_client_id = module.security.cognito_user_pool_client_id
+  cognito_domain = module.cognito.client_pool_domain
+  cognito_client_id = module.cognito.client_app_client_id
   cognito_redirect_uri = "https://${var.client_domain}/callback"
   domain_name = "${var.environment}.finefinds.lk"
 }
@@ -288,8 +288,13 @@ output "rds_endpoint" {
 }
 
 output "cognito_client_id" {
-  description = "ID of the Cognito User Pool Client"
-  value       = module.cognito.client_id
+  description = "ID of the Cognito User Pool Client (Client App)"
+  value       = module.cognito.client_app_client_id
+}
+
+output "s3_bucket_name" {
+  description = "Name of the S3 bucket (specifically the uploads bucket)"
+  value       = "${local.name_prefix}-uploads"
 }
 
 module "networking" {

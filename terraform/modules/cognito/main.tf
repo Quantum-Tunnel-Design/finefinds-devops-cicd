@@ -117,7 +117,6 @@ resource "aws_cognito_user_pool_client" "client_app" {
   access_token_validity  = 1
   id_token_validity     = 1
   refresh_token_validity = 30
-  tags = merge(var.tags, { PoolType = "Client" })
   lifecycle {
     prevent_destroy = true
   }
@@ -145,7 +144,6 @@ resource "aws_cognito_user_pool_client" "admin_app" {
   access_token_validity  = 1
   id_token_validity     = 1
   refresh_token_validity = 7
-  tags = merge(var.tags, { PoolType = "Admin" })
   lifecycle {
     prevent_destroy = true
   }

@@ -8,27 +8,6 @@ output "ecs_task_role_arn" {
   value       = aws_iam_role.ecs_task.arn
 }
 
-output "cognito_user_pool_id" {
-  description = "ID of the (Client) Cognito User Pool (from cognito module)"
-  value       = module.cognito.client_user_pool_id
-}
-
-output "cognito_user_pool_client_id" {
-  description = "ID of the (Client App) Cognito User Pool Client (from cognito module)"
-  value       = module.cognito.client_app_client_id
-}
-
-output "cognito_user_pool_client_secret" {
-  description = "Client secret of the (Client App) Cognito user pool client (from cognito module)"
-  value       = module.cognito.client_app_client_secret
-  sensitive   = true
-}
-
-output "cognito_domain" {
-  description = "Domain of the (Client) Cognito User Pool (from cognito module)"
-  value       = module.cognito.client_pool_domain
-}
-
 output "kms_key_id" {
   description = "ID of the KMS key"
   value       = var.enable_encryption ? aws_kms_key.main[0].key_id : null
