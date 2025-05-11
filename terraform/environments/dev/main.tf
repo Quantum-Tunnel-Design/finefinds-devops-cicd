@@ -68,7 +68,6 @@ module "storage" {
   vpc_cidr_blocks   = [local.current_vpc_config.cidr]
   private_subnet_ids    = module.network.private_subnet_ids
   kms_key_id        = module.security.kms_key_id
-  ecs_security_group_id = module.compute.ecs_security_group_id
   db_instance_class     = local.env_config[var.environment].db_instance_class
   db_name               = var.db_name
   db_username           = var.db_username
@@ -100,11 +99,6 @@ module "compute" {
   certificate_arn        = module.security.certificate_arn
   rds_secret_arn           = module.security.rds_secret_arn
   mongodb_secret_arn       = module.security.mongodb_secret_arn
-
-  aws_region               = var.aws_region
-  task_execution_role_arn  = module.security.ecs_task_execution_role_arn
-  task_role_arn            = module.security.ecs_task_role_arn
-  container_environment    = []
 }
 
 # CICD Module
@@ -269,10 +263,12 @@ module "monitoring" {
   environment = var.environment
   aws_region  = var.aws_region
   alert_email = var.alert_email
-  
+  private_subnet_ids = module.network.private_subnet_ids
+  rds_endpoint = module.storage.rds_endpoint
   name_prefix       = local.name_prefix
-  ecs_cluster_name  = module.ecs.cluster_name
-  ecs_service_name  = module.ecs.service_name
+  ecs_cluster_name  = module.compute.cluster_name
+  ecs_service_name  = module.compute.service_name
+  ecs_cluster_arn    = module.compute.cluster_arn
   rds_instance_id   = module.rds.db_instance_id
   alb_arn_suffix    = module.alb.alb_arn_suffix
 
@@ -303,12 +299,6 @@ variable "secret_suffix" {
 }
 
 # Outputs
-
-output "alb_dns_name" {
-  description = "DNS name of the ALB"
-  value       = module.alb.alb_dns_name
-}
-
 output "sonarqube_url" {
   description = "URL of the SonarQube instance"
   value       = module.sonarqube.sonarqube_url
@@ -322,11 +312,6 @@ output "ecr_repository_url" {
 output "rds_security_group_id" {
   description = "ID of the RDS security group"
   value       = module.rds.security_group_id
-}
-
-output "ecs_service_name" {
-  description = "Name of the ECS service"
-  value       = module.ecs.service_name
 }
 
 output "rds_endpoint" {
@@ -356,9 +341,8 @@ output "cloudwatch_dashboard" {
 
 module "networking" {
   source              = "../../modules/networking"
+  environment = var.environment
   name_prefix         = local.name_prefix
-  vpc_cidr            = var.vpc_cidr
-  availability_zones  = var.availability_zones
   tags                = local.common_tags
 }
 
@@ -389,6 +373,4 @@ module "database" {
   instance_class    = local.current_env_config.db_instance_class
   allocated_storage = 20
   db_name          = "finefinds"
-  db_username      = var.db_username
-  db_password      = var.db_password
 }

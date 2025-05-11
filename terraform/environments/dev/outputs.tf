@@ -58,6 +58,7 @@ output "alb_dns_name" {
   value       = module.compute.alb_dns_name
 }
 
+
 output "cognito_user_pool_id" {
   description = "ID of the Cognito user pool"
   value       = module.security.cognito_user_pool_id
