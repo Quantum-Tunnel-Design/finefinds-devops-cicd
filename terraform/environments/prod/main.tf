@@ -323,9 +323,4 @@ variable "secret_suffix" {
   description = "Suffix for secret names"
   type        = string
   default     = "latest"
-}
-
-# Local variables for certificate handling
-locals {
-  certificate_arn = data.aws_acm_certificate.main.arn != null ? data.aws_acm_certificate.main.arn : "arn:aws:acm:us-east-1:${data.aws_caller_identity.current.account_id}:certificate/${var.environment}-finefinds-com"
 } 

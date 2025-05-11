@@ -189,7 +189,7 @@ module "networking" {
 
 module "security" {
   source            = "../../modules/security"
-  name_prefix       = "${var.project}-${var.environment}"
+  name_prefix       = local.name_prefix
   tags              = local.common_tags
   callback_urls     = ["https://${var.environment}.finefinds.com/callback"]
   logout_urls       = ["https://${var.environment}.finefinds.com/logout"]
@@ -204,7 +204,7 @@ module "security" {
 
 module "storage" {
   source                = "../../modules/storage"
-  name_prefix           = "${var.project}-${var.environment}"
+  name_prefix           = local.name_prefix
   environment           = var.environment
   vpc_id                = module.vpc.vpc_id
   private_subnet_ids    = module.vpc.private_subnet_ids
@@ -224,7 +224,7 @@ module "storage" {
 
 module "compute" {
   source                   = "../../modules/compute"
-  name_prefix              = "${var.project}-${var.environment}"
+  name_prefix              = local.name_prefix
   environment              = var.environment
   aws_region               = var.aws_region
   vpc_id                   = module.vpc.vpc_id
@@ -247,7 +247,7 @@ module "compute" {
 
 module "cicd" {
   source            = "../../modules/cicd"
-  name_prefix       = "${var.project}-${var.environment}"
+  name_prefix       = local.name_prefix
   environment       = var.environment
   repository_url    = var.repository_url
   source_token      = var.source_token
