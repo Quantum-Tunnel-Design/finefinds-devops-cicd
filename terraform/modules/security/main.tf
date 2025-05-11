@@ -157,17 +157,26 @@ resource "aws_security_group" "sonarqube" {
 # Get current region
 data "aws_region" "current" {}
 
+# Secrets Manager Data Sources
+data "aws_secretsmanager_secret" "mongodb_password" {
+  name = "${var.name_prefix}-mongodb-password"
+}
+
+data "aws_secretsmanager_secret" "sonar_token" {
+  name = "${var.name_prefix}-sonar-token"
+}
+
 # Get secret versions
 data "aws_secretsmanager_secret_version" "db_password" {
   secret_id = var.db_password_arn
 }
 
 data "aws_secretsmanager_secret_version" "mongodb_password" {
-  secret_id = var.mongodb_password_arn
+  secret_id = data.aws_secretsmanager_secret.mongodb_password.id
 }
 
 data "aws_secretsmanager_secret_version" "sonar_token" {
-  secret_id = var.sonar_token_arn
+  secret_id = data.aws_secretsmanager_secret.sonar_token.id
 }
 
 # Local variables for secrets
@@ -393,21 +402,4 @@ resource "aws_cloudwatch_dashboard" "main" {
       }
     ]
   })
-}
-
-# Secrets Manager Data Sources
-data "aws_secretsmanager_secret" "mongodb_password" {
-  name = "${var.name_prefix}-mongodb-password"
-}
-
-data "aws_secretsmanager_secret_version" "mongodb_password" {
-  secret_id = data.aws_secretsmanager_secret.mongodb_password.id
-}
-
-data "aws_secretsmanager_secret" "sonar_token" {
-  name = "${var.name_prefix}-sonar-token"
-}
-
-data "aws_secretsmanager_secret_version" "sonar_token" {
-  secret_id = data.aws_secretsmanager_secret.sonar_token.id
 } 
