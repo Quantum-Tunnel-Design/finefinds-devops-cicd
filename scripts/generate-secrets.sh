@@ -81,6 +81,7 @@ main() {
 
     # Generate secure random strings for passwords
     echo "Generating secure random strings for passwords..."
+    JWT_SECRET=$(generate_secure_string)
     DB_PASSWORD=$(generate_secure_string)
     MONGODB_PASSWORD=$(generate_secure_string)
     SONARQUBE_PASSWORD=$(generate_secure_string)
@@ -108,7 +109,14 @@ main() {
     echo "Creating/updating secrets in AWS Secrets Manager..."
 
     # Database credentials
-    db_secret_json="{\"username\": \"${DB_USERNAME}\", \"password\": \"${DB_PASSWORD}\", \"host\": \"\", \"port\": 5432, \"database\": \"finefinds\"}"
+    jwt_secret_json=$(printf '{"password":"%s", "database":"finefinds"}' "$JWT_SECRET")
+    create_or_update_secret \
+        "finefindslk/${ENVIRONMENT}/jwt-secret" \
+        "$jwt_secret_json" \
+        "JWT credentials for ${PROJECT} ${ENVIRONMENT}" \
+        "$REGION"
+    
+    db_secret_json=$(printf '{"username":"%s","password":"%s","host":"","port":5432,"database":"finefinds"}' "$DB_USERNAME" "$DB_PASSWORD")
     create_or_update_secret \
         "finefindslk/${ENVIRONMENT}/database" \
         "$db_secret_json" \
@@ -116,7 +124,7 @@ main() {
         "$REGION"
 
     # MongoDB credentials
-    mongodb_secret_json="{\"username\": \"${MONGODB_USERNAME}\", \"password\": \"${MONGODB_PASSWORD}\", \"host\": \"\", \"port\": 27017, \"database\": \"finefinds\"}"
+    mongodb_secret_json=$(printf '{"username":"%s","password":"%s","host":"","port":27017,"database":"finefinds"}' "$MONGODB_USERNAME" "$MONGODB_PASSWORD")
     create_or_update_secret \
         "finefindslk/${ENVIRONMENT}/mongodb" \
         "$mongodb_secret_json" \
@@ -124,7 +132,7 @@ main() {
         "$REGION"
 
     # SonarQube credentials
-    sonarqube_secret_json="{\"username\": \"${SONARQUBE_USERNAME}\", \"password\": \"${SONARQUBE_PASSWORD}\", \"host\": \"\", \"port\": 9000, \"database\": \"finefinds\"}"
+    sonarqube_secret_json=$(printf '{"username":"%s","password":"%s","host":"","port":9000,"database":"finefinds"}' "$SONARQUBE_USERNAME" "$SONARQUBE_PASSWORD")
     create_or_update_secret \
         "finefindslk/${ENVIRONMENT}/sonarqube-password" \
         "$sonarqube_secret_json" \
@@ -132,7 +140,7 @@ main() {
         "$REGION"
 
     # SonarQube token
-    sonar_token_json="{\"token\": \"${SONAR_TOKEN}\"}"
+    sonar_token_json=$(printf '{"token":"%s"}' "$SONAR_TOKEN")
     create_or_update_secret \
         "finefindslk/${ENVIRONMENT}/sonar-token" \
         "$sonar_token_json" \
@@ -140,7 +148,7 @@ main() {
         "$REGION"
 
     # Source token (GitHub PAT)
-    source_token_json="{\"token\": \"${SOURCE_TOKEN}\"}"
+    source_token_json=$(printf '{"token":"%s"}' "$SOURCE_TOKEN")
     create_or_update_secret \
         "finefindslk/${ENVIRONMENT}/source-token" \
         "$source_token_json" \
@@ -148,7 +156,7 @@ main() {
         "$REGION"
     
     # Client Repository URL
-    client_repo_json="{\"url\": \"${CLIENT_REPOSITORY}\"}"
+    client_repo_json=$(printf '{"url":"%s"}' "$CLIENT_REPOSITORY")
     create_or_update_secret \
         "finefindslk/${ENVIRONMENT}/client-repository" \
         "$client_repo_json" \
@@ -156,7 +164,7 @@ main() {
         "$REGION"
 
     # Admin Repository URL
-    admin_repo_json="{\"url\": \"${ADMIN_REPOSITORY}\"}"
+    admin_repo_json=$(printf '{"url":"%s"}' "$ADMIN_REPOSITORY")
     create_or_update_secret \
         "finefindslk/${ENVIRONMENT}/admin-repository" \
         "$admin_repo_json" \
@@ -164,7 +172,7 @@ main() {
         "$REGION"
 
     # Container Image (using default AWS image)
-    container_image_json="{\"image\": \"public.ecr.aws/amazonlinux/amazonlinux:latest\"}"
+    container_image_json='{"image":"public.ecr.aws/amazonlinux/amazonlinux:latest"}'
     create_or_update_secret \
         "finefindslk/${ENVIRONMENT}/container-image" \
         "$container_image_json" \
@@ -174,6 +182,7 @@ main() {
     # Get ARNs
     echo "Retrieving secret ARNs..."
     DATABASE_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/database" "$REGION")
+    JWT_SECRET_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/jwt-secret" "$REGION")
     MONGODB_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/mongodb" "$REGION")
     SONAR_TOKEN_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/sonar-token" "$REGION")
     SONARQUBE_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/sonarqube-password" "$REGION")
@@ -196,6 +205,9 @@ main() {
 
 # These ARNs point to secrets containing JSON objects.
 # Terraform modules will parse the JSON to extract specific fields.
+
+# JWT secret
+jwt_secret_arn = "${JWT_SECRET_ARN}"
 
 # Database secrets (username is within the 'database' secret)
 db_username_arn = "${DATABASE_ARN}"
@@ -222,6 +234,7 @@ container_image_arn = "${CONTAINER_IMAGE_ARN}"
 
 # Actual values (for local reference, not directly used by Terraform root module vars of same name)
 # Terraform modules will fetch these from Secrets Manager using the ARNs above.
+# jwt_secret = "${JWT_SECRET}"
 # db_username = "${DB_USERNAME}"
 # db_password = "${DB_PASSWORD}"
 # mongodb_username = "${MONGODB_USERNAME}"
