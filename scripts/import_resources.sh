@@ -26,7 +26,7 @@ terraform import module.rds.aws_db_subnet_group.main "${NAME_PREFIX}-rds-subnet-
 
 # Import Backup Plan
 echo "Importing Backup Plan..."
-BACKUP_PLAN_ID=$(aws backup list-backup-plans --query "BackupPlansList[?BackupPlanName=='${NAME_PREFIX}-backup-plan'].BackupPlanId" --output text)
+BACKUP_PLAN_ID=$(aws backup list-backup-plans --query "BackupPlansList[?BackupPlanName=='${NAME_PREFIX}-backup-plan-${ENVIRONMENT}'].BackupPlanId" --output text)
 terraform import module.security.aws_backup_plan.main[0] "${BACKUP_PLAN_ID}"
 
 # Import IAM Roles

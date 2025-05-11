@@ -29,7 +29,7 @@ data "aws_secretsmanager_secret" "admin_repository" {
 
 # Container Image URI secret
 data "aws_secretsmanager_secret" "container_image" {
-  name = "${var.project}/${var.environment}/container-image"
+  name = "${var.project}/${var.environment}/container-image-new"
 }
 
 # Get the latest versions of each secret

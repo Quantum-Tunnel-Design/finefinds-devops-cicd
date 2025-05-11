@@ -235,7 +235,7 @@ resource "aws_backup_vault" "main" {
 # AWS Backup Plan
 resource "aws_backup_plan" "main" {
   count = var.enable_backup ? 1 : 0
-  name  = "${var.name_prefix}-backup-plan"
+  name  = "${var.name_prefix}-backup-plan-${var.environment}"
 
   rule {
     rule_name         = "daily_backups"
@@ -270,7 +270,7 @@ resource "aws_backup_plan" "main" {
   tags = merge(
     var.tags,
     {
-      Name = "${var.name_prefix}-backup-plan"
+      Name = "${var.name_prefix}-backup-plan-${var.environment}"
     }
   )
 }
