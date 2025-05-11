@@ -43,12 +43,14 @@ variable "image_tag" {
 variable "db_username" {
   description = "Database username"
   type        = string
+  default     = null
 }
 
 variable "db_password" {
   description = "Database password"
   type        = string
   sensitive   = true
+  default     = null
 }
 
 variable "sonarqube_db_username" {
@@ -71,12 +73,14 @@ variable "mongodb_admin_username" {
 variable "mongodb_username" {
   description = "MongoDB username"
   type        = string
+  default     = null
 }
 
 variable "mongodb_password" {
   description = "MongoDB password"
   type        = string
   sensitive   = true
+  default     = null
 }
 
 variable "source_token" {
@@ -99,6 +103,7 @@ variable "sonar_token" {
   description = "SonarQube token for authentication"
   type        = string
   sensitive   = true
+  default     = null
 }
 
 variable "use_existing_rds_subnet_group" {
