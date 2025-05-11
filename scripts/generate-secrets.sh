@@ -73,7 +73,7 @@ main() {
 
     # Set environment variables
     ENVIRONMENT=${1:-dev}
-    PROJECT="finefinds"
+    PROJECT="finefindslk"
     REGION="us-east-1"
 
     # Validate environment
@@ -106,106 +106,109 @@ main() {
     # Create or update secrets
     echo "Creating/updating secrets in AWS Secrets Manager..."
 
-    # Passwords (automatically generated)
+    # Database credentials
     create_or_update_secret \
-        "finefindslk/${ENVIRONMENT}/db-password" \
-        "$DB_PASSWORD" \
-        "Database password for ${ENVIRONMENT}" \
+        "finefindslk/${ENVIRONMENT}/database" \
+        "{\\"username\\":\\"${DB_USERNAME}\\",\\"password\\":\\"${DB_PASSWORD}\\",\\"host\\":\\"\\",\\"port\\":5432,\\"database\\":\\"finefinds\\"}" \
+        "Database credentials for ${PROJECT} ${ENVIRONMENT}" \
         "$REGION"
 
+    # MongoDB credentials
     create_or_update_secret \
-        "finefindslk/${ENVIRONMENT}/mongodb-password" \
-        "$MONGODB_PASSWORD" \
-        "MongoDB password for ${ENVIRONMENT}" \
+        "finefindslk/${ENVIRONMENT}/mongodb" \
+        "{\\"username\\":\\"${MONGODB_USERNAME}\\",\\"password\\":\\"${MONGODB_PASSWORD}\\",\\"host\\":\\"\\",\\"port\\":27017,\\"database\\":\\"finefinds\\"}" \
+        "MongoDB credentials for ${PROJECT} ${ENVIRONMENT}" \
         "$REGION"
 
-    create_or_update_secret \
-        "finefindslk/${ENVIRONMENT}/sonarqube-password" \
-        "$SONARQUBE_DB_PASSWORD" \
-        "SonarQube password for ${ENVIRONMENT}" \
-        "$REGION"
-
+    # SonarQube token
     create_or_update_secret \
         "finefindslk/${ENVIRONMENT}/sonar-token" \
-        "$SONAR_TOKEN" \
-        "SonarQube token for ${ENVIRONMENT}" \
+        "{\\"token\\":\\"${SONAR_TOKEN}\\"}" \
+        "SonarQube token for ${PROJECT} ${ENVIRONMENT}" \
         "$REGION"
 
+    # Source token (GitHub PAT)
     create_or_update_secret \
         "finefindslk/${ENVIRONMENT}/source-token" \
-        "$SOURCE_TOKEN" \
-        "GitHub source token for ${ENVIRONMENT}" \
+        "{\\"token\\":\\"${SOURCE_TOKEN}\\"}" \
+        "Source control token for ${PROJECT} ${ENVIRONMENT}" \
         "$REGION"
-
-    # Usernames (manually set)
-    create_or_update_secret \
-        "finefindslk/${ENVIRONMENT}/db-username" \
-        "$DB_USERNAME" \
-        "Database username for ${ENVIRONMENT}" \
-        "$REGION"
-
-    create_or_update_secret \
-        "finefindslk/${ENVIRONMENT}/mongodb-username" \
-        "$MONGODB_USERNAME" \
-        "MongoDB username for ${ENVIRONMENT}" \
-        "$REGION"
-
-    # Repository URLs (manually set)
+    
+    # Client Repository URL
     create_or_update_secret \
         "finefindslk/${ENVIRONMENT}/client-repository" \
-        "$CLIENT_REPOSITORY" \
-        "Client repository URL for ${ENVIRONMENT}" \
+        "{\\"url\\":\\"${CLIENT_REPOSITORY}\\"}" \
+        "Client repository URL for ${PROJECT} ${ENVIRONMENT}" \
         "$REGION"
 
+    # Admin Repository URL
     create_or_update_secret \
         "finefindslk/${ENVIRONMENT}/admin-repository" \
-        "$ADMIN_REPOSITORY" \
-        "Admin repository URL for ${ENVIRONMENT}" \
+        "{\\"url\\":\\"${ADMIN_REPOSITORY}\\"}" \
+        "Admin repository URL for ${PROJECT} ${ENVIRONMENT}" \
+        "$REGION"
+
+    # Container Image (using default AWS image)
+    create_or_update_secret \
+        "finefindslk/${ENVIRONMENT}/container-image" \
+        "{\\"image\\":\\"public.ecr.aws/amazonlinux/amazonlinux:latest\\"}" \
+        "Container image URI for ${PROJECT} ${ENVIRONMENT}" \
         "$REGION"
 
     # Get ARNs
     echo "Retrieving secret ARNs..."
-    DB_PASSWORD_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/db-password" "$REGION")
-    MONGODB_PASSWORD_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/mongodb-password" "$REGION")
+    DATABASE_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/database" "$REGION")
+    MONGODB_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/mongodb" "$REGION")
     SONAR_TOKEN_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/sonar-token" "$REGION")
     SOURCE_TOKEN_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/source-token" "$REGION")
-    DB_USERNAME_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/db-username" "$REGION")
-    MONGODB_USERNAME_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/mongodb-username" "$REGION")
     CLIENT_REPOSITORY_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/client-repository" "$REGION")
     ADMIN_REPOSITORY_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/admin-repository" "$REGION")
+    CONTAINER_IMAGE_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/container-image" "$REGION")
 
     # Create tfvars file
+    # Ensure TFVARS_PATH is relative to the workspace root if running script from root,
+    # or adjust if running from a different CWD.
+    # Assuming script is run from workspace root:
     TFVARS_PATH="terraform/environments/${ENVIRONMENT}/secrets.auto.tfvars"
     echo "Creating Terraform variables file at ${TFVARS_PATH}..."
     
     cat > "$TFVARS_PATH" << EOF
-# Generated secrets for ${ENVIRONMENT} environment
+# Generated secrets for ${ENVIRONMENT} environment by generate-secrets.sh
 # DO NOT COMMIT THIS FILE TO VERSION CONTROL
 # Generated on: $(date)
 
-# Password ARNs
-db_password_arn = "${DB_PASSWORD_ARN}"
-mongodb_password_arn = "${MONGODB_PASSWORD_ARN}"
+# These ARNs point to secrets containing JSON objects.
+# Terraform modules will parse the JSON to extract specific fields.
+
+# Database secrets (username is within the 'database' secret)
+db_username_arn = "${DATABASE_ARN}"
+db_password_arn = "${DATABASE_ARN}"
+
+# MongoDB secrets (username is within the 'mongodb' secret)
+mongodb_username_arn = "${MONGODB_ARN}"
+mongodb_password_arn = "${MONGODB_ARN}"
+
+# Token ARNs
 sonar_token_arn = "${SONAR_TOKEN_ARN}"
-source_token_arn = "${SOURCE_TOKEN_ARN}"
+source_token_arn = "${SOURCE_TOKEN_ARN}" # ARN for the secret containing the GitHub PAT
 
-# Username ARNs
-db_username_arn = "${DB_USERNAME_ARN}"
-mongodb_username_arn = "${MONGODB_USERNAME_ARN}"
-
-# Repository ARNs
+# Repository URL ARNs
 client_repository_arn = "${CLIENT_REPOSITORY_ARN}"
 admin_repository_arn = "${ADMIN_REPOSITORY_ARN}"
 
-# Optional: Store actual values for reference (not used by Terraform)
-db_username = "${DB_USERNAME}"
-db_password = "${DB_PASSWORD}"
-mongodb_username = "${MONGODB_USERNAME}"
-mongodb_password = "${MONGODB_PASSWORD}"
-sonar_token = "${SONAR_TOKEN}"
-source_token = "${SOURCE_TOKEN}"
-client_repository = "${CLIENT_REPOSITORY}"
-admin_repository = "${ADMIN_REPOSITORY}"
+# Container Image ARN
+container_image_arn = "${CONTAINER_IMAGE_ARN}"
+
+# Actual values (for local reference, not directly used by Terraform root module vars of same name)
+# Terraform modules will fetch these from Secrets Manager using the ARNs above.
+# db_username = "${DB_USERNAME}"
+# db_password = "${DB_PASSWORD}"
+# mongodb_username = "${MONGODB_USERNAME}"
+# mongodb_password = "${MONGODB_PASSWORD}"
+# sonar_token = "${SONAR_TOKEN}"
+# source_token_actual = "${SOURCE_TOKEN}" # Note: root var is 'source_token', not 'source_token_actual'
+# client_repository_url_actual = "${CLIENT_REPOSITORY}"
+# admin_repository_url_actual = "${ADMIN_REPOSITORY}"
 EOF
 
     # Set proper permissions
