@@ -71,9 +71,10 @@ variable "tags" {
 variable "sonarqube_url" {
   description = "URL of the SonarQube instance"
   type        = string
+  default     = ""
   validation {
-    condition     = can(regex("^https?://[a-zA-Z0-9.-]+(\\.[a-zA-Z]{2,})+(:[0-9]+)?(/[a-zA-Z0-9._~:/?#\\[\\]@!$&'()*+,;=]*)?$", var.sonarqube_url))
-    error_message = "The SonarQube URL must be a valid HTTP(S) URL."
+    condition     = var.sonarqube_url == "" || can(regex("^https?://[a-zA-Z0-9.-]+(\\.[a-zA-Z]{2,})+(:[0-9]+)?(/[a-zA-Z0-9._~:/?#\\[\\]@!$&'()*+,;=]*)?$", var.sonarqube_url))
+    error_message = "The SonarQube URL must be a valid HTTP(S) URL or empty."
   }
 }
 
@@ -84,10 +85,11 @@ variable "use_existing_roles" {
 }
 
 variable "repository" {
-  description = "GitHub repository URL"
+  description = "GitHub repository URL (deprecated, use client_repository and admin_repository instead)"
   type        = string
+  default     = ""
   validation {
-    condition     = can(regex("^https://github\\.com/[a-zA-Z0-9-]+/[a-zA-Z0-9-_.]+(\\.git)?$", var.repository))
-    error_message = "The repository must be a valid GitHub repository URL."
+    condition     = var.repository == "" || can(regex("^https://github\\.com/[a-zA-Z0-9-]+/[a-zA-Z0-9-_.]+(\\.git)?$", var.repository))
+    error_message = "The repository must be a valid GitHub repository URL or empty."
   }
 } 
