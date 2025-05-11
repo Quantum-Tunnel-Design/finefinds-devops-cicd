@@ -15,6 +15,18 @@ data "aws_acm_certificate" "main" {
 # Local variables for certificate handling
 locals {
   certificate_arn = data.aws_acm_certificate.main.arn != null ? data.aws_acm_certificate.main.arn : "arn:aws:acm:us-east-1:${data.aws_caller_identity.current.account_id}:certificate/${var.environment}-finefinds-com"
+  current_vpc_config = {
+    cidr_block           = "10.1.0.0/16"
+    availability_zones   = ["${var.aws_region}a", "${var.aws_region}b"]
+    public_subnets      = ["10.1.101.0/24", "10.1.102.0/24"]
+    private_subnets     = ["10.1.1.0/24", "10.1.2.0/24"]
+    database_subnets    = ["10.1.201.0/24", "10.1.202.0/24"]
+    enable_nat_gateway  = true
+    single_nat_gateway  = true
+    enable_vpn_gateway  = false
+    enable_flow_log     = true
+    flow_log_retention  = 30
+  }
 }
 
 # VPC Module
@@ -64,9 +76,9 @@ module "storage" {
   source                = "../../modules/storage"
   name_prefix           = local.name_prefix
   environment           = var.environment
-  vpc_id            = module.network.vpc_id
-  vpc_cidr_blocks   = [local.current_vpc_config.cidr]
-  private_subnet_ids    = module.network.private_subnet_ids
+  vpc_id            = module.networking.vpc_id
+  vpc_cidr_blocks   = [local.current_vpc_config.cidr_block]
+  private_subnet_ids    = module.networking.private_subnet_ids
   kms_key_id        = module.security.kms_key_id
   db_instance_class     = local.env_config[var.environment].db_instance_class
   db_name               = var.db_name
@@ -87,9 +99,9 @@ module "compute" {
   environment              = var.environment
   tags                     = local.common_tags
   
-  vpc_id             = module.network.vpc_id
-  private_subnet_ids = module.network.private_subnet_ids
-  public_subnet_ids  = module.network.public_subnet_ids
+  vpc_id             = module.networking.vpc_id
+  private_subnet_ids = module.networking.private_subnet_ids
+  public_subnet_ids  = module.networking.public_subnet_ids
 
   task_cpu                = local.current_env_config.task_cpu
   task_memory            = local.current_env_config.task_memory
@@ -255,24 +267,35 @@ module "s3" {
   environment = var.environment
 }
 
-# Monitoring Module - No VPC dependencies
+# Monitoring Module
 module "monitoring" {
   source = "../../modules/monitoring"
 
   project     = var.project
   environment = var.environment
-  aws_region  = var.aws_region
-  alert_email = var.alert_email
-  private_subnet_ids = module.network.private_subnet_ids
-  rds_endpoint = module.storage.rds_endpoint
-  name_prefix       = local.name_prefix
-  ecs_cluster_name  = module.compute.cluster_name
-  ecs_service_name  = module.compute.service_name
-  ecs_cluster_arn    = module.compute.cluster_arn
-  rds_instance_id   = module.rds.db_instance_id
-  alb_arn_suffix    = module.alb.alb_arn_suffix
+  name_prefix = local.name_prefix
+  tags        = local.common_tags
 
-  tags = local.common_tags
+  vpc_id             = module.networking.vpc_id
+  private_subnet_ids = module.networking.private_subnet_ids
+  public_subnet_ids  = module.networking.public_subnet_ids
+
+  alb_arn            = module.alb.alb_arn
+  alb_dns_name       = module.alb.alb_dns_name
+  alb_arn_suffix     = module.alb.alb_arn_suffix
+  ecs_cluster_arn    = module.compute.cluster_arn
+  ecs_cluster_name   = module.compute.cluster_name
+  ecs_service_arn    = module.compute.service_arn
+  ecs_service_name   = module.compute.service_name
+  rds_instance_id    = module.rds.db_instance_id
+  rds_endpoint       = module.rds.db_instance_endpoint
+
+  enable_cloudwatch  = true
+  enable_xray        = true
+  enable_cloudtrail  = true
+  log_retention_days = 30
+  alert_email        = var.alert_email
+  aws_region         = var.aws_region
 }
 
 # Amplify Module
@@ -340,21 +363,13 @@ output "cloudwatch_dashboard" {
 }
 
 module "networking" {
-  source              = "../../modules/networking"
-  environment = var.environment
-  name_prefix         = local.name_prefix
-  tags                = local.common_tags
-}
-
-module "network" {
-  source = "../../modules/network"
-
+  source = "../../modules/networking"
+  
   project     = var.project
   environment = var.environment
   name_prefix = local.name_prefix
   tags        = local.common_tags
-
-  vpc_config = local.current_vpc_config
+  vpc_config  = local.current_vpc_config
 }
 
 module "database" {
@@ -365,8 +380,8 @@ module "database" {
   name_prefix = local.name_prefix
   tags        = local.common_tags
 
-  vpc_id              = module.network.vpc_id
-  private_subnet_ids  = module.network.database_subnet_ids
+  vpc_id              = module.networking.vpc_id
+  private_subnet_ids  = module.networking.database_subnet_ids
   ecs_security_group_id = module.compute.ecs_security_group_id
   kms_key_id          = module.security.kms_key_id
 
