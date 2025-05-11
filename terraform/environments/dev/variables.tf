@@ -197,12 +197,11 @@ variable "subnet_ids" {
 }
 
 variable "certificate_arn" {
-  description = "ARN of the ACM certificate for the custom domain"
+  description = "ARN of the ACM certificate for the custom domain (set to null if using AWS default domains for Cognito/Amplify)"
   type        = string
-  # Ensure you have an ACM certificate created in us-east-1 for CloudFront/Cognito custom domains
+  # Ensure you have an ACM certificate created in us-east-1 for CloudFront/Cognito custom domains if using a custom domain you own.
   # Example: "arn:aws:acm:us-east-1:123456789012:certificate/your-certificate-id"
-  # Set to null if not using a custom domain or if certificate is managed elsewhere initially.
-  # default = null 
+  default     = null 
 }
 
 variable "vpc_cidr" {
@@ -336,6 +335,12 @@ variable "client_repository_arn" {
 
 variable "admin_repository_arn" {
   description = "ARN of the admin repository URL in Secrets Manager"
+  type        = string
+  default     = null
+}
+
+variable "source_token_arn" {
+  description = "ARN of the source token in Secrets Manager"
   type        = string
   default     = null
 }
