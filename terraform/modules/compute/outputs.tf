@@ -70,20 +70,20 @@ output "alb_security_group_id" {
 
 output "target_group_arn" {
   description = "ARN of the target group"
-  value       = aws_lb_target_group.app.arn
+  value       = aws_lb_target_group.main.arn
 }
 
 output "target_group_name" {
   description = "Name of the target group"
-  value       = aws_lb_target_group.app.name
+  value       = aws_lb_target_group.main.name
 }
 
 output "listener_arn" {
   description = "ARN of the listener"
-  value       = aws_lb_listener.https.arn
+  value       = aws_lb_listener.main.arn
 }
 
 output "log_group_name" {
   description = "Name of the CloudWatch log group"
-  value       = aws_cloudwatch_log_group.app.name
+  value       = aws_cloudwatch_log_group.main.name
 } 
