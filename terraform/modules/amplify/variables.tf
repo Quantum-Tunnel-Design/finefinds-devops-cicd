@@ -104,4 +104,10 @@ variable "app_name" {
   description = "Name of the Amplify app"
   type        = string
   default     = "finefinds"
+}
+
+variable "branch" {
+  description = "Branch name for the Amplify app"
+  type        = string
+  default     = "main"
 } 
