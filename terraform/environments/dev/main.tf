@@ -28,6 +28,9 @@ module "common" {
   project     = var.project
   environment = var.environment
   aws_region  = var.aws_region
+  vpc_id      = module.vpc.vpc_id
+  private_subnet_ids = module.vpc.private_subnet_ids
+  public_subnet_ids  = module.vpc.public_subnet_ids
 }
 
 # VPC Module

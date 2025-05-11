@@ -83,4 +83,9 @@ locals {
 
   # Get current VPC configuration
   current_vpc_config = local.vpc_config[var.environment]
+
+  # Infrastructure-dependent locals
+  has_vpc = var.vpc_id != null
+  has_private_subnets = length(var.private_subnet_ids) > 0
+  has_public_subnets = length(var.public_subnet_ids) > 0
 } 
