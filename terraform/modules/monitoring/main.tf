@@ -1,22 +1,20 @@
+# Data source for existing Grafana role
+data "aws_iam_role" "existing_grafana" {
+  count = var.use_existing_roles ? 1 : 0
+  name  = "${var.project}-${var.environment}-grafana"
+}
+
 # CloudWatch Log Group
-resource "aws_cloudwatch_log_group" "ecs" {
-  name              = "/ecs/${var.project}-${var.environment}"
-  retention_in_days = 30
+resource "aws_cloudwatch_log_group" "app" {
+  name              = "/ecs/${var.name_prefix}"
+  retention_in_days = var.environment == "prod" ? 30 : 7
 
-  tags = {
-    Environment = var.environment
-    Project     = var.project
-    Terraform   = "true"
-  }
-
-  lifecycle {
-    ignore_changes = [name]
-  }
+  tags = var.tags
 }
 
 # CloudWatch Dashboard
 resource "aws_cloudwatch_dashboard" "main" {
-  dashboard_name = "finefinds-${var.environment}"
+  dashboard_name = "${var.name_prefix}-dashboard"
 
   dashboard_body = jsonencode({
     widgets = [
@@ -26,15 +24,16 @@ resource "aws_cloudwatch_dashboard" "main" {
         y      = 0
         width  = 12
         height = 6
+
         properties = {
           metrics = [
-            ["AWS/ECS", "CPUUtilization", "ServiceName", "finefinds-${var.environment}", "ClusterName", "finefinds-${var.environment}"],
-            ["AWS/ECS", "MemoryUtilization", "ServiceName", "finefinds-${var.environment}", "ClusterName", "finefinds-${var.environment}"]
+            ["AWS/ECS", "CPUUtilization", "ClusterName", "${var.name_prefix}-cluster"],
+            ["AWS/ECS", "MemoryUtilization", "ClusterName", "${var.name_prefix}-cluster"]
           ]
           period = 300
           stat   = "Average"
           region = var.aws_region
-          title  = "ECS Service Metrics"
+          title  = "ECS Cluster Metrics"
         }
       },
       {
@@ -43,15 +42,34 @@ resource "aws_cloudwatch_dashboard" "main" {
         y      = 0
         width  = 12
         height = 6
+
         properties = {
           metrics = [
-            ["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "finefinds-${var.environment}"],
-            ["AWS/RDS", "FreeableMemory", "DBInstanceIdentifier", "finefinds-${var.environment}"]
+            ["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "${var.name_prefix}-rds"],
+            ["AWS/RDS", "FreeableMemory", "DBInstanceIdentifier", "${var.name_prefix}-rds"]
           ]
           period = 300
           stat   = "Average"
           region = var.aws_region
           title  = "RDS Metrics"
+        }
+      },
+      {
+        type   = "metric"
+        x      = 0
+        y      = 6
+        width  = 12
+        height = 6
+
+        properties = {
+          metrics = [
+            ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", "${var.name_prefix}-alb"],
+            ["AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", "${var.name_prefix}-alb"]
+          ]
+          period = 300
+          stat   = "Sum"
+          region = var.aws_region
+          title  = "ALB Metrics"
         }
       }
     ]
@@ -60,16 +78,13 @@ resource "aws_cloudwatch_dashboard" "main" {
 
 # Prometheus Workspace
 resource "aws_prometheus_workspace" "main" {
-  alias = "finefinds-${var.environment}"
-
-  tags = {
-    Environment = var.environment
-  }
+  alias = "${var.name_prefix}-prometheus"
+  tags  = var.tags
 }
 
 # Grafana Workspace
 resource "aws_grafana_workspace" "main" {
-  name                     = "finefinds-${var.environment}"
+  name                     = "${var.name_prefix}-grafana"
   account_access_type      = "CURRENT_ACCOUNT"
   authentication_providers = ["AWS_SSO"]
   permission_type         = "SERVICE_MANAGED"
@@ -77,14 +92,12 @@ resource "aws_grafana_workspace" "main" {
 
   data_sources = ["PROMETHEUS", "CLOUDWATCH"]
 
-  tags = {
-    Environment = var.environment
-  }
+  tags = var.tags
 }
 
 # IAM Role for Grafana
 resource "aws_iam_role" "grafana" {
-  name = "${var.project}-${var.environment}-grafana"
+  name = "${var.name_prefix}-grafana-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -99,20 +112,12 @@ resource "aws_iam_role" "grafana" {
     ]
   })
 
-  tags = {
-    Environment = var.environment
-    Project     = var.project
-    Terraform   = "true"
-  }
-
-  lifecycle {
-    ignore_changes = [name]
-  }
+  tags = var.tags
 }
 
 # IAM Policy for Grafana
 resource "aws_iam_role_policy" "grafana" {
-  name = "grafana-${var.environment}"
+  name = "${var.name_prefix}-grafana-policy"
   role = aws_iam_role.grafana.id
 
   policy = jsonencode({
@@ -121,13 +126,14 @@ resource "aws_iam_role_policy" "grafana" {
       {
         Effect = "Allow"
         Action = [
+          "aps:QueryMetrics",
+          "aps:GetLabels",
+          "aps:GetMetricMetadata",
+          "aps:GetSeries",
           "cloudwatch:GetMetricData",
           "cloudwatch:ListMetrics",
           "cloudwatch:GetMetricStatistics",
-          "cloudwatch:DescribeAlarms",
-          "aps:QueryMetrics",
-          "aps:GetLabels",
-          "aps:GetMetricMetadata"
+          "cloudwatch:DescribeAlarms"
         ]
         Resource = "*"
       }
@@ -175,9 +181,9 @@ locals {
   current_thresholds = var.environment == "prod" ? local.thresholds.prod : (var.environment == "staging" ? local.thresholds.staging : local.thresholds.dev)
 }
 
-# ECS CPU Utilization Alarm
-resource "aws_cloudwatch_metric_alarm" "cpu_utilization" {
-  alarm_name          = "cpu-utilization-${var.environment}"
+# CloudWatch Alarms
+resource "aws_cloudwatch_metric_alarm" "ecs_cpu" {
+  alarm_name          = "${var.name_prefix}-ecs-cpu-utilization"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
   metric_name         = "CPUUtilization"
@@ -190,19 +196,14 @@ resource "aws_cloudwatch_metric_alarm" "cpu_utilization" {
   ok_actions         = [aws_sns_topic.alerts.arn]
 
   dimensions = {
-    ClusterName = "finefinds-${var.environment}"
-    ServiceName = "finefinds-${var.environment}"
+    ClusterName = "${var.name_prefix}-cluster"
   }
 
-  tags = {
-    Environment = var.environment
-    Metric      = "CPUUtilization"
-  }
+  tags = var.tags
 }
 
-# ECS Memory Utilization Alarm
-resource "aws_cloudwatch_metric_alarm" "memory_utilization" {
-  alarm_name          = "memory-utilization-${var.environment}"
+resource "aws_cloudwatch_metric_alarm" "ecs_memory" {
+  alarm_name          = "${var.name_prefix}-ecs-memory-utilization"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
   metric_name         = "MemoryUtilization"
@@ -215,19 +216,14 @@ resource "aws_cloudwatch_metric_alarm" "memory_utilization" {
   ok_actions         = [aws_sns_topic.alerts.arn]
 
   dimensions = {
-    ClusterName = "finefinds-${var.environment}"
-    ServiceName = "finefinds-${var.environment}"
+    ClusterName = "${var.name_prefix}-cluster"
   }
 
-  tags = {
-    Environment = var.environment
-    Metric      = "MemoryUtilization"
-  }
+  tags = var.tags
 }
 
-# RDS CPU Utilization Alarm
 resource "aws_cloudwatch_metric_alarm" "rds_cpu" {
-  alarm_name          = "rds-cpu-utilization-${var.environment}"
+  alarm_name          = "${var.name_prefix}-rds-cpu-utilization"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
   metric_name         = "CPUUtilization"
@@ -240,94 +236,17 @@ resource "aws_cloudwatch_metric_alarm" "rds_cpu" {
   ok_actions         = [aws_sns_topic.alerts.arn]
 
   dimensions = {
-    DBInstanceIdentifier = "finefinds-${var.environment}"
+    DBInstanceIdentifier = "${var.name_prefix}-rds"
   }
 
-  tags = {
-    Environment = var.environment
-    Metric      = "RDSCPUUtilization"
-  }
+  tags = var.tags
 }
 
-# RDS Memory Alarm
-resource "aws_cloudwatch_metric_alarm" "rds_memory" {
-  alarm_name          = "rds-memory-${var.environment}"
-  comparison_operator = "LessThanThreshold"
-  evaluation_periods  = "2"
-  metric_name         = "FreeableMemory"
-  namespace           = "AWS/RDS"
-  period             = "300"
-  statistic          = "Average"
-  threshold          = local.current_thresholds.rds_memory
-  alarm_description  = "This metric monitors RDS freeable memory"
-  alarm_actions      = [aws_sns_topic.alerts.arn]
-  ok_actions         = [aws_sns_topic.alerts.arn]
-
-  dimensions = {
-    DBInstanceIdentifier = "finefinds-${var.environment}"
-  }
-
-  tags = {
-    Environment = var.environment
-    Metric      = "RDSMemory"
-  }
-}
-
-# Application Error Rate Alarm
-resource "aws_cloudwatch_metric_alarm" "error_rate" {
-  alarm_name          = "error-rate-${var.environment}"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = "2"
-  metric_name         = "ErrorRate"
-  namespace           = "FineFinds/Application"
-  period             = "300"
-  statistic          = "Sum"
-  threshold          = local.current_thresholds.error_rate
-  alarm_description  = "This metric monitors application error rate"
-  alarm_actions      = [aws_sns_topic.alerts.arn]
-  ok_actions         = [aws_sns_topic.alerts.arn]
-
-  dimensions = {
-    Environment = var.environment
-  }
-
-  tags = {
-    Environment = var.environment
-    Metric      = "ErrorRate"
-  }
-}
-
-# Application Latency Alarm
-resource "aws_cloudwatch_metric_alarm" "latency" {
-  alarm_name          = "latency-${var.environment}"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = "2"
-  metric_name         = "Latency"
-  namespace           = "FineFinds/Application"
-  period             = "300"
-  statistic          = "Average"
-  threshold          = local.current_thresholds.latency
-  alarm_description  = "This metric monitors application latency"
-  alarm_actions      = [aws_sns_topic.alerts.arn]
-  ok_actions         = [aws_sns_topic.alerts.arn]
-
-  dimensions = {
-    Environment = var.environment
-  }
-
-  tags = {
-    Environment = var.environment
-    Metric      = "Latency"
-  }
-}
-
-# SNS Topic for Alerts with Environment-specific Configuration
+# SNS Topic for Alerts
 resource "aws_sns_topic" "alerts" {
-  name = "finefinds-alerts-${var.environment}"
+  name = "${var.name_prefix}-alerts"
 
-  tags = {
-    Environment = var.environment
-  }
+  tags = var.tags
 }
 
 # SNS Topic Policy
@@ -349,9 +268,197 @@ resource "aws_sns_topic_policy" "alerts" {
   })
 }
 
-# SNS Topic Subscription (example for email)
-resource "aws_sns_topic_subscription" "email" {
+# SNS Topic Subscription
+resource "aws_sns_topic_subscription" "alerts" {
   topic_arn = aws_sns_topic.alerts.arn
   protocol  = "email"
   endpoint  = var.alert_email
+}
+
+# IAM Role for CloudWatch
+resource "aws_iam_role" "cloudwatch" {
+  name = "${var.name_prefix}-cloudwatch-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "monitoring.rds.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = var.tags
+}
+
+# IAM Policy for CloudWatch
+resource "aws_iam_role_policy" "cloudwatch" {
+  name = "${var.name_prefix}-cloudwatch-policy"
+  role = aws_iam_role.cloudwatch.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "cloudwatch:PutMetricData",
+          "cloudwatch:GetMetricStatistics",
+          "cloudwatch:ListMetrics"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# CloudWatch Log Groups
+resource "aws_cloudwatch_log_group" "alb" {
+  name              = "/aws/alb/${var.name_prefix}"
+  retention_in_days = var.log_retention_days
+
+  tags = var.tags
+}
+
+resource "aws_cloudwatch_log_group" "ecs" {
+  name              = "/aws/ecs/${var.name_prefix}"
+  retention_in_days = var.log_retention_days
+
+  tags = var.tags
+}
+
+resource "aws_cloudwatch_log_group" "rds" {
+  name              = "/aws/rds/${var.name_prefix}"
+  retention_in_days = var.log_retention_days
+
+  tags = var.tags
+}
+
+# CloudWatch Alarms for ALB
+resource "aws_cloudwatch_metric_alarm" "alb_5xx" {
+  alarm_name          = "${var.name_prefix}-alb-5xx-errors"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "HTTPCode_ELB_5XX_Count"
+  namespace           = "AWS/ApplicationELB"
+  period             = "300"
+  statistic          = "Sum"
+  threshold          = "10"
+  alarm_description  = "This metric monitors ALB 5XX errors"
+  alarm_actions      = [aws_sns_topic.alerts.arn]
+  ok_actions         = [aws_sns_topic.alerts.arn]
+
+  dimensions = {
+    LoadBalancer = "${var.name_prefix}-alb"
+  }
+
+  tags = var.tags
+}
+
+# X-Ray Group
+resource "aws_xray_group" "main" {
+  group_name        = "${var.name_prefix}-xray"
+  filter_expression = "service(\"${var.name_prefix}\")"
+
+  tags = var.tags
+}
+
+# CloudTrail
+resource "aws_cloudtrail" "main" {
+  name                          = "${var.name_prefix}-trail"
+  s3_bucket_name               = aws_s3_bucket.cloudtrail.id
+  include_global_service_events = true
+  is_multi_region_trail        = true
+  enable_logging               = true
+  cloud_watch_logs_group_arn   = "${aws_cloudwatch_log_group.cloudtrail.arn}:*"
+  cloud_watch_logs_role_arn    = aws_iam_role.cloudtrail.arn
+
+  tags = var.tags
+}
+
+# S3 Bucket for CloudTrail
+resource "aws_s3_bucket" "cloudtrail" {
+  bucket = "${var.name_prefix}-cloudtrail"
+
+  tags = var.tags
+}
+
+# S3 Bucket Versioning
+resource "aws_s3_bucket_versioning" "cloudtrail" {
+  bucket = aws_s3_bucket.cloudtrail.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+# S3 Bucket Lifecycle Configuration
+resource "aws_s3_bucket_lifecycle_configuration" "cloudtrail" {
+  bucket = aws_s3_bucket.cloudtrail.id
+
+  rule {
+    id     = "cleanup"
+    status = "Enabled"
+
+    filter {
+      prefix = "AWSLogs/"
+    }
+
+    expiration {
+      days = 90
+    }
+  }
+}
+
+# IAM Role for CloudTrail
+resource "aws_iam_role" "cloudtrail" {
+  name = "${var.name_prefix}-cloudtrail-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "cloudtrail.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = var.tags
+}
+
+# IAM Policy for CloudTrail
+resource "aws_iam_role_policy" "cloudtrail" {
+  name = "${var.name_prefix}-cloudtrail-policy"
+  role = aws_iam_role.cloudtrail.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "${aws_cloudwatch_log_group.cloudtrail.arn}:*"
+      }
+    ]
+  })
+}
+
+# CloudWatch Log Group for CloudTrail
+resource "aws_cloudwatch_log_group" "cloudtrail" {
+  name              = "/aws/cloudtrail/${var.name_prefix}"
+  retention_in_days = var.log_retention_days
+
+  tags = var.tags
 } 

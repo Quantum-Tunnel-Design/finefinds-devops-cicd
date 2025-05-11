@@ -1,0 +1,173 @@
+name: Terraform Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+      - qa
+      - sandbox
+      - staging
+    paths:
+      - 'terraform/**'
+      - '.github/workflows/terraform-deploy.yml'
+      - 'scripts/**'
+  pull_request:
+    branches:
+      - main
+      - dev
+      - qa
+      - sandbox
+      - staging
+    paths:
+      - 'terraform/**'
+      - '.github/workflows/terraform-deploy.yml'
+      - 'scripts/**'
+
+jobs:
+  terraform:
+    name: 'Terraform'
+    runs-on: ubuntu-latest
+    env:
+      TF_ENV: >-
+        ${GITHUB_REF##*/}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Set environment name
+      id: setenv
+      run: |
+        if [[ "${GITHUB_REF##*/}" == "main" ]]; then
+          echo "env=prod" >> $GITHUB_OUTPUT
+        elif [[ "${GITHUB_REF##*/}" == "staging" ]]; then
+          echo "env=staging" >> $GITHUB_OUTPUT
+        elif [[ "${GITHUB_REF##*/}" == "qa" ]]; then
+          echo "env=qa" >> $GITHUB_OUTPUT
+        elif [[ "${GITHUB_REF##*/}" == "sandbox" ]]; then
+          echo "env=sandbox" >> $GITHUB_OUTPUT
+        else
+          echo "env=dev" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: "1.5.0"
+
+    - name: Terraform Format
+      id: fmt
+      run: terraform fmt -check
+      continue-on-error: true
+      working-directory: terraform/environments/${{ steps.setenv.outputs.env }}
+
+    - name: Terraform Init
+      id: init
+      run: terraform init
+      working-directory: terraform/environments/${{ steps.setenv.outputs.env }}
+
+    - name: Terraform Validate
+      id: validate
+      run: terraform validate
+      working-directory: terraform/environments/${{ steps.setenv.outputs.env }}
+
+    - name: Terraform Plan
+      id: plan
+      if: github.event_name == 'pull_request'
+      run: terraform plan -no-color
+      continue-on-error: true
+      working-directory: terraform/environments/${{ steps.setenv.outputs.env }}
+
+    - name: Update Pull Request
+      uses: actions/github-script@v6
+      if: github.event_name == 'pull_request'
+      env:
+        PLAN: "terraform\n${{ steps.plan.outputs.stdout }}"
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
+          #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
+          #### Terraform Validation 🤖\`${{ steps.validate.outcome }}\`
+          #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
+
+          <details><summary>Show Plan</summary>
+
+          \`\`\`\n
+          ${process.env.PLAN}
+          \`\`\`
+
+          </details>`;
+
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.name,
+            body: output
+          })
+
+    - name: Terraform Apply
+      if: github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'qa' || github.ref_name == 'sandbox' || github.ref_name == 'staging')
+      run: |
+        cd ../..
+        chmod +x scripts/deploy_terraform.sh
+        ./scripts/deploy_terraform.sh ${{ steps.setenv.outputs.env }}
+      working-directory: terraform/environments/${{ steps.setenv.outputs.env }}
+
+    - name: Set Environment Emoji
+      id: emoji
+      run: |
+        if [[ "${{ steps.setenv.outputs.env }}" == "prod" ]]; then
+          echo "emoji=🚀" >> $GITHUB_OUTPUT
+        elif [[ "${{ steps.setenv.outputs.env }}" == "staging" ]]; then
+          echo "emoji=🔄" >> $GITHUB_OUTPUT
+        elif [[ "${{ steps.setenv.outputs.env }}" == "qa" ]]; then
+          echo "emoji=🔍" >> $GITHUB_OUTPUT
+        elif [[ "${{ steps.setenv.outputs.env }}" == "sandbox" ]]; then
+          echo "emoji=🏖️" >> $GITHUB_OUTPUT
+        else
+          echo "emoji=🛠️" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Slack Notification (Success)
+      if: success() && github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'qa' || github.ref_name == 'sandbox' || github.ref_name == 'staging')
+      uses: rtCamp/action-slack-notify@v2
+      env:
+        SLACK_WEBHOOK: ${{ steps.setenv.outputs.env == 'prod' && secrets.SLACK_WEBHOOK_URL_PROD || secrets.SLACK_WEBHOOK_URL_NON_PROD }}
+        SLACK_CHANNEL: ${{ steps.setenv.outputs.env == 'prod' && secrets.SLACK_CHANNEL_PROD || secrets.SLACK_CHANNEL_NON_PROD }}
+        SLACK_COLOR: good
+        SLACK_TITLE: '${{ steps.emoji.outputs.emoji }} Terraform Deploy Succeeded'
+        SLACK_MESSAGE: |
+          *Environment:* ${{ steps.setenv.outputs.env }}
+          *Branch:* `${{ github.ref_name }}`
+          *Triggered by:* ${{ github.actor }}
+          *Commit:* <${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>
+          *Workflow:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>
+          *Changes:* <${{ github.server_url }}/${{ github.repository }}/compare/${{ github.event.before }}...${{ github.sha }}|View Changes>
+        SLACK_USERNAME: 'GitHub Actions'
+        SLACK_ICON_EMOJI: ':white_check_mark:'
+
+    - name: Slack Notification (Failure)
+      if: failure() && github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'qa' || github.ref_name == 'sandbox' || github.ref_name == 'staging')
+      uses: rtCamp/action-slack-notify@v2
+      env:
+        SLACK_WEBHOOK: ${{ steps.setenv.outputs.env == 'prod' && secrets.SLACK_WEBHOOK_URL_PROD || secrets.SLACK_WEBHOOK_URL_NON_PROD }}
+        SLACK_CHANNEL: ${{ steps.setenv.outputs.env == 'prod' && secrets.SLACK_CHANNEL_PROD || secrets.SLACK_CHANNEL_NON_PROD }}
+        SLACK_COLOR: danger
+        SLACK_TITLE: '${{ steps.emoji.outputs.emoji }} Terraform Deploy Failed'
+        SLACK_MESSAGE: |
+          *Environment:* ${{ steps.setenv.outputs.env }}
+          *Branch:* `${{ github.ref_name }}`
+          *Triggered by:* ${{ github.actor }}
+          *Commit:* <${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>
+          *Workflow:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>
+          *Changes:* <${{ github.server_url }}/${{ github.repository }}/compare/${{ github.event.before }}...${{ github.sha }}|View Changes>
+        SLACK_USERNAME: 'GitHub Actions'
+        SLACK_ICON_EMOJI: ':x:' 

@@ -2,6 +2,22 @@ provider "aws" {
   region = var.aws_region
 }
 
+# Get current AWS account ID
+data "aws_caller_identity" "current" {}
+
+# Check if certificate exists
+data "aws_acm_certificate" "main" {
+  domain      = "${var.environment}.finefinds.lk"
+  statuses    = ["ISSUED", "PENDING_VALIDATION"]
+  most_recent = true
+}
+
+# Local variables
+locals {
+  name_prefix = "${var.project}-${var.environment}"
+  certificate_arn = data.aws_acm_certificate.main.arn != null ? data.aws_acm_certificate.main.arn : "arn:aws:acm:us-east-1:${data.aws_caller_identity.current.account_id}:certificate/${var.environment}-finefindslk-com"
+}
+
 # VPC Module
 module "vpc" {
   source = "../../modules/vpc"
@@ -14,6 +30,7 @@ module "vpc" {
   availability_zones   = ["${var.aws_region}a"]
   private_subnet_cidrs = ["10.0.1.0/24"]
   public_subnet_cidrs  = ["10.0.101.0/24"]
+  tags                 = local.common_tags
 }
 
 # ECS Module
@@ -108,7 +125,7 @@ module "monitoring" {
 variable "project" {
   description = "Project name"
   type        = string
-  default     = "finefinds"
+  default     = "finefindslk"
 }
 
 variable "environment" {
@@ -172,6 +189,12 @@ variable "db_password" {
   sensitive   = true
 }
 
+variable "certificate_arn" {
+  description = "ARN of the SSL certificate for the ALB"
+  type        = string
+  default     = null
+}
+
 # Outputs
 output "vpc_id" {
   description = "ID of the VPC"
@@ -216,4 +239,91 @@ output "mongodb_endpoint" {
 output "cloudwatch_dashboard" {
   description = "Name of the CloudWatch dashboard"
   value       = module.monitoring.dashboard_name
+}
+
+module "networking" {
+  source              = "../../modules/networking"
+  name_prefix         = local.name_prefix
+  vpc_cidr            = var.vpc_cidr
+  availability_zones  = var.availability_zones
+  tags                = local.common_tags
+}
+
+module "security" {
+  source            = "../../modules/security"
+  name_prefix       = local.name_prefix
+  tags              = local.common_tags
+  callback_urls     = ["https://${var.environment}.finefinds.lk/callback"]
+  logout_urls       = ["https://${var.environment}.finefinds.lk/logout"]
+  certificate_arn   = local.certificate_arn
+  db_username       = var.db_username
+  db_password       = var.db_password
+  mongodb_username  = var.mongodb_username
+  mongodb_password  = var.mongodb_password
+  sonar_token       = var.sonar_token
+}
+
+module "storage" {
+  source                = "../../modules/storage"
+  name_prefix           = local.name_prefix
+  environment           = var.environment
+  vpc_id                = module.networking.vpc_id
+  private_subnet_ids    = module.networking.private_subnet_ids
+  ecs_security_group_id = module.compute.ecs_security_group_id
+  db_instance_class     = local.env_config.db_instance_class
+  db_name               = var.db_name
+  db_username           = var.db_username
+  db_password           = var.db_password
+  use_existing_cluster  = false
+  mongodb_ami           = var.mongodb_ami
+  mongodb_instance_type = local.env_config.instance_type
+  tags                  = local.common_tags
+}
+
+module "compute" {
+  source                   = "../../modules/compute"
+  name_prefix              = local.name_prefix
+  environment              = var.environment
+  aws_region               = var.aws_region
+  vpc_id                   = module.networking.vpc_id
+  public_subnet_ids        = module.networking.public_subnet_ids
+  private_subnet_ids       = module.networking.private_subnet_ids
+  certificate_arn          = module.cicd.ecr_repository_url
+  task_cpu                 = 256
+  task_memory              = 512
+  task_execution_role_arn  = module.security.ecs_task_execution_role_arn
+  task_role_arn            = module.security.ecs_task_role_arn
+  container_image          = module.cicd.ecr_repository_url
+  container_port           = var.container_port
+  container_environment    = []
+  service_desired_count    = 1
+  rds_secret_arn           = module.security.rds_secret_arn
+  mongodb_secret_arn       = module.security.mongodb_secret_arn
+  tags                     = local.common_tags
+}
+
+module "cicd" {
+  source            = "../../modules/cicd"
+  name_prefix       = local.name_prefix
+  environment       = var.environment
+  repository_url    = var.repository_url
+  source_token      = var.source_token
+  api_url           = module.compute.alb_dns_name
+  cognito_domain    = module.security.cognito_domain
+  cognito_client_id = module.security.cognito_user_pool_client_id
+  cognito_redirect_uri = "https://sandbox.finefinds.lk/callback"
+  domain_name       = "sandbox.finefinds.lk"
+  tags              = local.common_tags
+}
+
+module "monitoring" {
+  source            = "../../modules/monitoring"
+  name_prefix       = local.name_prefix
+  aws_region        = var.aws_region
+  ecs_cluster_name  = module.compute.ecs_cluster_name
+  ecs_service_name  = module.compute.ecs_service_name
+  rds_instance_id   = module.storage.rds_endpoint
+  alb_arn_suffix    = module.compute.alb_arn
+  alert_email       = var.alert_email
+  tags              = local.common_tags
 } 

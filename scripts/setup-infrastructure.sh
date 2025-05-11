@@ -25,17 +25,17 @@ REGION="us-east-1"
 # Create S3 bucket for Terraform state
 print_message "Creating S3 bucket for Terraform state..." "$YELLOW"
 aws s3api create-bucket \
-    --bucket "finefinds-terraform-state-${ENVIRONMENT}" \
+    --bucket "finefindslk-terraform-state-${ENVIRONMENT}" \
     --region $REGION
 
 # Enable versioning
 aws s3api put-bucket-versioning \
-    --bucket "finefinds-terraform-state-${ENVIRONMENT}" \
+    --bucket "finefindslk-terraform-state-${ENVIRONMENT}" \
     --versioning-configuration Status=Enabled
 
 # Enable encryption
 aws s3api put-bucket-encryption \
-    --bucket "finefinds-terraform-state-${ENVIRONMENT}" \
+    --bucket "finefindslk-terraform-state-${ENVIRONMENT}" \
     --server-side-encryption-configuration '{
         "Rules": [
             {
@@ -49,7 +49,7 @@ aws s3api put-bucket-encryption \
 # Create DynamoDB table for state locking
 print_message "Creating DynamoDB table for state locking..." "$YELLOW"
 aws dynamodb create-table \
-    --table-name "finefinds-terraform-locks" \
+    --table-name "finefindslk-terraform-locks" \
     --attribute-definitions AttributeName=LockID,AttributeType=S \
     --key-schema AttributeName=LockID,KeyType=HASH \
     --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5
@@ -59,10 +59,10 @@ print_message "Creating backend configuration..." "$YELLOW"
 cat > terraform/environments/${ENVIRONMENT}/backend.tf << EOL
 terraform {
   backend "s3" {
-    bucket         = "finefinds-terraform-state-${ENVIRONMENT}"
+    bucket         = "finefindslk-terraform-state-${ENVIRONMENT}"
     key            = "terraform.tfstate"
     region         = "${REGION}"
-    dynamodb_table = "finefinds-terraform-locks"
+    dynamodb_table = "finefindslk-terraform-locks"
     encrypt        = true
   }
 }
@@ -71,7 +71,7 @@ EOL
 # Create terraform.tfvars
 print_message "Creating terraform.tfvars..." "$YELLOW"
 cat > terraform/environments/${ENVIRONMENT}/terraform.tfvars << EOL
-project     = "finefinds"
+project     = "finefindslk"
 environment = "${ENVIRONMENT}"
 aws_region  = "${REGION}"
 

@@ -1,7 +1,7 @@
 variable "project" {
   description = "Project name"
   type        = string
-  default     = "finefinds"
+  default     = "finefindslk"
 }
 
 variable "environment" {
@@ -31,7 +31,7 @@ variable "container_port" {
 variable "ecr_repository_url" {
   description = "URL of the ECR repository"
   type        = string
-  default     = "123456789012.dkr.ecr.us-east-1.amazonaws.com/finefinds"
+  default     = "123456789012.dkr.ecr.us-east-1.amazonaws.com/finefindslk"
 }
 
 variable "image_tag" {

@@ -30,10 +30,11 @@ resource "aws_cognito_user_pool" "main" {
     allow_admin_create_user_only = false
   }
 
-  tags = {
-    Environment = var.environment
-    Project     = var.project
-    Terraform   = "true"
+  tags = var.tags
+
+  lifecycle {
+    ignore_changes = [name]
+    prevent_destroy = true
   }
 }
 
@@ -46,6 +47,7 @@ resource "aws_cognito_user_pool_client" "main" {
   generate_secret = true
 
   explicit_auth_flows = [
+    "ALLOW_USER_PASSWORD_AUTH",
     "ALLOW_USER_SRP_AUTH",
     "ALLOW_REFRESH_TOKEN_AUTH"
   ]
@@ -56,14 +58,19 @@ resource "aws_cognito_user_pool_client" "main" {
   supported_identity_providers = ["COGNITO"]
 
   token_validity_units {
-    refresh_token = "days"
     access_token  = "hours"
     id_token      = "hours"
+    refresh_token = "days"
   }
 
-  refresh_token_validity = 30
   access_token_validity  = 1
   id_token_validity     = 1
+  refresh_token_validity = 30
+
+  lifecycle {
+    ignore_changes = [name]
+    prevent_destroy = true
+  }
 }
 
 # Cognito User Pool Groups
@@ -72,6 +79,10 @@ resource "aws_cognito_user_group" "admin" {
   user_pool_id = aws_cognito_user_pool.main.id
   description  = "Administrators"
   precedence   = 1
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_cognito_user_group" "vendor" {
@@ -79,6 +90,10 @@ resource "aws_cognito_user_group" "vendor" {
   user_pool_id = aws_cognito_user_pool.main.id
   description  = "Vendors"
   precedence   = 2
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_cognito_user_group" "parent" {
@@ -86,6 +101,10 @@ resource "aws_cognito_user_group" "parent" {
   user_pool_id = aws_cognito_user_pool.main.id
   description  = "Parents"
   precedence   = 3
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_cognito_user_group" "student" {
@@ -93,49 +112,83 @@ resource "aws_cognito_user_group" "student" {
   user_pool_id = aws_cognito_user_pool.main.id
   description  = "Students"
   precedence   = 4
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
-# Variables
-variable "project" {
-  description = "Project name"
-  type        = string
+# Cognito Identity Provider (Google)
+resource "aws_cognito_identity_provider" "google" {
+  count = var.enable_google_auth ? 1 : 0
+
+  user_pool_id  = aws_cognito_user_pool.main.id
+  provider_name = "Google"
+  provider_type = "Google"
+
+  provider_details = {
+    authorize_scopes = "email profile openid"
+    client_id        = var.google_client_id
+    client_secret    = var.google_client_secret
+  }
+
+  attribute_mapping = {
+    email    = "email"
+    username = "sub"
+  }
 }
 
-variable "environment" {
-  description = "Environment name"
-  type        = string
+# Cognito Identity Provider (Facebook)
+resource "aws_cognito_identity_provider" "facebook" {
+  count = var.enable_facebook_auth ? 1 : 0
+
+  user_pool_id  = aws_cognito_user_pool.main.id
+  provider_name = "Facebook"
+  provider_type = "Facebook"
+
+  provider_details = {
+    api_version                = "v17.0"
+    authorize_scopes          = "email,public_profile"
+    client_id                 = var.facebook_client_id
+    client_secret             = var.facebook_client_secret
+  }
+
+  attribute_mapping = {
+    email    = "email"
+    username = "id"
+  }
 }
 
-variable "callback_urls" {
-  description = "List of callback URLs"
-  type        = list(string)
-  default     = ["https://api.finefinds.com/auth/callback"]
-}
-
-variable "logout_urls" {
-  description = "List of logout URLs"
-  type        = list(string)
-  default     = ["https://api.finefinds.com/auth/logout"]
+# Cognito Domain
+resource "aws_cognito_user_pool_domain" "main" {
+  domain       = "${var.project}-${var.environment}"
+  user_pool_id = aws_cognito_user_pool.main.id
+  certificate_arn = var.certificate_arn
 }
 
 # Outputs
 output "user_pool_id" {
-  description = "The ID of the Cognito User Pool"
+  description = "ID of the Cognito User Pool"
   value       = aws_cognito_user_pool.main.id
 }
 
 output "user_pool_arn" {
-  description = "The ARN of the Cognito User Pool"
+  description = "ARN of the Cognito User Pool"
   value       = aws_cognito_user_pool.main.arn
 }
 
 output "client_id" {
-  description = "The ID of the Cognito User Pool Client"
+  description = "ID of the Cognito User Pool Client"
   value       = aws_cognito_user_pool_client.main.id
 }
 
-output "cognito_client_secret" {
-  description = "The client secret of the Cognito User Pool Client"
+output "client_secret" {
+  description = "Secret of the Cognito User Pool Client"
   value       = aws_cognito_user_pool_client.main.client_secret
   sensitive   = true
+}
+
+output "domain" {
+  description = "Domain of the Cognito User Pool"
+  value       = aws_cognito_user_pool_domain.main.domain
 } 

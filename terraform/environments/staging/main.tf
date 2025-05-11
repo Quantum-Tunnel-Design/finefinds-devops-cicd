@@ -2,99 +2,98 @@ provider "aws" {
   region = var.aws_region
 }
 
-# VPC Module
-module "vpc" {
-  source = "../../modules/vpc"
+# Get current AWS account ID
+data "aws_caller_identity" "current" {}
+
+# Check if certificate exists
+data "aws_acm_certificate" "main" {
+  domain      = "${var.environment}.finefinds.lk"
+  statuses    = ["ISSUED", "PENDING_VALIDATION"]
+  most_recent = true
+}
+
+# Local variables
+locals {
+  certificate_arn = data.aws_acm_certificate.main.arn != null ? data.aws_acm_certificate.main.arn : "arn:aws:acm:us-east-1:${data.aws_caller_identity.current.account_id}:certificate/${var.environment}-finefindslk-com"
+}
+
+# Networking Module
+module "networking" {
+  source = "../../modules/networking"
 
   project     = var.project
   environment = var.environment
+  name_prefix = local.name_prefix
+  tags        = var.tags
 
-  # Staging uses moderate resources
-  vpc_cidr             = "10.1.0.0/16"
-  availability_zones   = ["${var.aws_region}a", "${var.aws_region}b"]
-  private_subnet_cidrs = ["10.1.1.0/24", "10.1.2.0/24"]
-  public_subnet_cidrs  = ["10.1.101.0/24", "10.1.102.0/24"]
+  vpc_config = var.vpc_config
 }
 
-# ALB Module
-module "alb" {
-  source = "../../modules/alb"
+# Security Module
+module "security" {
+  source = "../../modules/security"
 
   project     = var.project
   environment = var.environment
-  vpc_id      = module.vpc.vpc_id
-  subnet_ids  = module.vpc.public_subnet_ids
-  target_group_arn = module.ecs.target_group_arn
+  name_prefix = local.name_prefix
+  tags        = var.tags
+
+  enable_encryption = var.security_config.enable_encryption
+  enable_backup     = var.security_config.enable_backup
+  enable_monitoring = var.security_config.enable_monitoring
 }
 
-# ECS Module
-module "ecs" {
-  source = "../../modules/ecs"
-
-  project            = var.project
-  environment        = var.environment
-  vpc_id            = module.vpc.vpc_id
-  subnet_ids        = module.vpc.private_subnet_ids
-  container_name    = var.container_name
-  container_port    = var.container_port
-  ecr_repository_url = var.ecr_repository_url
-  image_tag         = var.image_tag
-  alb_security_group_id = module.alb.security_group_id
-  database_url_arn  = module.rds.db_password_arn
-  mongodb_uri_arn   = module.mongodb.mongodb_password_arn
-  aws_region        = var.aws_region
-}
-
-# RDS Module
-module "rds" {
-  source = "../../modules/rds"
+# Database Module
+module "database" {
+  source = "../../modules/database"
 
   project     = var.project
   environment = var.environment
-  vpc_id      = module.vpc.vpc_id
-  subnet_ids  = module.vpc.private_subnet_ids
-  ecs_security_group_id = module.ecs.security_group_id
-  db_username = var.db_username
-  db_instance_class = "db.t3.micro"
-  allocated_storage = 20
-  skip_final_snapshot = true
-  db_name = "finefinds"
+  name_prefix = local.name_prefix
+  tags        = var.tags
+
+  vpc_id             = module.networking.vpc_id
+  private_subnet_ids = module.networking.private_subnet_ids
+  kms_key_id         = module.security.kms_key_id
+
+  instance_class         = var.database_config.instance_class
+  allocated_storage     = var.database_config.allocated_storage
+  db_name              = var.database_config.db_name
+  backup_retention_period = var.database_config.backup_retention_period
+  multi_az             = var.database_config.multi_az
+  skip_final_snapshot  = var.database_config.skip_final_snapshot
+  deletion_protection  = var.database_config.deletion_protection
 }
 
-# Cognito Module
-module "cognito" {
-  source = "../../modules/cognito"
+# Compute Module
+module "compute" {
+  source = "../../modules/compute"
 
   project     = var.project
   environment = var.environment
-}
+  name_prefix = local.name_prefix
+  tags        = var.tags
 
-# S3 Module
-module "s3" {
-  source = "../../modules/s3"
+  vpc_id             = module.networking.vpc_id
+  private_subnet_ids = module.networking.private_subnet_ids
+  public_subnet_ids  = module.networking.public_subnet_ids
 
-  project     = var.project
-  environment = var.environment
-}
+  task_cpu    = var.compute_config.task_cpu
+  task_memory = var.compute_config.task_memory
 
-# Secrets Manager Module
-module "secrets" {
-  source = "../../modules/secrets"
+  service_desired_count = var.compute_config.service_desired_count
+  container_image      = var.compute_config.container_image
+  container_port       = var.compute_config.container_port
 
-  project     = var.project
-  environment = var.environment
-}
+  certificate_arn    = local.certificate_arn
+  rds_secret_arn     = module.database.rds_secret_arn
+  mongodb_secret_arn = var.mongodb_secret_arn
 
-# MongoDB Module
-module "mongodb" {
-  source = "../../modules/mongodb"
-
-  project     = var.project
-  environment = var.environment
-  vpc_id      = module.vpc.vpc_id
-  subnet_ids  = module.vpc.private_subnet_ids
-  ecs_security_group_id = module.ecs.security_group_id
-  admin_username = var.mongodb_admin_username
+  health_check_path               = var.compute_config.health_check_path
+  health_check_interval          = var.compute_config.health_check_interval
+  health_check_timeout           = var.compute_config.health_check_timeout
+  health_check_healthy_threshold = var.compute_config.health_check_healthy_threshold
+  health_check_unhealthy_threshold = var.compute_config.health_check_unhealthy_threshold
 }
 
 # Monitoring Module
@@ -103,83 +102,32 @@ module "monitoring" {
 
   project     = var.project
   environment = var.environment
-  aws_region  = var.aws_region
-  alert_email = var.alert_email
+  name_prefix = local.name_prefix
+  tags        = var.tags
+
+  vpc_id             = module.networking.vpc_id
+  private_subnet_ids = module.networking.private_subnet_ids
+  public_subnet_ids  = module.networking.public_subnet_ids
+
+  alb_arn            = module.compute.alb_arn
+  alb_dns_name       = module.compute.alb_dns_name
+  ecs_cluster_arn    = module.compute.cluster_arn
+  ecs_service_arn    = module.compute.service_arn
+  rds_instance_id    = module.database.db_instance_id
+  rds_endpoint       = module.database.db_endpoint
+
+  enable_cloudwatch = var.monitoring_config.enable_cloudwatch
+  enable_xray       = var.monitoring_config.enable_xray
+  enable_cloudtrail = var.monitoring_config.enable_cloudtrail
+  log_retention_days = var.monitoring_config.log_retention_days
 }
 
-# SonarQube Module
-module "sonarqube" {
-  source = "../../modules/sonarqube"
-
-  project     = var.project
-  environment = var.environment
-  vpc_id      = module.vpc.vpc_id
-  subnet_ids  = module.vpc.private_subnet_ids
-  aws_region  = var.aws_region
-  db_instance_class = "db.t3.micro"
-  db_username = var.sonarqube_db_username
-  alb_security_group_id = module.alb.security_group_id
-  alb_dns_name = module.alb.dns_name
-  db_endpoint = module.rds.endpoint
-  db_subnet_group_name = module.rds.db_subnet_group_name
-}
-
-# Amplify Module
-module "amplify" {
-  source = "../../modules/amplify"
-
-  project     = var.project
-  environment = var.environment
-  source_token = var.source_token
-  client_repository = var.client_repository
-  admin_repository = var.admin_repository
-  sonar_token = var.sonar_token
-  graphql_endpoint = "https://api.${var.environment}.finefinds.com/graphql"
-  sonarqube_url = module.sonarqube.sonarqube_url
-}
-
-# Outputs
-output "vpc_id" {
-  description = "ID of the VPC"
-  value       = module.vpc.vpc_id
-}
-
-output "ecs_cluster_name" {
-  description = "Name of the ECS cluster"
-  value       = module.ecs.cluster_name
-}
-
-output "ecs_service_name" {
-  description = "Name of the ECS service"
-  value       = module.ecs.service_name
-}
-
-output "rds_endpoint" {
-  description = "Endpoint of the RDS instance"
-  value       = module.rds.db_instance_endpoint
-}
-
-output "cognito_user_pool_id" {
-  description = "ID of the Cognito User Pool"
-  value       = module.cognito.user_pool_id
-}
-
-output "cognito_client_id" {
-  description = "ID of the Cognito User Pool Client"
-  value       = module.cognito.client_id
-}
-
-output "s3_bucket_name" {
-  description = "Name of the S3 bucket"
-  value       = module.s3.bucket_name
-}
-
-output "mongodb_endpoint" {
-  description = "Endpoint of the MongoDB instance"
-  value       = module.mongodb.endpoint
-}
-
-output "cloudwatch_dashboard" {
-  description = "Name of the CloudWatch dashboard"
-  value       = module.monitoring.dashboard_name
+# Update database security group after compute is created
+resource "aws_security_group_rule" "database_from_compute" {
+  type                     = "ingress"
+  from_port                = 5432
+  to_port                  = 5432
+  protocol                 = "tcp"
+  source_security_group_id = module.compute.tasks_security_group_id
+  security_group_id        = module.database.db_security_group_id
 } 

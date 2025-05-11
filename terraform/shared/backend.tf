@@ -1,10 +1,10 @@
 terraform {
   backend "s3" {
     # These values will be filled in by the environment-specific configurations
-    # bucket         = "finefinds-terraform-state-${var.environment}"
+    # bucket         = "finefindslk-terraform-state-${var.environment}"
     # key            = "terraform.tfstate"
     # region         = "us-east-1"
-    # dynamodb_table = "finefinds-terraform-locks"
+    # dynamodb_table = "finefindslk-terraform-locks"
     # encrypt        = true
   }
 
