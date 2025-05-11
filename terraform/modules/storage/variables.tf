@@ -1,45 +1,130 @@
-variable "name_prefix" {
-  description = "Prefix for resource names"
+variable "project" {
+  description = "Project name"
   type        = string
-  validation {
-    condition     = can(regex("^[a-z0-9-]+$", var.name_prefix))
-    error_message = "The name_prefix must contain only lowercase letters, numbers, and hyphens."
-  }
+  default     = "finefinds"
 }
 
 variable "environment" {
   description = "Environment name"
   type        = string
-  validation {
-    condition     = contains(["dev", "qa", "staging", "prod"], var.environment)
-    error_message = "The environment must be one of: dev, qa, staging, prod."
-  }
+}
+
+variable "name_prefix" {
+  description = "Prefix for resource names"
+  type        = string
+}
+
+variable "tags" {
+  description = "Additional tags for resources"
+  type        = map(string)
+  default     = {}
 }
 
 variable "vpc_id" {
   description = "ID of the VPC"
   type        = string
-  validation {
-    condition     = can(regex("^vpc-[a-z0-9]+$", var.vpc_id))
-    error_message = "The VPC ID must be in the format: vpc-xxxxxxxx."
-  }
+}
+
+variable "vpc_cidr_blocks" {
+  description = "List of VPC CIDR blocks"
+  type        = list(string)
 }
 
 variable "private_subnet_ids" {
   description = "List of private subnet IDs"
   type        = list(string)
-  validation {
-    condition     = alltrue([for id in var.private_subnet_ids : can(regex("^subnet-[a-z0-9]+$", id))])
-    error_message = "All subnet IDs must be in the format: subnet-xxxxxxxx."
+}
+
+variable "kms_key_id" {
+  description = "KMS key ID for encryption"
+  type        = string
+}
+
+variable "bucket_names" {
+  description = "Map of bucket names and their purposes"
+  type = map(string)
+  default = {
+    static  = "static-assets"
+    uploads = "uploads"
+    backups = "backups"
   }
 }
 
-variable "vpc_cidr_blocks" {
-  description = "List of VPC CIDR blocks for security group rules"
-  type        = list(string)
-  validation {
-    condition     = alltrue([for cidr in var.vpc_cidr_blocks : can(regex("^([0-9]{1,3}\\.){3}[0-9]{1,3}/([0-9]|[1-2][0-9]|3[0-2])$", cidr))])
-    error_message = "All CIDR blocks must be in the format: x.x.x.x/x."
+variable "lifecycle_rules" {
+  description = "Map of lifecycle rules for each bucket"
+  type = map(object({
+    enabled = bool
+    prefix  = string
+    transitions = list(object({
+      days          = number
+      storage_class = string
+    }))
+    expiration = object({
+      days = number
+    })
+  }))
+  default = {
+    uploads = {
+      enabled = true
+      prefix  = ""
+      transitions = [
+        {
+          days          = 30
+          storage_class = "STANDARD_IA"
+        },
+        {
+          days          = 90
+          storage_class = "GLACIER"
+        }
+      ]
+      expiration = {
+        days = 365
+      }
+    }
+    backups = {
+      enabled = true
+      prefix  = ""
+      transitions = [
+        {
+          days          = 30
+          storage_class = "STANDARD_IA"
+        },
+        {
+          days          = 90
+          storage_class = "GLACIER"
+        }
+      ]
+      expiration = {
+        days = 365
+      }
+    }
+  }
+}
+
+variable "cors_rules" {
+  description = "Map of CORS rules for each bucket"
+  type = map(object({
+    allowed_headers = list(string)
+    allowed_methods = list(string)
+    allowed_origins = list(string)
+    expose_headers  = list(string)
+    max_age_seconds = number
+  }))
+  default = {
+    static = {
+      allowed_headers = ["*"]
+      allowed_methods = ["GET", "HEAD"]
+      allowed_origins = ["*"]
+      expose_headers  = ["ETag"]
+      max_age_seconds = 3000
+    }
+    uploads = {
+      allowed_headers = ["*"]
+      allowed_methods = ["GET", "PUT", "POST", "DELETE"]
+      allowed_origins = ["*"]
+      expose_headers  = ["ETag"]
+      max_age_seconds = 3000
+    }
   }
 }
 
@@ -118,15 +203,5 @@ variable "mongodb_instance_type" {
   validation {
     condition     = can(regex("^[a-z0-9]+\\.[a-z0-9]+$", var.mongodb_instance_type))
     error_message = "The instance type must be in the format: type.size (e.g., t3.small)."
-  }
-}
-
-variable "tags" {
-  description = "Tags to apply to all resources"
-  type        = map(string)
-  default     = {}
-  validation {
-    condition     = alltrue([for k, v in var.tags : can(regex("^[a-zA-Z0-9-_]+$", k)) && can(regex("^[a-zA-Z0-9-_]+$", v))])
-    error_message = "Tag keys and values must contain only letters, numbers, hyphens, and underscores."
   }
 } 

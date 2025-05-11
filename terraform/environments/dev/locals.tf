@@ -1,4 +1,42 @@
 locals {
+  name_prefix = "${var.project}-${var.environment}"
+
+  common_tags = {
+    Project     = var.project
+    Environment = var.environment
+    ManagedBy   = "Terraform"
+    Service     = "FineFinds"
+  }
+
+  # Environment-specific configurations
+  env_config = {
+    dev = {
+      instance_type     = "t3.micro"
+      db_instance_class = "db.t3.micro"
+      min_size         = 1
+      max_size         = 2
+      task_cpu         = 256
+      task_memory      = 512
+      service_count    = 1
+      backup_retention = 1
+      multi_az        = false
+    }
+  }
+
+  current_env_config = local.env_config[var.environment]
+
+  # VPC configurations
+  vpc_config = {
+    dev = {
+      cidr             = "10.1.0.0/16"
+      public_subnets   = ["10.1.101.0/24", "10.1.102.0/24"]
+      private_subnets  = ["10.1.1.0/24", "10.1.2.0/24"]
+      database_subnets = ["10.1.11.0/24", "10.1.12.0/24"]
+    }
+  }
+
+  current_vpc_config = local.vpc_config[var.environment]
+
   # VPC Configuration
   vpc_cidr = "10.0.0.0/16"
   azs      = ["us-east-1a", "us-east-1b"]
@@ -28,8 +66,6 @@ locals {
 
   # Container Configuration
   container_port = 3000
-  task_cpu       = 256
-  task_memory    = 512
 
   # Health Check Configuration
   health_check_path     = "/health"

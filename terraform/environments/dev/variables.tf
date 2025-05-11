@@ -7,10 +7,7 @@ variable "project" {
 variable "environment" {
   description = "Environment name"
   type        = string
-  validation {
-    condition     = contains(["dev", "qa", "staging", "prod"], var.environment)
-    error_message = "The environment must be one of: dev, qa, staging, prod."
-  }
+  default     = "dev"
 }
 
 variable "aws_region" {
@@ -44,13 +41,13 @@ variable "image_tag" {
 }
 
 variable "db_username" {
-  description = "Username for RDS database"
+  description = "Database username"
   type        = string
   sensitive   = true
 }
 
 variable "db_password" {
-  description = "Password for RDS database"
+  description = "Database password"
   type        = string
   sensitive   = true
 }
@@ -62,7 +59,7 @@ variable "sonarqube_db_username" {
 }
 
 variable "alert_email" {
-  description = "Email address for CloudWatch alerts"
+  description = "Email for alerts"
   type        = string
 }
 
@@ -73,13 +70,13 @@ variable "mongodb_admin_username" {
 }
 
 variable "mongodb_username" {
-  description = "Username for MongoDB"
+  description = "MongoDB username"
   type        = string
   sensitive   = true
 }
 
 variable "mongodb_password" {
-  description = "Password for MongoDB"
+  description = "MongoDB password"
   type        = string
   sensitive   = true
 }
@@ -101,7 +98,7 @@ variable "admin_repository" {
 }
 
 variable "sonar_token" {
-  description = "SonarQube authentication token"
+  description = "SonarQube token"
   type        = string
   sensitive   = true
 }
@@ -228,4 +225,21 @@ variable "db_name" {
 variable "mongodb_ami" {
   description = "AMI ID for MongoDB instance"
   type        = string
+}
+
+variable "container_image" {
+  description = "Container image to deploy"
+  type        = string
+}
+
+variable "callback_urls" {
+  description = "Cognito callback URLs"
+  type        = list(string)
+  default     = ["http://localhost:3000"]
+}
+
+variable "logout_urls" {
+  description = "Cognito logout URLs"
+  type        = list(string)
+  default     = ["http://localhost:3000"]
 }

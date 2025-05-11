@@ -366,4 +366,102 @@ module "networking" {
   vpc_cidr            = var.vpc_cidr
   availability_zones  = var.availability_zones
   tags                = local.common_tags
+}
+
+module "network" {
+  source = "../../modules/network"
+
+  project     = var.project
+  environment = var.environment
+  name_prefix = local.name_prefix
+  tags        = local.common_tags
+
+  vpc_config = local.current_vpc_config
+}
+
+module "storage" {
+  source = "../../modules/storage"
+
+  project     = var.project
+  environment = var.environment
+  name_prefix = local.name_prefix
+  tags        = local.common_tags
+
+  vpc_id            = module.network.vpc_id
+  vpc_cidr_blocks   = [local.current_vpc_config.cidr]
+  private_subnet_ids = module.network.private_subnet_ids
+  kms_key_id        = module.security.kms_key_id
+}
+
+module "database" {
+  source = "../../modules/database"
+
+  project     = var.project
+  environment = var.environment
+  name_prefix = local.name_prefix
+  tags        = local.common_tags
+
+  vpc_id              = module.network.vpc_id
+  private_subnet_ids  = module.network.database_subnet_ids
+  ecs_security_group_id = module.compute.ecs_security_group_id
+  kms_key_id          = module.security.kms_key_id
+
+  instance_class    = local.current_env_config.db_instance_class
+  allocated_storage = 20
+  db_name          = "finefinds"
+  db_username      = var.db_username
+  db_password      = var.db_password
+}
+
+module "compute" {
+  source = "../../modules/compute"
+
+  project     = var.project
+  environment = var.environment
+  name_prefix = local.name_prefix
+  tags        = local.common_tags
+
+  vpc_id             = module.network.vpc_id
+  private_subnet_ids = module.network.private_subnet_ids
+  public_subnet_ids  = module.network.public_subnet_ids
+
+  task_cpu                = local.current_env_config.task_cpu
+  task_memory            = local.current_env_config.task_memory
+  service_desired_count  = local.current_env_config.service_count
+  container_image        = var.container_image
+  container_port         = var.container_port
+  certificate_arn        = module.security.certificate_arn
+  rds_secret_arn         = module.database.db_secret_arn
+  mongodb_secret_arn     = module.database.mongodb_secret_arn
+}
+
+module "monitoring" {
+  source = "../../modules/monitoring"
+
+  project     = var.project
+  environment = var.environment
+  name_prefix = local.name_prefix
+  tags        = local.common_tags
+
+  aws_region  = var.aws_region
+  alert_email = var.alert_email
+}
+
+module "security" {
+  source = "../../modules/security"
+
+  project     = var.project
+  environment = var.environment
+  name_prefix = local.name_prefix
+  tags        = local.common_tags
+
+  callback_urls = var.callback_urls
+  logout_urls   = var.logout_urls
+  certificate_arn = module.security.certificate_arn
+
+  db_username      = var.db_username
+  db_password      = var.db_password
+  mongodb_username = var.mongodb_username
+  mongodb_password = var.mongodb_password
+  sonar_token      = var.sonar_token
 } 

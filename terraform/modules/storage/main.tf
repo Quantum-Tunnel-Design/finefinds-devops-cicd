@@ -132,159 +132,132 @@ resource "aws_iam_instance_profile" "mongodb" {
   role = aws_iam_role.mongodb.name
 }
 
-# S3 Bucket for Static Assets
-resource "aws_s3_bucket" "static" {
-  bucket = "${var.name_prefix}-static-assets"
+# S3 Buckets
+resource "aws_s3_bucket" "buckets" {
+  for_each = var.bucket_names
 
-  tags = var.tags
-}
-
-# S3 Bucket for Uploads
-resource "aws_s3_bucket" "uploads" {
-  bucket = "${var.name_prefix}-uploads"
-
-  tags = var.tags
-}
-
-# S3 Bucket for Backups
-resource "aws_s3_bucket" "backups" {
-  bucket = "${var.name_prefix}-backups"
+  bucket = "${var.name_prefix}-${each.value}"
 
   tags = var.tags
 }
 
 # S3 Bucket Versioning
-resource "aws_s3_bucket_versioning" "static" {
-  bucket = aws_s3_bucket.static.id
-  versioning_configuration {
-    status = "Enabled"
-  }
-}
+resource "aws_s3_bucket_versioning" "buckets" {
+  for_each = aws_s3_bucket.buckets
 
-resource "aws_s3_bucket_versioning" "uploads" {
-  bucket = aws_s3_bucket.uploads.id
-  versioning_configuration {
-    status = "Enabled"
-  }
-}
-
-resource "aws_s3_bucket_versioning" "backups" {
-  bucket = aws_s3_bucket.backups.id
+  bucket = each.value.id
   versioning_configuration {
     status = "Enabled"
   }
 }
 
 # S3 Bucket Server Side Encryption
-resource "aws_s3_bucket_server_side_encryption_configuration" "static" {
-  bucket = aws_s3_bucket.static.id
+resource "aws_s3_bucket_server_side_encryption_configuration" "buckets" {
+  for_each = aws_s3_bucket.buckets
+
+  bucket = each.value.id
 
   rule {
     apply_server_side_encryption_by_default {
       sse_algorithm = "AES256"
-    }
-  }
-}
-
-resource "aws_s3_bucket_server_side_encryption_configuration" "uploads" {
-  bucket = aws_s3_bucket.uploads.id
-
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-    }
-  }
-}
-
-resource "aws_s3_bucket_server_side_encryption_configuration" "backups" {
-  bucket = aws_s3_bucket.backups.id
-
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
+      kms_master_key_id = var.kms_key_id
     }
   }
 }
 
 # S3 Bucket Lifecycle Rules
-resource "aws_s3_bucket_lifecycle_configuration" "uploads" {
-  bucket = aws_s3_bucket.uploads.id
+resource "aws_s3_bucket_lifecycle_configuration" "buckets" {
+  for_each = {
+    for k, v in var.lifecycle_rules : k => v
+    if v.enabled
+  }
 
-  rule {
-    id     = "cleanup-old-versions"
-    status = "Enabled"
+  bucket = aws_s3_bucket.buckets[each.key].id
 
-    filter {
-      prefix = ""
-    }
+  dynamic "rule" {
+    for_each = each.value.transitions
+    content {
+      id     = "transition-to-${rule.value.storage_class}"
+      status = "Enabled"
 
-    noncurrent_version_expiration {
-      noncurrent_days = 90
+      filter {
+        prefix = each.value.prefix
+      }
+
+      transition {
+        days          = rule.value.days
+        storage_class = rule.value.storage_class
+      }
     }
   }
 
   rule {
-    id     = "delete-incomplete-multipart-uploads"
+    id     = "expire-old-versions"
     status = "Enabled"
 
     filter {
-      prefix = ""
-    }
-
-    abort_incomplete_multipart_upload {
-      days_after_initiation = 7
-    }
-  }
-}
-
-resource "aws_s3_bucket_lifecycle_configuration" "backups" {
-  bucket = aws_s3_bucket.backups.id
-
-  rule {
-    id     = "transition-to-ia"
-    status = "Enabled"
-
-    filter {
-      prefix = ""
-    }
-
-    transition {
-      days          = 30
-      storage_class = "STANDARD_IA"
-    }
-
-    transition {
-      days          = 90
-      storage_class = "GLACIER"
+      prefix = each.value.prefix
     }
 
     expiration {
-      days = 365
+      days = each.value.expiration.days
     }
   }
 }
 
 # S3 Bucket CORS Configuration
-resource "aws_s3_bucket_cors_configuration" "static" {
-  bucket = aws_s3_bucket.static.id
+resource "aws_s3_bucket_cors_configuration" "buckets" {
+  for_each = var.cors_rules
+
+  bucket = aws_s3_bucket.buckets[each.key].id
 
   cors_rule {
-    allowed_headers = ["*"]
-    allowed_methods = ["GET", "HEAD"]
-    allowed_origins = ["*"]
-    expose_headers  = ["ETag"]
-    max_age_seconds = 3000
+    allowed_headers = each.value.allowed_headers
+    allowed_methods = each.value.allowed_methods
+    allowed_origins = each.value.allowed_origins
+    expose_headers  = each.value.expose_headers
+    max_age_seconds = each.value.max_age_seconds
   }
 }
 
-resource "aws_s3_bucket_cors_configuration" "uploads" {
-  bucket = aws_s3_bucket.uploads.id
+# S3 Bucket Public Access Block
+resource "aws_s3_bucket_public_access_block" "buckets" {
+  for_each = aws_s3_bucket.buckets
 
-  cors_rule {
-    allowed_headers = ["*"]
-    allowed_methods = ["GET", "PUT", "POST", "DELETE"]
-    allowed_origins = ["*"]
-    expose_headers  = ["ETag"]
-    max_age_seconds = 3000
+  bucket = each.value.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# S3 Bucket Policy
+resource "aws_s3_bucket_policy" "buckets" {
+  for_each = {
+    for k, v in aws_s3_bucket.buckets : k => v
+    if k == "uploads" || k == "static"
   }
+
+  bucket = each.value.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "AllowCloudFrontServicePrincipal"
+        Effect    = "Allow"
+        Principal = {
+          Service = "cloudfront.amazonaws.com"
+        }
+        Action   = "s3:GetObject"
+        Resource = "${each.value.arn}/*"
+        Condition = {
+          StringEquals = {
+            "AWS:SourceArn" = var.cloudfront_distribution_arn
+          }
+        }
+      }
+    ]
+  })
 } 
