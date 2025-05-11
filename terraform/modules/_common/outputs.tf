@@ -31,4 +31,19 @@ output "environment" {
 output "tags" {
   description = "Common tags applied to all resources"
   value       = local.common_tags
+}
+
+output "has_vpc" {
+  description = "Whether VPC is configured"
+  value       = local.has_vpc
+}
+
+output "has_private_subnets" {
+  description = "Whether private subnets are configured"
+  value       = local.has_private_subnets
+}
+
+output "has_public_subnets" {
+  description = "Whether public subnets are configured"
+  value       = local.has_public_subnets
 } 
