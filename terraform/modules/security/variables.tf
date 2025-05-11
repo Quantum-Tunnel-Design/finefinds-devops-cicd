@@ -76,4 +76,14 @@ variable "enable_monitoring" {
   description = "Enable CloudWatch monitoring"
   type        = bool
   default     = true
+}
+
+variable "client_domain" {
+  description = "Client application domain"
+  type        = string
+}
+
+variable "admin_domain" {
+  description = "Admin application domain"
+  type        = string
 } 

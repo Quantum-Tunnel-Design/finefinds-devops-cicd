@@ -19,11 +19,15 @@ locals {
   client_domain = data.aws_amplify_app.client.default_domain
   admin_domain = data.aws_amplify_app.admin.default_domain
   graphql_endpoint = "https://${data.aws_amplify_app.client.default_domain}/graphql"
-  common_tags = {
-    Environment = var.environment
-    Project     = var.project
-    Terraform   = "true"
-  }
+}
+
+# Use common module for standard variables
+module "common" {
+  source = "../../modules/_common"
+
+  project     = var.project
+  environment = var.environment
+  aws_region  = var.aws_region
 }
 
 # VPC Module
@@ -36,7 +40,7 @@ module "vpc" {
   availability_zones = ["${var.aws_region}a", "${var.aws_region}b"]
   public_subnet_cidrs  = ["10.1.101.0/24", "10.1.102.0/24"]
   private_subnet_cidrs = ["10.1.1.0/24", "10.1.2.0/24"]
-  tags = local.common_tags
+  tags = module.common.common_tags
 }
 
 # Secrets Module
@@ -45,7 +49,7 @@ module "secrets" {
   
   project     = var.project
   environment              = var.environment
-  tags                     = local.common_tags
+  tags                     = module.common.common_tags
   
   container_image = var.container_image
   secret_suffix = var.secret_suffix
@@ -59,10 +63,9 @@ module "security" {
   environment       = var.environment
   source            = "../../modules/security"
   name_prefix       = local.name_prefix
-  tags              = local.common_tags
-  callback_urls = var.callback_urls
-  logout_urls   = var.logout_urls
-  certificate_arn   = local.certificate_arn
+  tags              = module.common.common_tags
+  client_domain     = local.client_domain
+  admin_domain      = local.admin_domain
   db_username       = var.db_username
   db_password_arn   = module.secrets.db_password_arn
   mongodb_username  = var.mongodb_username
@@ -87,7 +90,7 @@ module "storage" {
   use_existing_cluster  = false
   mongodb_ami           = var.mongodb_ami
   mongodb_instance_type = local.env_config[var.environment].instance_type
-  tags                  = local.common_tags
+  tags                  = module.common.common_tags
 }
 
 # Compute Module
@@ -97,7 +100,7 @@ module "compute" {
   project     = var.project
   name_prefix              = local.name_prefix
   environment              = var.environment
-  tags                     = local.common_tags
+  tags                     = module.common.common_tags
   
   vpc_id             = module.networking.vpc_id
   private_subnet_ids = module.networking.private_subnet_ids
@@ -125,7 +128,7 @@ module "cicd" {
   cognito_client_id = module.security.cognito_user_pool_client_id
   cognito_redirect_uri = "https://dev.finefinds.com/callback"
   domain_name       = "dev.finefinds.com"
-  tags              = local.common_tags
+  tags              = module.common.common_tags
 }
 
 # ALB Module
@@ -149,7 +152,7 @@ module "alb" {
   health_check_healthy_threshold   = local.health_check_healthy_threshold
   health_check_unhealthy_threshold = local.health_check_unhealthy_threshold
 
-  tags = local.common_tags
+  tags = module.common.common_tags
 }
 
 # ECR Module
@@ -158,7 +161,7 @@ module "ecr" {
 
   project     = var.project
   environment = var.environment
-  tags        = local.common_tags
+  tags        = module.common.common_tags
 }
 
 # ECS Module
@@ -184,7 +187,7 @@ module "ecs" {
   task_cpu    = 512
   task_memory = 1024
 
-  tags = local.common_tags
+  tags = module.common.common_tags
 }
 
 # RDS Module
@@ -203,7 +206,7 @@ module "rds" {
   db_name     = local.db_name
   db_password_arn = module.secrets.database_password_arn
 
-  tags = local.common_tags
+  tags = module.common.common_tags
 }
 
 # MongoDB Module
@@ -220,7 +223,7 @@ module "mongodb" {
 
   mongodb_password_arn = module.secrets.mongodb_password_arn
 
-  tags = local.common_tags
+  tags = module.common.common_tags
 }
 
 # SonarQube Module
@@ -248,7 +251,7 @@ module "sonarqube" {
   task_cpu    = local.task_cpu
   task_memory = local.task_memory
 
-  tags = local.common_tags
+  tags = module.common.common_tags
 }
 
 # Cognito Module - No VPC dependencies
@@ -274,7 +277,7 @@ module "monitoring" {
   project     = var.project
   environment = var.environment
   name_prefix = local.name_prefix
-  tags        = local.common_tags
+  tags        = module.common.common_tags
 
   vpc_id             = module.networking.vpc_id
   private_subnet_ids = module.networking.private_subnet_ids
@@ -312,7 +315,7 @@ module "amplify" {
   sonar_token      = var.sonar_token
   graphql_endpoint = local.graphql_endpoint
 
-  tags = local.common_tags
+  tags = module.common.common_tags
 }
 
 # Variables
@@ -364,7 +367,7 @@ module "networking" {
   project     = var.project
   environment = var.environment
   name_prefix = local.name_prefix
-  tags        = local.common_tags
+  tags        = module.common.common_tags
   vpc_config  = local.current_vpc_config
 }
 
@@ -374,7 +377,7 @@ module "database" {
   project     = var.project
   environment = var.environment
   name_prefix = local.name_prefix
-  tags        = local.common_tags
+  tags        = module.common.common_tags
 
   vpc_id              = module.networking.vpc_id
   private_subnet_ids  = module.networking.database_subnet_ids

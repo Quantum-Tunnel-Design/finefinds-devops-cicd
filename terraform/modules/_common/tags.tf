@@ -1,10 +1,18 @@
 locals {
-  # Common tags for all resources
-  common_tags = {
+  # Base tags that should be present on all resources
+  base_tags = {
     Project     = var.project
     Environment = var.environment
     ManagedBy   = "Terraform"
     Service     = "FineFinds"
-    Terraform   = "true"
   }
+
+  # Common tags that can be extended by modules
+  common_tags = merge(
+    local.base_tags,
+    var.tags,
+    {
+      Terraform = "true"
+    }
+  )
 } 

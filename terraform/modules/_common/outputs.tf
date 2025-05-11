@@ -1,6 +1,26 @@
 output "name_prefix" {
-  description = "Prefix used for resource names"
-  value       = var.name_prefix
+  description = "Common name prefix for resources"
+  value       = local.name_prefix
+}
+
+output "base_tags" {
+  description = "Base tags that should be present on all resources"
+  value       = local.base_tags
+}
+
+output "common_tags" {
+  description = "Common tags that can be extended by modules"
+  value       = local.common_tags
+}
+
+output "current_env_config" {
+  description = "Current environment configuration"
+  value       = local.current_env_config
+}
+
+output "current_vpc_config" {
+  description = "Current VPC configuration"
+  value       = local.current_vpc_config
 }
 
 output "environment" {

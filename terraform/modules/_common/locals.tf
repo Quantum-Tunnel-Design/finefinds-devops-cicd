@@ -2,18 +2,6 @@ locals {
   # Common name prefix for all resources
   name_prefix = "${var.project}-${var.environment}"
 
-  # Common tags for all resources
-  common_tags = merge(
-    var.tags,
-    {
-      Project     = var.project
-      Environment = var.environment
-      ManagedBy   = "Terraform"
-      Service     = "FineFinds"
-      Terraform   = "true"
-    }
-  )
-
   # Environment-specific configurations
   env_config = {
     dev = {
