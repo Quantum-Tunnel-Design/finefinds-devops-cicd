@@ -1,7 +1,6 @@
 variable "project" {
   description = "Project name"
   type        = string
-  default     = "finefinds"
 }
 
 variable "environment" {
@@ -15,23 +14,17 @@ variable "name_prefix" {
 }
 
 variable "tags" {
-  description = "Additional tags for resources"
+  description = "Common tags for all resources"
   type        = map(string)
-  default     = {}
 }
 
-variable "callback_urls" {
-  description = "List of callback URLs for Cognito"
-  type        = list(string)
+variable "client_domain" {
+  description = "Client application domain"
+  type        = string
 }
 
-variable "logout_urls" {
-  description = "List of logout URLs for Cognito"
-  type        = list(string)
-}
-
-variable "certificate_arn" {
-  description = "ARN of the SSL certificate"
+variable "admin_domain" {
+  description = "Admin application domain"
   type        = string
 }
 
@@ -41,7 +34,7 @@ variable "db_username" {
 }
 
 variable "db_password_arn" {
-  description = "ARN of the database password secret in AWS Secrets Manager"
+  description = "ARN of the database password in Secrets Manager"
   type        = string
 }
 
@@ -51,13 +44,28 @@ variable "mongodb_username" {
 }
 
 variable "mongodb_password_arn" {
-  description = "ARN of the MongoDB password secret in AWS Secrets Manager"
+  description = "ARN of the MongoDB password in Secrets Manager"
   type        = string
 }
 
 variable "sonar_token_arn" {
-  description = "ARN of the SonarQube token secret in AWS Secrets Manager"
+  description = "ARN of the SonarQube token in Secrets Manager"
   type        = string
+}
+
+variable "certificate_arn" {
+  description = "ARN of the SSL certificate"
+  type        = string
+}
+
+variable "logout_urls" {
+  description = "List of logout URLs for Cognito"
+  type        = list(string)
+}
+
+variable "callback_urls" {
+  description = "List of callback URLs for Cognito"
+  type        = list(string)
 }
 
 variable "enable_encryption" {
@@ -76,14 +84,4 @@ variable "enable_monitoring" {
   description = "Enable CloudWatch monitoring"
   type        = bool
   default     = true
-}
-
-variable "client_domain" {
-  description = "Client application domain"
-  type        = string
-}
-
-variable "admin_domain" {
-  description = "Admin application domain"
-  type        = string
 } 

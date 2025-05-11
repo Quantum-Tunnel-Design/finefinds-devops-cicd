@@ -31,6 +31,7 @@ module "common" {
   vpc_id      = module.vpc.vpc_id
   private_subnet_ids = module.vpc.private_subnet_ids
   public_subnet_ids  = module.vpc.public_subnet_ids
+  tags        = var.tags
 }
 
 # VPC Module
@@ -62,11 +63,13 @@ module "secrets" {
 
 # Security Module
 module "security" {
+  source = "../../modules/security"
+  
   project     = var.project
-  environment       = var.environment
-  source            = "../../modules/security"
-  name_prefix       = local.name_prefix
-  tags              = module.common.common_tags
+  environment = var.environment
+  name_prefix = module.common.name_prefix
+  tags        = module.common.common_tags
+  
   client_domain     = local.client_domain
   admin_domain      = local.admin_domain
   db_username       = var.db_username
@@ -74,6 +77,11 @@ module "security" {
   mongodb_username  = var.mongodb_username
   mongodb_password_arn = module.secrets.mongodb_password_arn
   sonar_token_arn   = module.secrets.sonarqube_password_arn
+  
+  # Required arguments
+  certificate_arn = module.alb.certificate_arn
+  logout_urls     = ["https://${local.client_domain}/logout", "https://${local.admin_domain}/logout"]
+  callback_urls   = ["https://${local.client_domain}/callback", "https://${local.admin_domain}/callback"]
 }
 
 # Storage Module
