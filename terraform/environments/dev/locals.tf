@@ -48,13 +48,15 @@ locals {
 
   current_vpc_config = local.vpc_config[var.environment]
 
-  # VPC Configuration
-  vpc_cidr = "10.0.0.0/16"
-  azs      = ["us-east-1a", "us-east-1b"]
+  # VPC Configuration for other modules if they need the primary CIDR directly
+  vpc_cidr = local.current_vpc_config.cidr_block # Aligned with current_vpc_config
+  # azs, public_subnet_cidrs, private_subnet_cidrs below are not directly used by modules anymore if they take IDs from module.networking
+  # Keeping them for reference or other uses if any, but ensure they don't conflict.
+  azs      = local.current_vpc_config.availability_zones # Aligned
 
-  # Subnet CIDRs
-  public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24"]
-  private_subnet_cidrs = ["10.0.3.0/24", "10.0.4.0/24"]
+  # Subnet CIDRs - These are illustrative if needed, but modules now use subnet IDs from module.networking
+  public_subnet_cidrs  = local.current_vpc_config.public_subnets # Aligned
+  private_subnet_cidrs = local.current_vpc_config.private_subnets # Aligned
 
   # Security Group Names
   alb_sg_name        = "${var.project}-${var.environment}-alb-sg"

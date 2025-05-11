@@ -30,12 +30,12 @@ output "bucket_arns" {
 
 output "db_endpoint" {
   description = "RDS instance endpoint"
-  value       = module.database.db_endpoint
+  value       = module.rds.db_instance_endpoint
 }
 
 output "db_secret_arn" {
   description = "ARN of the RDS database secret"
-  value       = module.database.rds_secret_arn
+  value       = module.secrets.database_arn
 }
 
 output "ecs_cluster_name" {

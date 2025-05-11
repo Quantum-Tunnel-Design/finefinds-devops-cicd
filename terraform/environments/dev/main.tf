@@ -12,24 +12,24 @@ module "common" {
   project     = var.project
   environment = var.environment
   aws_region  = var.aws_region
-  vpc_id      = module.vpc.vpc_id
-  private_subnet_ids = module.vpc.private_subnet_ids
-  public_subnet_ids  = module.vpc.public_subnet_ids
+  vpc_id      = module.networking.vpc_id
+  private_subnet_ids = module.networking.private_subnet_ids
+  public_subnet_ids  = module.networking.public_subnet_ids
   tags        = var.tags
 }
 
 # VPC Module
-module "vpc" {
-  source = "../../modules/vpc"
-
-  project     = var.project
-  environment = var.environment
-  vpc_cidr    = "10.1.0.0/16"
-  availability_zones = ["${var.aws_region}a", "${var.aws_region}b"]
-  public_subnet_cidrs  = ["10.1.101.0/24", "10.1.102.0/24"]
-  private_subnet_cidrs = ["10.1.1.0/24", "10.1.2.0/24"]
-  tags        = var.tags
-}
+# module "vpc" {
+#   source = "../../modules/vpc"
+# 
+#   project     = var.project
+#   environment = var.environment
+#   vpc_cidr    = "10.1.0.0/16"
+#   availability_zones = ["${var.aws_region}a", "${var.aws_region}b"]
+#   public_subnet_cidrs  = ["10.1.101.0/24", "10.1.102.0/24"]
+#   private_subnet_cidrs = ["10.1.1.0/24", "10.1.2.0/24"]
+#   tags        = var.tags
+# }
 
 # Secrets Module
 module "secrets" {
@@ -52,7 +52,7 @@ module "security" {
   name_prefix = "${var.project}-${var.environment}"
   tags        = var.tags
   
-  vpc_id = module.vpc.vpc_id
+  vpc_id = module.networking.vpc_id
 
   client_domain = var.client_domain
   admin_domain  = var.admin_domain
@@ -105,9 +105,9 @@ module "compute" {
   environment = var.environment
   tags        = var.tags
   
-  vpc_id = module.vpc.vpc_id
-  private_subnet_ids = module.vpc.private_subnet_ids
-  public_subnet_ids  = module.vpc.public_subnet_ids
+  vpc_id = module.networking.vpc_id
+  private_subnet_ids = module.networking.private_subnet_ids
+  public_subnet_ids  = module.networking.public_subnet_ids
 
   task_cpu    = 512
   task_memory = 1024
@@ -141,8 +141,8 @@ module "alb" {
 
   project     = var.project
   environment = var.environment
-  vpc_id      = module.vpc.vpc_id
-  subnet_ids  = module.vpc.public_subnet_ids
+  vpc_id      = module.networking.vpc_id
+  subnet_ids  = module.networking.public_subnet_ids
   name        = "${var.project}-${var.environment}-alb"
   security_group_name = "${var.project}-${var.environment}-alb-sg"
   vpc_cidr_blocks = [var.vpc_cidr]
@@ -174,8 +174,8 @@ module "ecs" {
 
   project     = var.project
   environment = var.environment
-  vpc_id      = module.vpc.vpc_id
-  private_subnet_ids = module.vpc.private_subnet_ids
+  vpc_id      = module.networking.vpc_id
+  private_subnet_ids = module.networking.private_subnet_ids
   aws_region  = var.aws_region
   name        = local.ecs_cluster_name
   security_group_name = local.ecs_sg_name
@@ -199,8 +199,8 @@ module "rds" {
 
   project     = var.project
   environment = var.environment
-  vpc_id      = module.vpc.vpc_id
-  subnet_ids  = module.vpc.private_subnet_ids
+  vpc_id      = module.networking.vpc_id
+  subnet_ids  = module.networking.database_subnet_ids
   name        = local.rds_name
   security_group_name = local.rds_sg_name
   vpc_cidr_blocks = [local.vpc_cidr]
@@ -319,20 +319,20 @@ module "networking" {
   vpc_config  = local.current_vpc_config
 }
 
-module "database" {
-  source = "../../modules/database"
-
-  project     = var.project
-  environment = var.environment
-  name_prefix = local.name_prefix
-  tags        = module.common.common_tags
-
-  vpc_id              = module.networking.vpc_id
-  private_subnet_ids  = module.networking.database_subnet_ids
-  ecs_security_group_id = module.compute.ecs_security_group_id
-  kms_key_id          = module.security.kms_key_id
-
-  instance_class    = local.current_env_config.db_instance_class
-  allocated_storage = 20
-  db_name          = "finefindslk"
-}
+# module "database" { # REMOVED - module "rds" will manage the primary PostgreSQL RDS
+#   source = "../../modules/database"
+# 
+#   project     = var.project
+#   environment = var.environment
+#   name_prefix = local.name_prefix
+#   tags        = module.common.common_tags
+# 
+#   vpc_id              = module.networking.vpc_id
+#   private_subnet_ids  = module.networking.database_subnet_ids
+#   ecs_security_group_id = module.compute.ecs_security_group_id
+#   kms_key_id          = module.security.kms_key_id
+# 
+#   instance_class    = local.current_env_config.db_instance_class
+#   allocated_storage = 20
+#   db_name          = "finefindslk"
+# }
