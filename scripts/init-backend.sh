@@ -25,11 +25,11 @@ REGION="us-east-1"
 # Determine account type and bucket name
 if [ "$ENVIRONMENT" == "prod" ]; then
     ACCOUNT_TYPE="prod"
-    BUCKET_NAME="finefinds-terraform-state-prod"
+    BUCKET_NAME="finefindslk-terraform-state-prod"
     PROFILE="prod"
 else
     ACCOUNT_TYPE="nonprod"
-    BUCKET_NAME="finefinds-terraform-state-nonprod"
+    BUCKET_NAME="finefindslk-terraform-state-nonprod"
     PROFILE="nonprod"
 fi
 
@@ -63,10 +63,10 @@ if ! aws s3api head-bucket --bucket $BUCKET_NAME --profile $PROFILE 2>/dev/null;
 fi
 
 # Create DynamoDB table if it doesn't exist
-if ! aws dynamodb describe-table --table-name finefinds-terraform-locks --profile $PROFILE 2>/dev/null; then
+if ! aws dynamodb describe-table --table-name finefindslk-terraform-locks --profile $PROFILE 2>/dev/null; then
     print_message "Creating DynamoDB table for state locking..." "$YELLOW"
     aws dynamodb create-table \
-        --table-name finefinds-terraform-locks \
+        --table-name finefindslk-terraform-locks \
         --attribute-definitions AttributeName=LockID,AttributeType=S \
         --key-schema AttributeName=LockID,KeyType=HASH \
         --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5 \
@@ -81,7 +81,7 @@ terraform init \
     -backend-config="bucket=$BUCKET_NAME" \
     -backend-config="key=$ENVIRONMENT/terraform.tfstate" \
     -backend-config="region=$REGION" \
-    -backend-config="dynamodb_table=finefinds-terraform-locks" \
+    -backend-config="dynamodb_table=finefindslk-terraform-locks" \
     -backend-config="encrypt=true"
 
 if [ $? -eq 0 ]; then

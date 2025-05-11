@@ -53,13 +53,13 @@ variable "environment" {
 variable "callback_urls" {
   description = "List of callback URLs"
   type        = list(string)
-  default     = ["https://api.finefinds.com/auth/callback"]
+  default     = ["https://api.finefinds.lk/auth/callback"]
 }
 
 variable "logout_urls" {
   description = "List of logout URLs"
   type        = list(string)
-  default     = ["https://api.finefinds.com/auth/logout"]
+  default     = ["https://api.finefinds.lk/auth/logout"]
 }
 
 variable "use_existing_roles" {

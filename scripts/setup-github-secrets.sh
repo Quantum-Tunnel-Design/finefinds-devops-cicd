@@ -85,20 +85,20 @@ set_repo_secrets() {
     gh secret set SOURCE_TOKEN --body "$TF_VAR_github_token" --repo "$repo"
     
     # Set environment-specific variables
-    gh secret set VITE_GRAPHQL_ENDPOINT --body "https://api.${TF_VAR_environment}.finefinds.com/graphql" --repo "$repo"
+    gh secret set VITE_GRAPHQL_ENDPOINT --body "https://api.${TF_VAR_environment}.finefinds.lk/graphql" --repo "$repo"
     gh secret set VITE_ENVIRONMENT --body "$TF_VAR_environment" --repo "$repo"
     
     # Only set SonarQube secrets for non-devops repositories
-    if [[ "$repo" != *"finefinds-devops-cicd"* ]]; then
+    if [[ "$repo" != *"finefindslk-devops-cicd"* ]]; then
         gh secret set SONAR_TOKEN --body "$TF_VAR_sonar_token" --repo "$repo"
-        gh secret set VITE_SONARQUBE_URL --body "https://sonarqube.${TF_VAR_environment}.finefinds.com" --repo "$repo"
+        gh secret set VITE_SONARQUBE_URL --body "https://sonarqube.${TF_VAR_environment}.finefinds.lk" --repo "$repo"
     fi
 }
 
 # Set secrets for client web app
-set_repo_secrets "Quantum-Tunnel-Design/finefinds-client-web-app"
+set_repo_secrets "Quantum-Tunnel-Design/finefindslk-client-web-app"
 
 # Set secrets for admin dashboard
-set_repo_secrets "Quantum-Tunnel-Design/finefinds-admin"
+set_repo_secrets "Quantum-Tunnel-Design/finefindslk-admin"
 
 echo "GitHub secrets have been set successfully!" 

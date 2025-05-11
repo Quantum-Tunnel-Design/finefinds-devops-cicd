@@ -7,7 +7,7 @@ data "aws_caller_identity" "current" {}
 
 # Check if certificate exists
 data "aws_acm_certificate" "main" {
-  domain      = "${var.environment}.finefinds.com"
+  domain      = "${var.environment}.finefinds.lk"
   statuses    = ["ISSUED", "PENDING_VALIDATION"]
   most_recent = true
 }
@@ -15,7 +15,7 @@ data "aws_acm_certificate" "main" {
 # Local variables
 locals {
   name_prefix = "${var.project}-${var.environment}"
-  certificate_arn = data.aws_acm_certificate.main.arn != null ? data.aws_acm_certificate.main.arn : "arn:aws:acm:us-east-1:${data.aws_caller_identity.current.account_id}:certificate/${var.environment}-finefinds-com"
+  certificate_arn = data.aws_acm_certificate.main.arn != null ? data.aws_acm_certificate.main.arn : "arn:aws:acm:us-east-1:${data.aws_caller_identity.current.account_id}:certificate/${var.environment}-finefindslk-com"
 }
 
 # VPC Module
@@ -192,8 +192,8 @@ module "security" {
   name_prefix       = local.name_prefix
   environment       = var.environment
   tags              = local.common_tags
-  callback_urls     = ["https://${var.environment}.finefinds.com/callback"]
-  logout_urls       = ["https://${var.environment}.finefinds.com/logout"]
+  callback_urls     = ["https://${var.environment}.finefinds.lk/callback"]
+  logout_urls       = ["https://${var.environment}.finefinds.lk/logout"]
   certificate_arn   = local.certificate_arn
   db_username       = var.db_username
   db_password       = var.db_password
@@ -250,8 +250,8 @@ module "cicd" {
   api_url           = module.compute.alb_dns_name
   cognito_domain    = module.security.cognito_domain
   cognito_client_id = module.security.cognito_user_pool_client_id
-  cognito_redirect_uri = "https://${var.environment}.finefinds.com/callback"
-  domain_name       = "${var.environment}.finefinds.com"
+  cognito_redirect_uri = "https://${var.environment}.finefinds.lk/callback"
+  domain_name       = "${var.environment}.finefinds.lk"
   tags              = local.common_tags
 }
 

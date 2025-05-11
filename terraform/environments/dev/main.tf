@@ -147,7 +147,7 @@ module "cicd" {
   cognito_domain = module.security.cognito_domain
   cognito_client_id = module.security.cognito_user_pool_client_id
   cognito_redirect_uri = "https://${var.client_domain}/callback"
-  domain_name = "${var.environment}.finefinds.com"
+  domain_name = "${var.environment}.finefinds.lk"
 }
 
 # ALB Module

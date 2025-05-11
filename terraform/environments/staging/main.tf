@@ -7,14 +7,14 @@ data "aws_caller_identity" "current" {}
 
 # Check if certificate exists
 data "aws_acm_certificate" "main" {
-  domain      = "${var.environment}.finefinds.com"
+  domain      = "${var.environment}.finefinds.lk"
   statuses    = ["ISSUED", "PENDING_VALIDATION"]
   most_recent = true
 }
 
 # Local variables
 locals {
-  certificate_arn = data.aws_acm_certificate.main.arn != null ? data.aws_acm_certificate.main.arn : "arn:aws:acm:us-east-1:${data.aws_caller_identity.current.account_id}:certificate/${var.environment}-finefinds-com"
+  certificate_arn = data.aws_acm_certificate.main.arn != null ? data.aws_acm_certificate.main.arn : "arn:aws:acm:us-east-1:${data.aws_caller_identity.current.account_id}:certificate/${var.environment}-finefindslk-com"
 }
 
 # Networking Module

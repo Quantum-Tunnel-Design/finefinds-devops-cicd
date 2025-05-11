@@ -19,13 +19,13 @@ generate_rds_password() {
 # Delete existing IAM roles
 echo "Deleting existing IAM roles..."
 for role in \
-    "finefinds-dev-ecs-execution-role" \
-    "finefinds-dev-grafana" \
-    "finefinds-dev-sonarqube-execution-role" \
-    "finefinds-dev-ecs-task-role" \
-    "finefinds-dev-mongodb-execution-role" \
-    "finefinds-dev-mongodb-task-role" \
-    "finefinds-dev-sonarqube-task-role"
+    "finefindslk-dev-ecs-execution-role" \
+    "finefindslk-dev-grafana" \
+    "finefindslk-dev-sonarqube-execution-role" \
+    "finefindslk-dev-ecs-task-role" \
+    "finefindslk-dev-mongodb-execution-role" \
+    "finefindslk-dev-mongodb-task-role" \
+    "finefindslk-dev-sonarqube-task-role"
 do
     echo "Deleting IAM role: $role"
     aws iam delete-role --role-name "$role" || true
@@ -33,8 +33,8 @@ done
 
 # Delete subnet groups
 echo "Deleting subnet groups..."
-aws rds delete-db-subnet-group --db-subnet-group-name "finefinds-dev-db-subnet-group" || true
-aws docdb delete-db-subnet-group --db-subnet-group-name "finefinds-dev-docdb-subnet-group" || true
+aws rds delete-db-subnet-group --db-subnet-group-name "finefindslk-dev-db-subnet-group" || true
+aws docdb delete-db-subnet-group --db-subnet-group-name "finefindslk-dev-docdb-subnet-group" || true
 
 # Delete EFS file system
 echo "Deleting EFS file system..."
@@ -52,9 +52,9 @@ JWT_SECRET=$(openssl rand -base64 32)
 
 # Remove any existing secrets with the same names
 for secret in \
-    "finefinds-dev-db-password" \
-    "finefinds-dev-sonarqube-password" \
-    "finefinds-dev-jwt-secret"
+    "finefindslk-dev-db-password" \
+    "finefindslk-dev-sonarqube-password" \
+    "finefindslk-dev-jwt-secret"
 do
     echo "Removing existing secret: $secret"
     aws secretsmanager delete-secret --secret-id "$secret" --force-delete-without-recovery --region "$REGION" || true
@@ -62,19 +62,19 @@ done
 
 # Create new secrets with timestamp
 aws secretsmanager create-secret \
-    --name "finefinds-${ENVIRONMENT}-db-password-${TIMESTAMP}" \
+    --name "finefindslk-${ENVIRONMENT}-db-password-${TIMESTAMP}" \
     --description "Database password for ${ENVIRONMENT} environment" \
     --secret-string "$DB_PASSWORD" \
     --region "$REGION"
 
 aws secretsmanager create-secret \
-    --name "finefinds-${ENVIRONMENT}-sonarqube-password-${TIMESTAMP}" \
+    --name "finefindslk-${ENVIRONMENT}-sonarqube-password-${TIMESTAMP}" \
     --description "SonarQube database password for ${ENVIRONMENT} environment" \
     --secret-string "$SONARQUBE_DB_PASSWORD" \
     --region "$REGION"
 
 aws secretsmanager create-secret \
-    --name "finefinds-${ENVIRONMENT}-jwt-secret-${TIMESTAMP}" \
+    --name "finefindslk-${ENVIRONMENT}-jwt-secret-${TIMESTAMP}" \
     --description "JWT signing secret for ${ENVIRONMENT} environment" \
     --secret-string "$JWT_SECRET" \
     --region "$REGION"
@@ -87,9 +87,9 @@ echo "JWT_SECRET: $JWT_SECRET"
 
 # Print the new secret names for reference
 echo -e "\nNew secret names:"
-echo "Database: finefinds-${ENVIRONMENT}-db-password-${TIMESTAMP}"
-echo "SonarQube: finefinds-${ENVIRONMENT}-sonarqube-password-${TIMESTAMP}"
-echo "JWT: finefinds-${ENVIRONMENT}-jwt-secret-${TIMESTAMP}"
+echo "Database: finefindslk-${ENVIRONMENT}-db-password-${TIMESTAMP}"
+echo "SonarQube: finefindslk-${ENVIRONMENT}-sonarqube-password-${TIMESTAMP}"
+echo "JWT: finefindslk-${ENVIRONMENT}-jwt-secret-${TIMESTAMP}"
 
 echo -e "\nNote: You'll need to update your Terraform configuration to use these new secret names."
 echo "The passwords have been generated to be compatible with RDS requirements." 

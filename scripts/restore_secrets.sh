@@ -14,21 +14,21 @@ echo "Creating new secrets in AWS Secrets Manager..."
 
 # Database password
 aws secretsmanager create-secret \
-    --name "finefinds-${ENVIRONMENT}-db-password-${TIMESTAMP}" \
+    --name "finefindslk-${ENVIRONMENT}-db-password-${TIMESTAMP}" \
     --description "Database password for ${ENVIRONMENT} environment" \
     --secret-string "$DB_PASSWORD" \
     --region "$REGION"
 
 # SonarQube database password
 aws secretsmanager create-secret \
-    --name "finefinds-${ENVIRONMENT}-sonarqube-password-${TIMESTAMP}" \
+    --name "finefindslk-${ENVIRONMENT}-sonarqube-password-${TIMESTAMP}" \
     --description "SonarQube database password for ${ENVIRONMENT} environment" \
     --secret-string "$SONARQUBE_DB_PASSWORD" \
     --region "$REGION"
 
 # JWT secret
 aws secretsmanager create-secret \
-    --name "finefinds-${ENVIRONMENT}-jwt-secret-${TIMESTAMP}" \
+    --name "finefindslk-${ENVIRONMENT}-jwt-secret-${TIMESTAMP}" \
     --description "JWT signing secret for ${ENVIRONMENT} environment" \
     --secret-string "$JWT_SECRET" \
     --region "$REGION"
@@ -41,6 +41,6 @@ echo "JWT_SECRET: $JWT_SECRET"
 
 # Print the new secret names for reference
 echo -e "\nNew secret names:"
-echo "Database: finefinds-${ENVIRONMENT}-db-password-${TIMESTAMP}"
-echo "SonarQube: finefinds-${ENVIRONMENT}-sonarqube-password-${TIMESTAMP}"
-echo "JWT: finefinds-${ENVIRONMENT}-jwt-secret-${TIMESTAMP}" 
+echo "Database: finefindslk-${ENVIRONMENT}-db-password-${TIMESTAMP}"
+echo "SonarQube: finefindslk-${ENVIRONMENT}-sonarqube-password-${TIMESTAMP}"
+echo "JWT: finefindslk-${ENVIRONMENT}-jwt-secret-${TIMESTAMP}" 

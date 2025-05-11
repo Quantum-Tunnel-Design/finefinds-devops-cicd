@@ -130,7 +130,7 @@ check_aws_cli
 check_aws_credentials
 
 # Set project name
-PROJECT="finefinds"
+PROJECT="finefindslk"
 
 # Get environment from command line argument
 if [ -z "$1" ]; then

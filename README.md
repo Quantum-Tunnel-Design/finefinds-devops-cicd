@@ -47,8 +47,8 @@ The infrastructure is organized into the following modules:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-org/finefinds-devops-cicd.git
-   cd finefinds-devops-cicd
+   git clone https://github.com/your-org/finefindslk-devops-cicd.git
+   cd finefindslk-devops-cicd
    ```
 
 2. Initialize Terraform:

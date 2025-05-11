@@ -34,7 +34,7 @@ jobs:
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         with:
           args: >
-            -Dsonar.projectKey=finefinds-${{ github.ref_name }}
+            -Dsonar.projectKey=finefindslk-${{ github.ref_name }}
             -Dsonar.projectName=FineFinds-${{ github.ref_name }}
             -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
             -Dsonar.coverage.exclusions=**/*.test.js,**/*.spec.js,**/__tests__/**

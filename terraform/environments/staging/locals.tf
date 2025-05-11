@@ -1,3 +1,3 @@
 locals {
-  name_prefix = "finefinds-${var.environment}"
+  name_prefix = "finefindslk-${var.environment}"
 } 

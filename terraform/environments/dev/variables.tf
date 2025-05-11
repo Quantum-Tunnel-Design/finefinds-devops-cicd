@@ -31,7 +31,7 @@ variable "container_port" {
 variable "ecr_repository_url" {
   description = "URL of the ECR repository"
   type        = string
-  default     = "123456789012.dkr.ecr.us-east-1.amazonaws.com/finefinds"
+  default     = "123456789012.dkr.ecr.us-east-1.amazonaws.com/finefindslk"
 }
 
 variable "image_tag" {
@@ -288,13 +288,13 @@ variable "tags" {
 variable "client_domain" {
   description = "Client application domain"
   type        = string
-  default     = "finefinds-client-dev.amplifyapp.com"
+  default     = "finefindslk-client-dev.amplifyapp.com"
 }
 
 variable "admin_domain" {
   description = "Admin application domain"
   type        = string
-  default     = "finefinds-admin-dev.amplifyapp.com"
+  default     = "finefindslk-admin-dev.amplifyapp.com"
 }
 
 variable "db_password_arn" {
@@ -348,5 +348,5 @@ variable "source_token_arn" {
 variable "name_prefix" {
   description = "Prefix for resource names"
   type        = string
-  default     = "finefinds-dev"  # This follows the pattern project-environment
+  default     = "finefindslk-dev"  # This follows the pattern project-environment
 }

@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Set variables
-BUCKET_NAME="finefinds-terraform-state"
-DYNAMODB_TABLE="finefinds-terraform-locks"
+BUCKET_NAME="finefindslk-terraform-state"
+DYNAMODB_TABLE="finefindslk-terraform-locks"
 REGION="us-east-1"
 
 echo "Setting up Terraform backend resources..."

@@ -94,8 +94,8 @@ main() {
 
     # Set repository URLs
     echo "Setting repository URLs..."
-    CLIENT_REPOSITORY="https://github.com/Quantum-Tunnel-Design/finefinds-client-web-app.git"
-    ADMIN_REPOSITORY="https://github.com/Quantum-Tunnel-Design/finefinds-admin"
+    CLIENT_REPOSITORY="https://github.com/Quantum-Tunnel-Design/finefindslk-client-web-app.git"
+    ADMIN_REPOSITORY="https://github.com/Quantum-Tunnel-Design/finefindslk-admin"
 
     # Set SonarQube token
     echo "Setting SonarQube token..."
@@ -109,14 +109,14 @@ main() {
     echo "Creating/updating secrets in AWS Secrets Manager..."
 
     # Database credentials
-    jwt_secret_json=$(printf '{"password":"%s", "database":"finefinds"}' "$JWT_SECRET")
+    jwt_secret_json=$(printf '{"password":"%s", "database":"finefindslk"}' "$JWT_SECRET")
     create_or_update_secret \
         "finefindslk/${ENVIRONMENT}/jwt-secret" \
         "$jwt_secret_json" \
         "JWT credentials for ${PROJECT} ${ENVIRONMENT}" \
         "$REGION"
     
-    db_secret_json=$(printf '{"username":"%s","password":"%s","host":"","port":5432,"database":"finefinds"}' "$DB_USERNAME" "$DB_PASSWORD")
+    db_secret_json=$(printf '{"username":"%s","password":"%s","host":"","port":5432,"database":"finefindslk"}' "$DB_USERNAME" "$DB_PASSWORD")
     create_or_update_secret \
         "finefindslk/${ENVIRONMENT}/database" \
         "$db_secret_json" \
@@ -124,7 +124,7 @@ main() {
         "$REGION"
 
     # MongoDB credentials
-    mongodb_secret_json=$(printf '{"username":"%s","password":"%s","host":"","port":27017,"database":"finefinds"}' "$MONGODB_USERNAME" "$MONGODB_PASSWORD")
+    mongodb_secret_json=$(printf '{"username":"%s","password":"%s","host":"","port":27017,"database":"finefindslk"}' "$MONGODB_USERNAME" "$MONGODB_PASSWORD")
     create_or_update_secret \
         "finefindslk/${ENVIRONMENT}/mongodb" \
         "$mongodb_secret_json" \
@@ -132,7 +132,7 @@ main() {
         "$REGION"
 
     # SonarQube credentials
-    sonarqube_secret_json=$(printf '{"username":"%s","password":"%s","host":"","port":9000,"database":"finefinds"}' "$SONARQUBE_USERNAME" "$SONARQUBE_PASSWORD")
+    sonarqube_secret_json=$(printf '{"username":"%s","password":"%s","host":"","port":9000,"database":"finefindslk"}' "$SONARQUBE_USERNAME" "$SONARQUBE_PASSWORD")
     create_or_update_secret \
         "finefindslk/${ENVIRONMENT}/sonarqube-password" \
         "$sonarqube_secret_json" \

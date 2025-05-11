@@ -4,7 +4,7 @@
 # }
 
 data "aws_secretsmanager_secret_version" "db_credentials" { # Renamed for clarity
-  secret_id = var.db_password_arn # ARN for the secret finefinds/dev/database
+  secret_id = var.db_password_arn # ARN for the secret finefindslk/dev/database
 }
 
 locals {
