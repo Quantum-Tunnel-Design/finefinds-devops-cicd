@@ -346,11 +346,6 @@ output "mongodb_endpoint" {
   value       = module.mongodb.endpoint
 }
 
-output "cloudwatch_dashboard" {
-  description = "Name of the CloudWatch dashboard"
-  value       = module.monitoring.dashboard_name
-}
-
 module "networking" {
   source = "../../modules/networking"
   

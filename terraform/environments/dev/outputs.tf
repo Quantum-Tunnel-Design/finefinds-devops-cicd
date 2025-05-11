@@ -38,11 +38,6 @@ output "db_secret_arn" {
   value       = module.database.rds_secret_arn
 }
 
-output "mongodb_secret_arn" {
-  description = "ARN of the MongoDB secret"
-  value       = module.database.mongodb_secret_arn
-}
-
 output "ecs_cluster_name" {
   description = "Name of the ECS cluster"
   value       = module.compute.cluster_name
