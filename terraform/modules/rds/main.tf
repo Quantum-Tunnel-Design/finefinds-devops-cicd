@@ -1,14 +1,16 @@
 # Get database password from Secrets Manager
-data "aws_secretsmanager_secret" "db_password" {
-  arn = var.db_password_arn
-}
+# data "aws_secretsmanager_secret" "db_password" { # Not needed if ARN directly points to the secret
+#   arn = var.db_password_arn
+# }
 
-data "aws_secretsmanager_secret_version" "db_password" {
-  secret_id = data.aws_secretsmanager_secret.db_password.id
+data "aws_secretsmanager_secret_version" "db_credentials" { # Renamed for clarity
+  secret_id = var.db_password_arn # ARN for the secret finefinds/dev/database
 }
 
 locals {
-  db_password = jsondecode(data.aws_secretsmanager_secret_version.db_password.secret_string)["password"]
+  db_credentials = jsondecode(data.aws_secretsmanager_secret_version.db_credentials.secret_string)
+  db_password    = local.db_credentials.password
+  # db_username    = local.db_credentials.username # Can be used if RDS module needs to override var.db_username
 }
 
 # Data source for existing RDS instance
@@ -72,7 +74,7 @@ resource "aws_db_instance" "main" {
   allocated_storage   = var.allocated_storage
   storage_type        = "gp2"
   db_name             = var.db_name
-  username            = var.db_username
+  username            = var.db_username # This uses the module input, not from secret
   password            = local.db_password
   skip_final_snapshot = var.skip_final_snapshot
 

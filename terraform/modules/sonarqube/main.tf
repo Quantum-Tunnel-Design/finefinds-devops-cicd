@@ -4,7 +4,8 @@ data "aws_secretsmanager_secret_version" "sonarqube_password" {
 }
 
 locals {
-  db_password = jsondecode(data.aws_secretsmanager_secret_version.sonarqube_password.secret_string)
+  db_credentials = jsondecode(data.aws_secretsmanager_secret_version.sonarqube_password.secret_string)
+  db_password_for_sonar = local.db_credentials.password
 }
 
 # ECS Task Definition
@@ -41,7 +42,7 @@ resource "aws_ecs_task_definition" "sonarqube" {
       secrets = [
         {
           name      = "SONAR_JDBC_PASSWORD"
-          valueFrom = var.db_password_arn
+          valueFrom = "${var.db_password_arn}:password::"
         }
       ]
       logConfiguration = {

@@ -211,48 +211,48 @@ resource "aws_amplify_branch" "admin_main" {
 }
 
 # Amplify App
-resource "aws_amplify_app" "main" {
-  name         = var.app_name
-  repository   = var.repository
-  access_token = var.source_token
-  platform     = "WEB"
-
-  # Build settings
-  build_spec = <<-EOT
-    version: 1
-    frontend:
-      phases:
-        build:
-          commands:
-            - npm install
-            - npm run build
-      artifacts:
-        baseDirectory: build
-        files:
-          - '**/*'
-      cache:
-        paths:
-          - node_modules/**/*
-  EOT
-
-  tags = var.tags
-}
-
-# Amplify Branch
-resource "aws_amplify_branch" "main" {
-  app_id      = aws_amplify_app.main.id
-  branch_name = var.branch
-
-  framework = "React"
-  stage     = var.environment == "prod" ? "PRODUCTION" : "DEVELOPMENT"
-
-  enable_auto_build = true
-  enable_pull_request_preview = true
-
-  environment_variables = {
-    REACT_APP_API_URL = "https://api.${var.project}-${var.environment}.example.com"
-  }
-}
+# resource "aws_amplify_app" "main" {
+#   name         = var.app_name
+#   repository   = var.repository
+#   access_token = var.source_token
+#   platform     = "WEB"
+# 
+#   # Build settings
+#   build_spec = <<-EOT
+#     version: 1
+#     frontend:
+#       phases:
+#         build:
+#           commands:
+#             - npm install
+#             - npm run build
+#       artifacts:
+#         baseDirectory: build
+#         files:
+#           - '**/*'
+#       cache:
+#         paths:
+#           - node_modules/**/*
+#   EOT
+# 
+#   tags = var.tags
+# }
+# 
+# # Amplify Branch
+# resource "aws_amplify_branch" "main" {
+#   app_id      = aws_amplify_app.main.id
+#   branch_name = var.branch
+# 
+#   framework = "React"
+#   stage     = var.environment == "prod" ? "PRODUCTION" : "DEVELOPMENT"
+# 
+#   enable_auto_build = true
+#   enable_pull_request_preview = true
+# 
+#   environment_variables = {
+#     REACT_APP_API_URL = "https://api.${var.project}-${var.environment}.example.com"
+#   }
+# }
 
 # IAM Role for Amplify
 resource "aws_iam_role" "amplify" {

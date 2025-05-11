@@ -158,32 +158,42 @@ resource "aws_security_group" "sonarqube" {
 data "aws_region" "current" {}
 
 # Secrets Manager Data Sources
-data "aws_secretsmanager_secret" "mongodb_password" {
-  name = "${var.project}/${var.environment}/mongodb-password"
-}
+# data "aws_secretsmanager_secret" "mongodb_password" { # Not needed, ARN is passed in
+# name = "${var.project}/${var.environment}/mongodb-password"
+# }
 
-data "aws_secretsmanager_secret" "sonar_token" {
+data "aws_secretsmanager_secret" "sonar_token" { # This is correct if we want to discover by name
   name = "${var.project}/${var.environment}/sonar-token"
 }
 
 # Get secret versions
-data "aws_secretsmanager_secret_version" "db_password" {
-  secret_id = var.db_password_arn
+data "aws_secretsmanager_secret_version" "db_credentials" {
+  secret_id = var.db_password_arn # This ARN now points to the secret holding {username, password}
 }
 
-data "aws_secretsmanager_secret_version" "mongodb_password" {
-  secret_id = data.aws_secretsmanager_secret.mongodb_password.id
+data "aws_secretsmanager_secret_version" "mongodb_credentials" {
+  secret_id = var.mongodb_password_arn # This ARN now points to the secret holding {username, password}
 }
 
 data "aws_secretsmanager_secret_version" "sonar_token" {
-  secret_id = data.aws_secretsmanager_secret.sonar_token.id
+  # If var.sonar_token_arn is preferred (passed from dev environment):
+  # secret_id = var.sonar_token_arn 
+  # Else, if discovery by name via data.aws_secretsmanager_secret.sonar_token is preferred:
+  secret_id = data.aws_secretsmanager_secret.sonar_token.id 
 }
 
 # Local variables for secrets
 locals {
-  db_password = jsondecode(data.aws_secretsmanager_secret_version.db_password.secret_string)["password"]
-  mongodb_password = try(jsondecode(data.aws_secretsmanager_secret_version.mongodb_password.secret_string)["password"], data.aws_secretsmanager_secret_version.mongodb_password.secret_string)
-  sonar_token = try(jsondecode(data.aws_secretsmanager_secret_version.sonar_token.secret_string)["token"], data.aws_secretsmanager_secret_version.sonar_token.secret_string)
+  db_secret_content = jsondecode(data.aws_secretsmanager_secret_version.db_credentials.secret_string)
+  db_password       = local.db_secret_content.password
+  # db_username       = local.db_secret_content.username # If needed by the security module
+
+  mongodb_secret_content = jsondecode(data.aws_secretsmanager_secret_version.mongodb_credentials.secret_string)
+  mongodb_password       = local.mongodb_secret_content.password
+  # mongodb_username     = local.mongodb_secret_content.username # If needed
+
+  sonar_token_content = jsondecode(data.aws_secretsmanager_secret_version.sonar_token.secret_string)
+  sonar_token         = local.sonar_token_content.token
 }
 
 # Cognito User Pool Client

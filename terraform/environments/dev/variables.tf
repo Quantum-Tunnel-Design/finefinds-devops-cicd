@@ -84,7 +84,7 @@ variable "mongodb_password" {
 }
 
 variable "source_token" {
-  description = "Token for source control"
+  description = "GitHub source token for repository access"
   type        = string
   sensitive   = true
 }
@@ -197,9 +197,12 @@ variable "subnet_ids" {
 }
 
 variable "certificate_arn" {
-  description = "ARN of the SSL certificate"
+  description = "ARN of the ACM certificate for the custom domain"
   type        = string
-  default     = null
+  # Ensure you have an ACM certificate created in us-east-1 for CloudFront/Cognito custom domains
+  # Example: "arn:aws:acm:us-east-1:123456789012:certificate/your-certificate-id"
+  # Set to null if not using a custom domain or if certificate is managed elsewhere initially.
+  # default = null 
 }
 
 variable "vpc_cidr" {

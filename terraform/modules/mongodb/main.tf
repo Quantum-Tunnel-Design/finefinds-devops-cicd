@@ -13,7 +13,9 @@ data "aws_secretsmanager_secret_version" "mongodb_password" {
 }
 
 locals {
-  mongodb_password = jsondecode(data.aws_secretsmanager_secret_version.mongodb_password.secret_string)
+  mongodb_credentials = jsondecode(data.aws_secretsmanager_secret_version.mongodb_password.secret_string)
+  mongodb_password    = local.mongodb_credentials.password
+  # mongodb_username    = local.mongodb_credentials.username # If needed for master_username
 }
 
 # MongoDB Security Group

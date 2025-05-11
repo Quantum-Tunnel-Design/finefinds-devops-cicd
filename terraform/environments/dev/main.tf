@@ -66,15 +66,15 @@ module "security" {
   client_domain = var.client_domain
   admin_domain  = var.admin_domain
 
-  db_username = var.db_username_arn != null ? var.db_username_arn : module.secrets.db_username_arn
-  db_password_arn = var.db_password_arn != null ? var.db_password_arn : module.secrets.db_password_arn
+  db_username = var.db_username_arn != null ? var.db_username_arn : module.secrets.database_arn
+  db_password_arn = var.db_password_arn != null ? var.db_password_arn : module.secrets.database_arn
 
-  mongodb_username = var.mongodb_username_arn != null ? var.mongodb_username_arn : module.secrets.mongodb_username_arn
-  mongodb_password_arn = var.mongodb_password_arn != null ? var.mongodb_password_arn : module.secrets.mongodb_password_arn
+  mongodb_username = var.mongodb_username_arn != null ? var.mongodb_username_arn : module.secrets.mongodb_arn
+  mongodb_password_arn = var.mongodb_password_arn != null ? var.mongodb_password_arn : module.secrets.mongodb_arn
 
   sonar_token_arn = var.sonar_token_arn != null ? var.sonar_token_arn : module.secrets.sonar_token_arn
 
-  certificate_arn = var.certificate_arn != null ? var.certificate_arn : module.secrets.certificate_arn
+  certificate_arn = var.certificate_arn
 
   callback_urls = [
     "https://${var.client_domain}/callback",
@@ -129,8 +129,8 @@ module "compute" {
   container_port = var.container_port
   container_image_arn = module.secrets.container_image_arn
   certificate_arn = var.certificate_arn != null ? var.certificate_arn : module.security.certificate_arn
-  rds_secret_arn = var.db_password_arn != null ? var.db_password_arn : module.secrets.db_password_arn
-  mongodb_secret_arn = var.mongodb_password_arn != null ? var.mongodb_password_arn : module.secrets.mongodb_password_arn
+  rds_secret_arn = var.db_password_arn != null ? var.db_password_arn : module.secrets.database_arn
+  mongodb_secret_arn = var.mongodb_password_arn != null ? var.mongodb_password_arn : module.secrets.mongodb_arn
 }
 
 # CICD Module
