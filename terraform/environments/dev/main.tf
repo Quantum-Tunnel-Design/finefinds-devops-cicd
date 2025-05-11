@@ -15,18 +15,6 @@ data "aws_acm_certificate" "main" {
 # Local variables for certificate handling
 locals {
   certificate_arn = data.aws_acm_certificate.main.arn != null ? data.aws_acm_certificate.main.arn : "arn:aws:acm:us-east-1:${data.aws_caller_identity.current.account_id}:certificate/${var.environment}-finefinds-com"
-  current_vpc_config = {
-    cidr_block           = "10.1.0.0/16"
-    availability_zones   = ["${var.aws_region}a", "${var.aws_region}b"]
-    public_subnets      = ["10.1.101.0/24", "10.1.102.0/24"]
-    private_subnets     = ["10.1.1.0/24", "10.1.2.0/24"]
-    database_subnets    = ["10.1.201.0/24", "10.1.202.0/24"]
-    enable_nat_gateway  = true
-    single_nat_gateway  = true
-    enable_vpn_gateway  = false
-    enable_flow_log     = true
-    flow_log_retention  = 30
-  }
 }
 
 # VPC Module

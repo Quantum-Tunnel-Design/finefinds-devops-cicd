@@ -28,10 +28,16 @@ locals {
   # VPC configurations
   vpc_config = {
     dev = {
-      cidr             = "10.1.0.0/16"
-      public_subnets   = ["10.1.101.0/24", "10.1.102.0/24"]
-      private_subnets  = ["10.1.1.0/24", "10.1.2.0/24"]
-      database_subnets = ["10.1.11.0/24", "10.1.12.0/24"]
+      cidr_block           = "10.1.0.0/16"
+      availability_zones   = ["${var.aws_region}a", "${var.aws_region}b"]
+      public_subnets      = ["10.1.101.0/24", "10.1.102.0/24"]
+      private_subnets     = ["10.1.1.0/24", "10.1.2.0/24"]
+      database_subnets    = ["10.1.201.0/24", "10.1.202.0/24"]
+      enable_nat_gateway  = true
+      single_nat_gateway  = true
+      enable_vpn_gateway  = false
+      enable_flow_log     = true
+      flow_log_retention  = 30
     }
   }
 
