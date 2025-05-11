@@ -1,26 +1,46 @@
 variable "project" {
   description = "Project name"
   type        = string
+  validation {
+    condition     = can(regex("^[a-z0-9-]+$", var.project))
+    error_message = "The project name must contain only lowercase letters, numbers, and hyphens."
+  }
 }
 
 variable "environment" {
   description = "Environment name"
   type        = string
+  validation {
+    condition     = contains(["dev", "qa", "staging", "prod"], var.environment)
+    error_message = "The environment must be one of: dev, qa, staging, prod."
+  }
 }
 
 variable "aws_region" {
   description = "AWS region"
   type        = string
+  validation {
+    condition     = can(regex("^[a-z]{2}-[a-z]+-[1-9]$", var.aws_region))
+    error_message = "The AWS region must be in the format: xx-xxxxx-N (e.g., us-east-1)."
+  }
 }
 
 variable "client_repository" {
   description = "GitHub repository URL for the client application"
   type        = string
+  validation {
+    condition     = can(regex("^https://github\\.com/[a-zA-Z0-9-]+/[a-zA-Z0-9-_.]+(\\.git)?$", var.client_repository))
+    error_message = "The client repository must be a valid GitHub repository URL."
+  }
 }
 
 variable "admin_repository" {
-  description = "GitHub repository URL for the admin dashboard"
+  description = "GitHub repository URL for the admin application"
   type        = string
+  validation {
+    condition     = can(regex("^https://github\\.com/[a-zA-Z0-9-]+/[a-zA-Z0-9-_.]+(\\.git)?$", var.admin_repository))
+    error_message = "The admin repository must be a valid GitHub repository URL."
+  }
 }
 
 variable "source_token" {
@@ -32,17 +52,29 @@ variable "source_token" {
 variable "graphql_endpoint" {
   description = "GraphQL API endpoint URL"
   type        = string
+  validation {
+    condition     = can(regex("^https?://[a-zA-Z0-9.-]+(\\.[a-zA-Z]{2,})+(:[0-9]+)?(/[a-zA-Z0-9._~:/?#\\[\\]@!$&'()*+,;=]*)?$", var.graphql_endpoint))
+    error_message = "The GraphQL endpoint must be a valid HTTP(S) URL."
+  }
 }
 
 variable "tags" {
   description = "Tags to apply to all resources"
   type        = map(string)
   default     = {}
+  validation {
+    condition     = alltrue([for k, v in var.tags : can(regex("^[a-zA-Z0-9-_]+$", k)) && can(regex("^[a-zA-Z0-9-_]+$", v))])
+    error_message = "Tag keys and values must contain only letters, numbers, hyphens, and underscores."
+  }
 }
 
 variable "sonarqube_url" {
   description = "URL of the SonarQube instance"
   type        = string
+  validation {
+    condition     = can(regex("^https?://[a-zA-Z0-9.-]+(\\.[a-zA-Z]{2,})+(:[0-9]+)?(/[a-zA-Z0-9._~:/?#\\[\\]@!$&'()*+,;=]*)?$", var.sonarqube_url))
+    error_message = "The SonarQube URL must be a valid HTTP(S) URL."
+  }
 }
 
 variable "use_existing_roles" {
@@ -52,6 +84,10 @@ variable "use_existing_roles" {
 }
 
 variable "repository" {
-  description = "Repository URL for the Amplify app"
+  description = "GitHub repository URL"
   type        = string
+  validation {
+    condition     = can(regex("^https://github\\.com/[a-zA-Z0-9-]+/[a-zA-Z0-9-_.]+(\\.git)?$", var.repository))
+    error_message = "The repository must be a valid GitHub repository URL."
+  }
 } 
