@@ -228,11 +228,12 @@ resource "aws_amplify_branch" "admin_main" {
 
 # Amplify App
 resource "aws_amplify_app" "main" {
-  name = "${var.project}-${var.environment}"
+  name         = var.app_name
+  repository   = var.repository
+  access_token = var.github_token
+  platform     = "WEB"
 
-  repository = var.repository
-  branch     = var.branch
-
+  # Build settings
   build_spec = <<-EOT
     version: 1
     frontend:

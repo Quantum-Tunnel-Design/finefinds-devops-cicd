@@ -5,7 +5,7 @@ output "security_group_id" {
 
 output "target_group_arn" {
   description = "ARN of the target group"
-  value       = aws_lb_target_group.main.arn
+  value       = aws_lb_target_group.app.arn
 }
 
 output "cluster_name" {

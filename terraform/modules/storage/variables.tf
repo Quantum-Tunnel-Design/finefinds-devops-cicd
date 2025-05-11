@@ -204,4 +204,10 @@ variable "mongodb_instance_type" {
     condition     = can(regex("^[a-z0-9]+\\.[a-z0-9]+$", var.mongodb_instance_type))
     error_message = "The instance type must be in the format: type.size (e.g., t3.small)."
   }
+}
+
+variable "cloudfront_distribution_arn" {
+  description = "ARN of the CloudFront distribution"
+  type        = string
+  default     = null
 } 

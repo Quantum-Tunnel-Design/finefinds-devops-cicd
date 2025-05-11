@@ -92,4 +92,10 @@ variable "repository" {
     condition     = var.repository == "" || can(regex("^https://github\\.com/[a-zA-Z0-9-]+/[a-zA-Z0-9-_.]+(\\.git)?$", var.repository))
     error_message = "The repository must be a valid GitHub repository URL or empty."
   }
+}
+
+variable "sonar_token" {
+  description = "SonarQube token for authentication"
+  type        = string
+  sensitive   = true
 } 
