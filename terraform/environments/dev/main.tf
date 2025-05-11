@@ -15,7 +15,6 @@ data "aws_acm_certificate" "main" {
 # Local variables for certificate handling
 locals {
   certificate_arn = data.aws_acm_certificate.main.arn != null ? data.aws_acm_certificate.main.arn : "arn:aws:acm:us-east-1:${data.aws_caller_identity.current.account_id}:certificate/${var.environment}-finefinds-com"
-  name_prefix     = "finefinds-${var.environment}"
 }
 
 # VPC Module
@@ -44,12 +43,13 @@ module "secrets" {
 
 # Security Module
 module "security" {
+  project     = var.project
+  environment       = var.environment
   source            = "../../modules/security"
   name_prefix       = local.name_prefix
-  environment       = var.environment
   tags              = local.common_tags
-  callback_urls     = ["https://${var.environment}.finefinds.com/callback"]
-  logout_urls       = ["https://${var.environment}.finefinds.com/logout"]
+  callback_urls = var.callback_urls
+  logout_urls   = var.logout_urls
   certificate_arn   = local.certificate_arn
   db_username       = var.db_username
   db_password       = var.db_password
@@ -60,11 +60,14 @@ module "security" {
 
 # Storage Module
 module "storage" {
+  project     = var.project
   source                = "../../modules/storage"
   name_prefix           = local.name_prefix
   environment           = var.environment
-  vpc_id                = module.networking.vpc_id
-  private_subnet_ids    = module.networking.private_subnet_ids
+  vpc_id            = module.network.vpc_id
+  vpc_cidr_blocks   = [local.current_vpc_config.cidr]
+  private_subnet_ids    = module.network.private_subnet_ids
+  kms_key_id        = module.security.kms_key_id
   ecs_security_group_id = module.compute.ecs_security_group_id
   db_instance_class     = local.env_config[var.environment].db_instance_class
   db_name               = var.db_name
@@ -79,24 +82,29 @@ module "storage" {
 # Compute Module
 module "compute" {
   source                   = "../../modules/compute"
+  
+  project     = var.project
   name_prefix              = local.name_prefix
   environment              = var.environment
-  aws_region               = var.aws_region
-  vpc_id                   = module.networking.vpc_id
-  public_subnet_ids        = module.networking.public_subnet_ids
-  private_subnet_ids       = module.networking.private_subnet_ids
-  certificate_arn          = module.cicd.ecr_repository_url
-  task_cpu                 = 256
-  task_memory              = 512
-  task_execution_role_arn  = module.security.ecs_task_execution_role_arn
-  task_role_arn            = module.security.ecs_task_role_arn
-  container_image          = module.cicd.ecr_repository_url
+  tags                     = local.common_tags
+  
+  vpc_id             = module.network.vpc_id
+  private_subnet_ids = module.network.private_subnet_ids
+  public_subnet_ids  = module.network.public_subnet_ids
+
+  task_cpu                = local.current_env_config.task_cpu
+  task_memory            = local.current_env_config.task_memory
+  service_desired_count  = local.current_env_config.service_count
   container_port           = var.container_port
-  container_environment    = []
-  service_desired_count    = 1
+  container_image        = var.container_image
+  certificate_arn        = module.security.certificate_arn
   rds_secret_arn           = module.security.rds_secret_arn
   mongodb_secret_arn       = module.security.mongodb_secret_arn
-  tags                     = local.common_tags
+
+  aws_region               = var.aws_region
+  task_execution_role_arn  = module.security.ecs_task_execution_role_arn
+  task_role_arn            = module.security.ecs_task_role_arn
+  container_environment    = []
 }
 
 # CICD Module
@@ -295,10 +303,6 @@ variable "secret_suffix" {
 }
 
 # Outputs
-output "vpc_id" {
-  description = "ID of the VPC"
-  value       = module.vpc.vpc_id
-}
 
 output "alb_dns_name" {
   description = "DNS name of the ALB"
@@ -320,11 +324,6 @@ output "rds_security_group_id" {
   value       = module.rds.security_group_id
 }
 
-output "ecs_cluster_name" {
-  description = "Name of the ECS cluster"
-  value       = module.ecs.cluster_name
-}
-
 output "ecs_service_name" {
   description = "Name of the ECS service"
   value       = module.ecs.service_name
@@ -333,11 +332,6 @@ output "ecs_service_name" {
 output "rds_endpoint" {
   description = "Endpoint of the RDS instance"
   value       = module.rds.db_instance_endpoint
-}
-
-output "cognito_user_pool_id" {
-  description = "ID of the Cognito User Pool"
-  value       = module.cognito.user_pool_id
 }
 
 output "cognito_client_id" {
@@ -379,20 +373,6 @@ module "network" {
   vpc_config = local.current_vpc_config
 }
 
-module "storage" {
-  source = "../../modules/storage"
-
-  project     = var.project
-  environment = var.environment
-  name_prefix = local.name_prefix
-  tags        = local.common_tags
-
-  vpc_id            = module.network.vpc_id
-  vpc_cidr_blocks   = [local.current_vpc_config.cidr]
-  private_subnet_ids = module.network.private_subnet_ids
-  kms_key_id        = module.security.kms_key_id
-}
-
 module "database" {
   source = "../../modules/database"
 
@@ -412,56 +392,3 @@ module "database" {
   db_username      = var.db_username
   db_password      = var.db_password
 }
-
-module "compute" {
-  source = "../../modules/compute"
-
-  project     = var.project
-  environment = var.environment
-  name_prefix = local.name_prefix
-  tags        = local.common_tags
-
-  vpc_id             = module.network.vpc_id
-  private_subnet_ids = module.network.private_subnet_ids
-  public_subnet_ids  = module.network.public_subnet_ids
-
-  task_cpu                = local.current_env_config.task_cpu
-  task_memory            = local.current_env_config.task_memory
-  service_desired_count  = local.current_env_config.service_count
-  container_image        = var.container_image
-  container_port         = var.container_port
-  certificate_arn        = module.security.certificate_arn
-  rds_secret_arn         = module.database.db_secret_arn
-  mongodb_secret_arn     = module.database.mongodb_secret_arn
-}
-
-module "monitoring" {
-  source = "../../modules/monitoring"
-
-  project     = var.project
-  environment = var.environment
-  name_prefix = local.name_prefix
-  tags        = local.common_tags
-
-  aws_region  = var.aws_region
-  alert_email = var.alert_email
-}
-
-module "security" {
-  source = "../../modules/security"
-
-  project     = var.project
-  environment = var.environment
-  name_prefix = local.name_prefix
-  tags        = local.common_tags
-
-  callback_urls = var.callback_urls
-  logout_urls   = var.logout_urls
-  certificate_arn = module.security.certificate_arn
-
-  db_username      = var.db_username
-  db_password      = var.db_password
-  mongodb_username = var.mongodb_username
-  mongodb_password = var.mongodb_password
-  sonar_token      = var.sonar_token
-} 
