@@ -153,11 +153,11 @@ resource "aws_ebs_volume" "mongodb_data" {
   }
 }
 
+# MongoDB EBS Volume Attachment
 resource "aws_volume_attachment" "mongodb_data" {
-  count        = (var.use_existing_cluster || var.use_existing_instance) ? 0 : 1
-  device_name  = "/dev/sdf"
-  volume_id    = aws_ebs_volume.mongodb_data[0].id
-  instance_id  = aws_instance.mongodb[0].id
+  device_name = "/dev/sdf"
+  volume_id   = aws_ebs_volume.mongodb_data.id
+  instance_id = aws_instance.mongodb.id
 }
 
 # Use existing or new cluster/instance

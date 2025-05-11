@@ -15,6 +15,12 @@ data "aws_acm_certificate" "main" {
 # Local variables for certificate handling
 locals {
   certificate_arn = data.aws_acm_certificate.main.arn != null ? data.aws_acm_certificate.main.arn : "arn:aws:acm:us-east-1:${data.aws_caller_identity.current.account_id}:certificate/${var.environment}-finefinds-com"
+  name_prefix     = "finefinds-${var.environment}"
+  common_tags     = {
+    Project     = var.project
+    Environment = var.environment
+    ManagedBy   = "Terraform"
+  }
 }
 
 # VPC Module
@@ -93,7 +99,7 @@ module "compute" {
   task_memory              = 1024
   task_execution_role_arn  = module.security.ecs_task_execution_role_arn
   task_role_arn            = module.security.ecs_task_role_arn
-  container_image          = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/${module.cicd.ecr_repository_name}"
+  container_image          = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/finefinds-${var.environment}-repo"
   container_port           = var.container_port
   container_environment    = []
   service_desired_count    = 2

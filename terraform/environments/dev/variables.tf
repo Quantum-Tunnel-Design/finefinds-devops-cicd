@@ -7,7 +7,10 @@ variable "project" {
 variable "environment" {
   description = "Environment name"
   type        = string
-  default     = "dev"
+  validation {
+    condition     = contains(["dev", "qa", "staging", "prod"], var.environment)
+    error_message = "The environment must be one of: dev, qa, staging, prod."
+  }
 }
 
 variable "aws_region" {
@@ -41,9 +44,15 @@ variable "image_tag" {
 }
 
 variable "db_username" {
-  description = "Master username for RDS"
+  description = "Username for RDS database"
   type        = string
-  default     = "admin"
+  sensitive   = true
+}
+
+variable "db_password" {
+  description = "Password for RDS database"
+  type        = string
+  sensitive   = true
 }
 
 variable "sonarqube_db_username" {
@@ -53,9 +62,8 @@ variable "sonarqube_db_username" {
 }
 
 variable "alert_email" {
-  description = "Email address for alerts"
+  description = "Email address for CloudWatch alerts"
   type        = string
-  default     = "amal.c.gamage@gmail.com"
 }
 
 variable "mongodb_admin_username" {
@@ -64,8 +72,20 @@ variable "mongodb_admin_username" {
   default     = "admin"
 }
 
+variable "mongodb_username" {
+  description = "Username for MongoDB"
+  type        = string
+  sensitive   = true
+}
+
+variable "mongodb_password" {
+  description = "Password for MongoDB"
+  type        = string
+  sensitive   = true
+}
+
 variable "source_token" {
-  description = "GitHub personal access token for repository access"
+  description = "GitHub personal access token"
   type        = string
   sensitive   = true
 }
@@ -180,4 +200,32 @@ variable "certificate_arn" {
   description = "ARN of the SSL certificate for the ALB"
   type        = string
   default     = null
+}
+
+variable "vpc_cidr" {
+  description = "CIDR block for the VPC"
+  type        = string
+  default     = "10.1.0.0/16"
+}
+
+variable "availability_zones" {
+  description = "List of availability zones"
+  type        = list(string)
+  default     = ["us-east-1a", "us-east-1b"]
+}
+
+variable "repository_url" {
+  description = "URL of the GitHub repository"
+  type        = string
+}
+
+variable "db_name" {
+  description = "Name of the RDS database"
+  type        = string
+  default     = "finefinds"
+}
+
+variable "mongodb_ami" {
+  description = "AMI ID for MongoDB instance"
+  type        = string
 }

@@ -1,11 +1,11 @@
 output "security_group_id" {
-  description = "ID of the ECS tasks security group"
-  value       = aws_security_group.ecs_tasks.id
+  description = "ID of the ECS security group"
+  value       = aws_security_group.main.id
 }
 
 output "target_group_arn" {
   description = "ARN of the target group"
-  value       = aws_lb_target_group.app.arn
+  value       = aws_lb_target_group.main.arn
 }
 
 output "cluster_name" {
@@ -20,17 +20,17 @@ output "cluster_arn" {
 
 output "service_name" {
   description = "Name of the ECS service"
-  value       = aws_ecs_service.app.name
+  value       = aws_ecs_service.main.name
 }
 
 output "service_id" {
   description = "ID of the ECS service"
-  value       = aws_ecs_service.app.id
+  value       = aws_ecs_service.main.id
 }
 
 output "task_definition_arn" {
   description = "ARN of the task definition"
-  value       = aws_ecs_task_definition.app.arn
+  value       = aws_ecs_task_definition.main.arn
 }
 
 output "task_execution_role_arn" {
