@@ -34,12 +34,12 @@ variable "private_subnet_ids" {
   }
 }
 
-variable "ecs_security_group_id" {
-  description = "ID of the ECS security group"
-  type        = string
+variable "vpc_cidr_blocks" {
+  description = "List of VPC CIDR blocks for security group rules"
+  type        = list(string)
   validation {
-    condition     = can(regex("^sg-[a-z0-9]+$", var.ecs_security_group_id))
-    error_message = "The security group ID must be in the format: sg-xxxxxxxx."
+    condition     = alltrue([for cidr in var.vpc_cidr_blocks : can(regex("^([0-9]{1,3}\\.){3}[0-9]{1,3}/([0-9]|[1-2][0-9]|3[0-2])$", cidr))])
+    error_message = "All CIDR blocks must be in the format: x.x.x.x/x."
   }
 }
 
