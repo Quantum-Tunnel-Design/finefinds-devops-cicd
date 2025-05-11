@@ -89,12 +89,37 @@ resource "aws_secretsmanager_secret_version" "sonarqube_password" {
   })
 }
 
-# Use existing or new secrets
+# Get existing secrets from AWS Secrets Manager
+data "aws_secretsmanager_secret" "db_password" {
+  name = "finefinds/${var.environment}/db-password"
+}
+
+data "aws_secretsmanager_secret" "mongodb_password" {
+  name = "finefinds/${var.environment}/mongodb-password"
+}
+
+data "aws_secretsmanager_secret" "sonarqube_password" {
+  name = "finefinds/${var.environment}/sonarqube-password"
+}
+
+# Get secret versions
+data "aws_secretsmanager_secret_version" "db_password" {
+  secret_id = data.aws_secretsmanager_secret.db_password.id
+}
+
+data "aws_secretsmanager_secret_version" "mongodb_password" {
+  secret_id = data.aws_secretsmanager_secret.mongodb_password.id
+}
+
+data "aws_secretsmanager_secret_version" "sonarqube_password" {
+  secret_id = data.aws_secretsmanager_secret.sonarqube_password.id
+}
+
+# Use existing secrets
 locals {
-  jwt_secret_arn      = var.use_existing_secrets ? "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${var.project}-${var.environment}-jwt-secret-${var.secret_suffix}" : aws_secretsmanager_secret.jwt_secret[0].arn
-  db_password_arn     = var.use_existing_secrets ? "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${var.project}-${var.environment}-db-password-${var.secret_suffix}" : aws_secretsmanager_secret.database_password[0].arn
-  mongodb_password_arn = aws_secretsmanager_secret.mongodb_password.arn
-  sonarqube_password_arn = var.use_existing_secrets ? "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${var.project}-${var.environment}-sonarqube-password-${var.secret_suffix}" : aws_secretsmanager_secret.sonarqube_password[0].arn
+  db_password_arn     = data.aws_secretsmanager_secret.db_password.arn
+  mongodb_password_arn = data.aws_secretsmanager_secret.mongodb_password.arn
+  sonarqube_password_arn = data.aws_secretsmanager_secret.sonarqube_password.arn
 }
 
 # Get current AWS account ID and region
@@ -125,25 +150,23 @@ variable "secret_suffix" {
 
 # Outputs
 output "jwt_secret_arn" {
-  value       = local.jwt_secret_arn
+  value       = var.use_existing_secrets ? "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${var.project}-${var.environment}-jwt-secret-${var.secret_suffix}" : aws_secretsmanager_secret.jwt_secret[0].arn
   description = "ARN of the JWT secret"
 }
 
 output "database_password_arn" {
-  value       = local.db_password_arn
   description = "ARN of the database password secret"
+  value       = local.db_password_arn
 }
 
-# Output the ARN for use in other modules
 output "mongodb_password_arn" {
   description = "ARN of the MongoDB password secret"
-  value       = data.aws_secretsmanager_secret.mongodb_password.arn
-  sensitive   = true
-} 
+  value       = local.mongodb_password_arn
+}
 
 output "sonarqube_password_arn" {
-  value       = local.sonarqube_password_arn
   description = "ARN of the SonarQube password secret"
+  value       = local.sonarqube_password_arn
 }
 
 output "jwt_secret" {
@@ -252,15 +275,6 @@ output "mongodb_secret_arn" {
 output "api_keys_secret_arn" {
   description = "ARN of the API keys secret"
   value       = aws_secretsmanager_secret.api_keys.arn
-}
-
-# MongoDB Password Secret
-data "aws_secretsmanager_secret" "mongodb_password" {
-  name = "finefinds/${var.environment}/mongodb-password"
-}
-
-data "aws_secretsmanager_secret_version" "mongodb_password" {
-  secret_id = data.aws_secretsmanager_secret.mongodb_password.id
 }
 
 resource "aws_secretsmanager_secret" "container_image" {
