@@ -166,31 +166,6 @@ module "ecr" {
   tags        = module.common.common_tags
 }
 
-# ECS Module
-module "ecs" {
-  source = "../../modules/ecs"
-
-  project     = var.project
-  environment = var.environment
-  vpc_id      = module.networking.vpc_id
-  private_subnet_ids = module.networking.private_subnet_ids
-  aws_region  = var.aws_region
-  name        = local.ecs_cluster_name
-  security_group_name = local.ecs_sg_name
-  vpc_cidr_blocks = [local.vpc_cidr]
-
-  database_url_arn = module.secrets.database_arn
-  ecr_repository_url = module.ecr.repository_url
-
-  alb_target_group_arn = module.alb.target_group_arn
-  alb_security_group_id = module.alb.security_group_id
-
-  task_cpu    = 512
-  task_memory = 1024
-
-  tags = module.common.common_tags
-}
-
 # RDS Module
 module "rds" {
   source = "../../modules/rds"
@@ -247,23 +222,6 @@ module "monitoring" {
   log_retention_days = 30
   alert_email        = var.alert_email
   aws_region         = var.aws_region
-}
-
-# Amplify Module
-module "amplify" {
-  source = "../../modules/amplify"
-
-  project     = var.project
-  environment = var.environment
-  aws_region  = var.aws_region
-
-  client_repository = var.client_repository
-  admin_repository  = var.admin_repository
-  source_token     = var.source_token
-  sonar_token      = var.sonar_token
-  graphql_endpoint = local.graphql_endpoint
-
-  tags = module.common.common_tags
 }
 
 # Variables

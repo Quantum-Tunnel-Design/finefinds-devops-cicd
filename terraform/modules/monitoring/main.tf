@@ -4,14 +4,6 @@ data "aws_iam_role" "existing_grafana" {
   name  = "${var.project}-${var.environment}-grafana"
 }
 
-# CloudWatch Log Group
-resource "aws_cloudwatch_log_group" "app" {
-  name              = "/ecs/${var.name_prefix}"
-  retention_in_days = var.environment == "prod" ? 30 : 7
-
-  tags = var.tags
-}
-
 # CloudWatch Dashboard
 resource "aws_cloudwatch_dashboard" "main" {
   dashboard_name = "${var.name_prefix}-dashboard"
