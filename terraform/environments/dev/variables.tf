@@ -230,6 +230,7 @@ variable "mongodb_ami" {
 variable "container_image" {
   description = "Container image to deploy"
   type        = string
+  default     = "amazon/aws-cli:latest"  # Placeholder image
 }
 
 variable "callback_urls" {
