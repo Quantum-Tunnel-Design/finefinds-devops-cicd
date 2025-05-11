@@ -111,6 +111,7 @@ module "compute" {
   container_image_arn = module.secrets.container_image_arn
   certificate_arn = var.certificate_arn != null ? var.certificate_arn : module.security.certificate_arn
   rds_secret_arn = var.db_password_arn != null ? var.db_password_arn : module.secrets.database_arn
+  alb_target_group_arn = module.alb.target_group_arn
 }
 
 # CICD Module
