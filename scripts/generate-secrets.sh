@@ -83,12 +83,13 @@ main() {
     echo "Generating secure random strings for passwords..."
     DB_PASSWORD=$(generate_secure_string)
     MONGODB_PASSWORD=$(generate_secure_string)
-    SONARQUBE_DB_PASSWORD=$(generate_secure_string)
+    SONARQUBE_PASSWORD=$(generate_secure_string)
 
     # Set manual usernames
     echo "Setting manual usernames..."
     DB_USERNAME="ffadmin"
     MONGODB_USERNAME="ffadminmongo"
+    SONARQUBE_USERNAME="ffadminsonar"
 
     # Set repository URLs
     echo "Setting repository URLs..."
@@ -107,51 +108,66 @@ main() {
     echo "Creating/updating secrets in AWS Secrets Manager..."
 
     # Database credentials
+    db_secret_json="{\"username\": \"${DB_USERNAME}\", \"password\": \"${DB_PASSWORD}\", \"host\": \"\", \"port\": 5432, \"database\": \"finefinds\"}"
     create_or_update_secret \
         "finefindslk/${ENVIRONMENT}/database" \
-        "{\\"username\\":\\"${DB_USERNAME}\\",\\"password\\":\\"${DB_PASSWORD}\\",\\"host\\":\\"\\",\\"port\\":5432,\\"database\\":\\"finefinds\\"}" \
+        "$db_secret_json" \
         "Database credentials for ${PROJECT} ${ENVIRONMENT}" \
         "$REGION"
 
     # MongoDB credentials
+    mongodb_secret_json="{\"username\": \"${MONGODB_USERNAME}\", \"password\": \"${MONGODB_PASSWORD}\", \"host\": \"\", \"port\": 27017, \"database\": \"finefinds\"}"
     create_or_update_secret \
         "finefindslk/${ENVIRONMENT}/mongodb" \
-        "{\\"username\\":\\"${MONGODB_USERNAME}\\",\\"password\\":\\"${MONGODB_PASSWORD}\\",\\"host\\":\\"\\",\\"port\\":27017,\\"database\\":\\"finefinds\\"}" \
+        "$mongodb_secret_json" \
         "MongoDB credentials for ${PROJECT} ${ENVIRONMENT}" \
         "$REGION"
 
+    # SonarQube credentials
+    sonarqube_secret_json="{\"username\": \"${SONARQUBE_USERNAME}\", \"password\": \"${SONARQUBE_PASSWORD}\", \"host\": \"\", \"port\": 9000, \"database\": \"finefinds\"}"
+    create_or_update_secret \
+        "finefindslk/${ENVIRONMENT}/sonarqube-password" \
+        "$sonarqube_secret_json" \
+        "SonarQube credentials for ${PROJECT} ${ENVIRONMENT}" \
+        "$REGION"
+
     # SonarQube token
+    sonar_token_json="{\"token\": \"${SONAR_TOKEN}\"}"
     create_or_update_secret \
         "finefindslk/${ENVIRONMENT}/sonar-token" \
-        "{\\"token\\":\\"${SONAR_TOKEN}\\"}" \
+        "$sonar_token_json" \
         "SonarQube token for ${PROJECT} ${ENVIRONMENT}" \
         "$REGION"
 
     # Source token (GitHub PAT)
+    source_token_json="{\"token\": \"${SOURCE_TOKEN}\"}"
     create_or_update_secret \
         "finefindslk/${ENVIRONMENT}/source-token" \
-        "{\\"token\\":\\"${SOURCE_TOKEN}\\"}" \
+        "$source_token_json" \
         "Source control token for ${PROJECT} ${ENVIRONMENT}" \
         "$REGION"
     
     # Client Repository URL
+    client_repo_json="{\"url\": \"${CLIENT_REPOSITORY}\"}"
     create_or_update_secret \
         "finefindslk/${ENVIRONMENT}/client-repository" \
-        "{\\"url\\":\\"${CLIENT_REPOSITORY}\\"}" \
+        "$client_repo_json" \
         "Client repository URL for ${PROJECT} ${ENVIRONMENT}" \
         "$REGION"
 
     # Admin Repository URL
+    admin_repo_json="{\"url\": \"${ADMIN_REPOSITORY}\"}"
     create_or_update_secret \
         "finefindslk/${ENVIRONMENT}/admin-repository" \
-        "{\\"url\\":\\"${ADMIN_REPOSITORY}\\"}" \
+        "$admin_repo_json" \
         "Admin repository URL for ${PROJECT} ${ENVIRONMENT}" \
         "$REGION"
 
     # Container Image (using default AWS image)
+    container_image_json="{\"image\": \"public.ecr.aws/amazonlinux/amazonlinux:latest\"}"
     create_or_update_secret \
         "finefindslk/${ENVIRONMENT}/container-image" \
-        "{\\"image\\":\\"public.ecr.aws/amazonlinux/amazonlinux:latest\\"}" \
+        "$container_image_json" \
         "Container image URI for ${PROJECT} ${ENVIRONMENT}" \
         "$REGION"
 
@@ -160,6 +176,7 @@ main() {
     DATABASE_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/database" "$REGION")
     MONGODB_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/mongodb" "$REGION")
     SONAR_TOKEN_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/sonar-token" "$REGION")
+    SONARQUBE_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/sonarqube-password" "$REGION")
     SOURCE_TOKEN_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/source-token" "$REGION")
     CLIENT_REPOSITORY_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/client-repository" "$REGION")
     ADMIN_REPOSITORY_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/admin-repository" "$REGION")
@@ -188,6 +205,10 @@ db_password_arn = "${DATABASE_ARN}"
 mongodb_username_arn = "${MONGODB_ARN}"
 mongodb_password_arn = "${MONGODB_ARN}"
 
+# SonarQube secrets (username is within the 'sonarqube-password' secret)
+sonarqube_username_arn = "${SONARQUBE_ARN}"
+sonarqube_password_arn = "${SONARQUBE_ARN}"
+
 # Token ARNs
 sonar_token_arn = "${SONAR_TOKEN_ARN}"
 source_token_arn = "${SOURCE_TOKEN_ARN}" # ARN for the secret containing the GitHub PAT
@@ -205,6 +226,8 @@ container_image_arn = "${CONTAINER_IMAGE_ARN}"
 # db_password = "${DB_PASSWORD}"
 # mongodb_username = "${MONGODB_USERNAME}"
 # mongodb_password = "${MONGODB_PASSWORD}"
+# sonarqube_username = "${SONARQUBE_USERNAME}"
+# sonarqube_password = "${SONARQUBE_PASSWORD}"
 # sonar_token = "${SONAR_TOKEN}"
 # source_token_actual = "${SOURCE_TOKEN}" # Note: root var is 'source_token', not 'source_token_actual'
 # client_repository_url_actual = "${CLIENT_REPOSITORY}"

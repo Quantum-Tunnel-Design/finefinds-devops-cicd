@@ -224,7 +224,7 @@ module "rds" {
 
   db_username = local.db_username
   db_name     = local.db_name
-  db_password_arn = module.secrets.database_password_arn
+  db_password_arn = module.secrets.database_arn
 
   tags = module.common.common_tags
 }
@@ -241,7 +241,7 @@ module "mongodb" {
   security_group_name = local.mongodb_sg_name
   vpc_cidr_blocks = [local.vpc_cidr]
 
-  mongodb_password_arn = module.secrets.mongodb_password_arn
+  mongodb_password_arn = module.secrets.mongodb_arn
 
   tags = module.common.common_tags
 }
@@ -264,7 +264,7 @@ module "sonarqube" {
 
   db_endpoint = module.rds.db_instance_endpoint
   db_username = local.db_username
-  db_password_arn = module.secrets.database_password_arn
+  db_password_arn = module.secrets.database_arn
   sonarqube_password_arn = module.secrets.sonarqube_password_arn
   db_subnet_group_name = module.rds.db_subnet_group_name
 
