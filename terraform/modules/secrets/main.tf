@@ -10,14 +10,6 @@ resource "aws_secretsmanager_secret" "database" {
   # Secret content is managed by generate-secrets.sh
 }
 
-# MongoDB credentials secret (composite JSON)
-resource "aws_secretsmanager_secret" "mongodb" {
-  name        = "${var.project}/${var.environment}/mongodb"
-  description = "MongoDB credentials for ${var.project} ${var.environment} (stores {username, password, host, port, database})"
-  tags        = var.tags
-  # Secret content is managed by generate-secrets.sh
-}
-
 # SonarQube Admin Token secret (composite JSON)
 resource "aws_secretsmanager_secret" "sonar_token" {
   name        = "${var.project}/${var.environment}/sonar-token"

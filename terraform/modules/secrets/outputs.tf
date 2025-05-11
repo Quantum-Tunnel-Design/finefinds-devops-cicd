@@ -3,11 +3,6 @@ output "database_arn" {
   value       = aws_secretsmanager_secret.database.arn
 }
 
-output "mongodb_arn" {
-  description = "ARN of the MongoDB credentials secret (stores {username, password, ...})"
-  value       = aws_secretsmanager_secret.mongodb.arn
-}
-
 output "sonar_token_arn" {
   description = "ARN of the SonarQube token secret (stores {token})"
   value       = aws_secretsmanager_secret.sonar_token.arn

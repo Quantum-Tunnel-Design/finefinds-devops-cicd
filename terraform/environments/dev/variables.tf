@@ -64,25 +64,6 @@ variable "alert_email" {
   type        = string
 }
 
-variable "mongodb_admin_username" {
-  description = "MongoDB admin username"
-  type        = string
-  default     = "admin"
-}
-
-variable "mongodb_username" {
-  description = "MongoDB username"
-  type        = string
-  default     = null
-}
-
-variable "mongodb_password" {
-  description = "MongoDB password"
-  type        = string
-  sensitive   = true
-  default     = null
-}
-
 variable "source_token" {
   description = "GitHub source token for repository access"
   type        = string
@@ -108,12 +89,6 @@ variable "sonar_token" {
 
 variable "use_existing_rds_subnet_group" {
   description = "Whether to use an existing RDS subnet group"
-  type        = bool
-  default     = false
-}
-
-variable "use_existing_cluster" {
-  description = "Whether to use an existing MongoDB cluster"
   type        = bool
   default     = false
 }
@@ -227,11 +202,6 @@ variable "db_name" {
   default     = "finefindslk"
 }
 
-variable "mongodb_ami" {
-  description = "AMI ID for MongoDB instance"
-  type        = string
-}
-
 variable "container_image" {
   description = "Container image to deploy"
   type        = string
@@ -303,12 +273,6 @@ variable "db_password_arn" {
   default     = null
 }
 
-variable "mongodb_password_arn" {
-  description = "ARN of the MongoDB password in Secrets Manager"
-  type        = string
-  default     = null
-}
-
 variable "sonar_token_arn" {
   description = "ARN of the SonarQube token in Secrets Manager"
   type        = string
@@ -317,12 +281,6 @@ variable "sonar_token_arn" {
 
 variable "db_username_arn" {
   description = "ARN of the database username in Secrets Manager"
-  type        = string
-  default     = null
-}
-
-variable "mongodb_username_arn" {
-  description = "ARN of the MongoDB username in Secrets Manager"
   type        = string
   default     = null
 }

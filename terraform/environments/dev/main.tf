@@ -5,13 +5,6 @@ provider "aws" {
 # Get current AWS account ID
 data "aws_caller_identity" "current" {}
 
-# Local variables for domains
-locals {
-  client_domain = "${var.project}-client-${var.environment}.amplifyapp.com"
-  admin_domain = "${var.project}-admin-${var.environment}.amplifyapp.com"
-  graphql_endpoint = "https://${local.client_domain}/graphql"
-}
-
 # Use common module for standard variables
 module "common" {
   source = "../../modules/_common"
@@ -129,7 +122,6 @@ module "compute" {
   container_image_arn = module.secrets.container_image_arn
   certificate_arn = var.certificate_arn != null ? var.certificate_arn : module.security.certificate_arn
   rds_secret_arn = var.db_password_arn != null ? var.db_password_arn : module.secrets.database_arn
-  mongodb_secret_arn = var.mongodb_password_arn != null ? var.mongodb_password_arn : module.secrets.mongodb_arn
 }
 
 # CICD Module
@@ -197,7 +189,6 @@ module "ecs" {
   vpc_cidr_blocks = [local.vpc_cidr]
 
   database_url_arn = module.secrets.database_arn
-  mongodb_uri_arn  = module.secrets.mongodb_arn
   ecr_repository_url = module.ecr.repository_url
 
   alb_target_group_arn = module.alb.target_group_arn
@@ -227,51 +218,6 @@ module "rds" {
 
   tags = module.common.common_tags
 }
-
-# MongoDB Module
-module "mongodb" { # Temporarily commenting out mongodb to simplify cycle diagnosis
-  source = "../../modules/mongodb"
-
-  project     = var.project
-  environment = var.environment
-  vpc_id      = module.vpc.vpc_id
-  subnet_ids  = module.vpc.private_subnet_ids
-  name        = local.mongodb_name
-  security_group_name = local.mongodb_sg_name
-  vpc_cidr_blocks = [local.vpc_cidr]
-
-  mongodb_password_arn = module.secrets.mongodb_arn
-
-  tags = module.common.common_tags
-}
-
-# SonarQube Module
-# module "sonarqube" { # Temporarily commenting out sonarqube to simplify cycle diagnosis
-#   source = "../../modules/sonarqube"
-# 
-#   project     = var.project
-#   environment = var.environment
-#   vpc_id      = module.vpc.vpc_id
-#   subnet_ids  = module.vpc.private_subnet_ids
-#   name        = local.sonarqube_name
-#   security_group_name = local.sonarqube_sg_name
-#   vpc_cidr_blocks = [local.vpc_cidr]
-# 
-#   aws_region = var.aws_region
-#   alb_security_group_id = module.alb.security_group_id
-#   alb_dns_name = module.alb.alb_dns_name
-# 
-#   db_endpoint = module.rds.db_instance_endpoint
-#   db_username = local.db_username
-#   db_password_arn = module.secrets.database_arn
-#   sonarqube_password_arn = module.secrets.sonarqube_credentials_arn
-#   db_subnet_group_name = module.rds.db_subnet_group_name
-# 
-#   task_cpu    = local.task_cpu
-#   task_memory = local.task_memory
-# 
-#   tags = module.common.common_tags
-# }
 
 # Cognito Module - No VPC dependencies
 module "cognito" {
@@ -337,6 +283,34 @@ module "amplify" {
   tags = module.common.common_tags
 }
 
+# SonarQube Module
+module "sonarqube" { # Temporarily commenting out sonarqube to simplify cycle diagnosis
+  source = "../../modules/sonarqube"
+
+  project     = var.project
+  environment = var.environment
+  vpc_id      = module.vpc.vpc_id
+  subnet_ids  = module.vpc.private_subnet_ids
+  name        = local.sonarqube_name
+  security_group_name = local.sonarqube_sg_name
+  vpc_cidr_blocks = [local.vpc_cidr]
+
+  aws_region = var.aws_region
+  alb_security_group_id = module.alb.security_group_id
+  alb_dns_name = module.alb.alb_dns_name
+
+  db_endpoint = module.rds.db_instance_endpoint
+  db_username = local.db_username
+  db_password_arn = module.secrets.database_arn
+  sonarqube_password_arn = module.secrets.sonarqube_credentials_arn
+  db_subnet_group_name = module.rds.db_subnet_group_name
+
+  task_cpu    = local.task_cpu
+  task_memory = local.task_memory
+
+  tags = module.common.common_tags
+}
+
 # Variables
 variable "secret_suffix" {
   description = "Suffix for secret names"
@@ -345,10 +319,10 @@ variable "secret_suffix" {
 }
 
 # Outputs
-# output "sonarqube_url" { # Temporarily commented out as module is commented out
-#   description = "URL of the SonarQube instance"
-#   value       = module.sonarqube.sonarqube_url
-# }
+output "sonarqube_url" { # Temporarily commented out as module is commented out
+  description = "URL of the SonarQube instance"
+  value       = module.sonarqube.sonarqube_url
+}
 
 output "ecr_repository_url" {
   description = "URL of the ECR repository"
@@ -373,11 +347,6 @@ output "cognito_client_id" {
 output "s3_bucket_name" {
   description = "Name of the S3 bucket"
   value       = module.s3.bucket_name
-}
-
-output "mongodb_endpoint" { # Temporarily commented out as module is commented out
-  description = "Endpoint of the MongoDB instance"
-  value       = module.mongodb.endpoint
 }
 
 module "networking" {
