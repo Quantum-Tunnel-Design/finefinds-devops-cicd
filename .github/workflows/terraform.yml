@@ -3,6 +3,8 @@ name: 'Terraform'
 on:
   push:
     branches: [ main, dev, qa, staging, sandbox ]
+  pull_request:
+    branches: [ main, dev, qa, staging, sandbox ]
 
 permissions:
   id-token: write
@@ -12,6 +14,7 @@ jobs:
   terraform:
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name }}
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && contains(github.event.pull_request.body, 'sonar-deploy'))
 
     steps:
     - name: Checkout code
@@ -71,6 +74,7 @@ jobs:
           -var="source_token=${{ secrets.SOURCE_TOKEN }}" \
           -var="client_repository=${{ secrets.CLIENT_REPOSITORY }}" \
           -var="admin_repository=${{ secrets.ADMIN_REPOSITORY }}" \
+          -var="alert_email=${{ secrets.ALERT_EMAIL }}" \
           -out=tfplan -detailed-exitcode
         echo "Terraform plan completed"
         echo "========================="
@@ -85,6 +89,7 @@ jobs:
           -var="source_token=${{ secrets.SOURCE_TOKEN }}" \
           -var="client_repository=${{ secrets.CLIENT_REPOSITORY }}" \
           -var="admin_repository=${{ secrets.ADMIN_REPOSITORY }}" \
+          -var="alert_email=${{ secrets.ALERT_EMAIL }}" \
           -auto-approve
         echo "Terraform apply completed"
         echo "============================="
