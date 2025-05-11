@@ -44,19 +44,18 @@ module "secrets" {
 
 # Security Module
 module "security" {
-  source = "../../modules/security"
-
+  source            = "../../modules/security"
   name_prefix       = local.name_prefix
+  environment       = var.environment
   tags              = local.common_tags
-  callback_urls     = ["https://dev.finefinds.com/callback"]
-  logout_urls       = ["https://dev.finefinds.com/logout"]
+  callback_urls     = ["https://${var.environment}.finefinds.com/callback"]
+  logout_urls       = ["https://${var.environment}.finefinds.com/logout"]
   certificate_arn   = local.certificate_arn
   db_username       = var.db_username
   db_password       = var.db_password
   mongodb_username  = var.mongodb_username
   mongodb_password  = var.mongodb_password
   sonar_token       = var.sonar_token
-  depends_on        = [module.secrets]
 }
 
 # Storage Module
@@ -64,20 +63,17 @@ module "storage" {
   source                = "../../modules/storage"
   name_prefix           = local.name_prefix
   environment           = var.environment
-  vpc_id                = module.vpc.vpc_id
-  private_subnet_ids    = module.vpc.private_subnet_ids
-  vpc_cidr_blocks       = [local.vpc_cidr]
-  db_instance_class     = "db.t3.small"
+  vpc_id                = module.networking.vpc_id
+  private_subnet_ids    = module.networking.private_subnet_ids
+  ecs_security_group_id = module.compute.ecs_security_group_id
+  db_instance_class     = local.env_config[var.environment].db_instance_class
   db_name               = var.db_name
   db_username           = var.db_username
   db_password           = var.db_password
   use_existing_cluster  = false
   mongodb_ami           = var.mongodb_ami
-  mongodb_instance_type = "t3.small"
-  allocated_storage     = 50
-  skip_final_snapshot   = true
+  mongodb_instance_type = local.env_config[var.environment].instance_type
   tags                  = local.common_tags
-  depends_on            = [module.vpc, module.security]
 }
 
 # Compute Module
@@ -86,22 +82,21 @@ module "compute" {
   name_prefix              = local.name_prefix
   environment              = var.environment
   aws_region               = var.aws_region
-  vpc_id                   = module.vpc.vpc_id
-  public_subnet_ids        = module.vpc.public_subnet_ids
-  private_subnet_ids       = module.vpc.private_subnet_ids
-  certificate_arn          = local.certificate_arn
-  task_cpu                 = 512
-  task_memory              = 1024
+  vpc_id                   = module.networking.vpc_id
+  public_subnet_ids        = module.networking.public_subnet_ids
+  private_subnet_ids       = module.networking.private_subnet_ids
+  certificate_arn          = module.cicd.ecr_repository_url
+  task_cpu                 = 256
+  task_memory              = 512
   task_execution_role_arn  = module.security.ecs_task_execution_role_arn
   task_role_arn            = module.security.ecs_task_role_arn
-  container_image          = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/finefinds-${var.environment}-repo"
+  container_image          = module.cicd.ecr_repository_url
   container_port           = var.container_port
   container_environment    = []
-  service_desired_count    = 2
+  service_desired_count    = 1
   rds_secret_arn           = module.security.rds_secret_arn
   mongodb_secret_arn       = module.security.mongodb_secret_arn
   tags                     = local.common_tags
-  depends_on               = [module.vpc, module.security, module.storage]
 }
 
 # CICD Module
@@ -117,7 +112,6 @@ module "cicd" {
   cognito_redirect_uri = "https://dev.finefinds.com/callback"
   domain_name       = "dev.finefinds.com"
   tags              = local.common_tags
-  depends_on        = [module.compute]
 }
 
 # ALB Module
