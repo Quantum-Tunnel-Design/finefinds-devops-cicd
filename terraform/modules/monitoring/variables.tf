@@ -128,8 +128,8 @@ variable "alb_arn_suffix" {
   description = "ARN suffix of the ALB"
   type        = string
   validation {
-    condition     = can(regex("^[a-zA-Z0-9-]+$", var.alb_arn_suffix))
-    error_message = "The ALB ARN suffix must contain only letters, numbers, and hyphens."
+    condition     = can(regex("^[a-zA-Z0-9-/]+$", var.alb_arn_suffix))
+    error_message = "The ALB ARN suffix must contain only letters, numbers, hyphens, and forward slashes."
   }
 }
 

@@ -90,4 +90,11 @@ variable "tags" {
 variable "container_image" {
   description = "Container image URI to store in AWS Secrets Manager"
   type        = string
+}
+
+variable "sonarqube_password" {
+  description = "Password for SonarQube"
+  type        = string
+  sensitive   = true
+  default     = null
 } 

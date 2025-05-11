@@ -7,6 +7,7 @@ data "aws_caller_identity" "current" {}
 
 # Check if certificate exists
 data "aws_acm_certificate" "main" {
+  count = var.certificate_arn != null ? 0 : 1
   domain      = "${var.environment}.finefinds.com"
   statuses    = ["ISSUED", "PENDING_VALIDATION"]
   most_recent = true
@@ -14,7 +15,9 @@ data "aws_acm_certificate" "main" {
 
 # Local variables for certificate handling
 locals {
-  certificate_arn = data.aws_acm_certificate.main.arn != null ? data.aws_acm_certificate.main.arn : "arn:aws:acm:us-east-1:${data.aws_caller_identity.current.account_id}:certificate/${var.environment}-finefinds-com"
+  certificate_arn = var.certificate_arn != null ? var.certificate_arn : (
+    length(data.aws_acm_certificate.main) > 0 ? data.aws_acm_certificate.main[0].arn : null
+  )
 }
 
 # VPC Module
