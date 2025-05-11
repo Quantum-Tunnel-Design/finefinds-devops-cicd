@@ -89,10 +89,6 @@ module "storage" {
   vpc_cidr_blocks   = [local.current_vpc_config.cidr_block]
   private_subnet_ids    = module.networking.private_subnet_ids
   kms_key_id        = module.security.kms_key_id
-  db_instance_class     = local.env_config[var.environment].db_instance_class
-  db_name               = var.db_name
-  db_username           = var.db_username
-  db_password           = var.db_password
   tags                  = module.common.common_tags
 }
 
