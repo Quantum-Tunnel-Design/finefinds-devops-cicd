@@ -1,6 +1,6 @@
 # ECR Repository
 resource "aws_ecr_repository" "main" {
-  name = "finefinds-${var.environment}-repo"
+  name = "${var.name_prefix}-repo"
 
   image_scanning_configuration {
     scan_on_push = true
@@ -31,7 +31,7 @@ resource "aws_ecr_lifecycle_policy" "main" {
 
 # Amplify App
 resource "aws_amplify_app" "main" {
-  name = "finefinds-${var.environment}-app"
+  name = "${var.name_prefix}-app"
   repository = var.repository_url
   access_token = var.source_token
 

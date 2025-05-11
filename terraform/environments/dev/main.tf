@@ -115,6 +115,7 @@ module "storage" {
 module "compute" {
   source = "../../modules/compute"
   
+  name_prefix = var.name_prefix
   project     = var.project
   environment = var.environment
   tags        = var.tags
@@ -136,6 +137,7 @@ module "compute" {
 module "cicd" {
   source = "../../modules/cicd"
   
+  name_prefix = var.name_prefix
   project     = var.project
   environment = var.environment
   tags        = var.tags
