@@ -1,12 +1,4 @@
 locals {
-  # Common tags
-  common_tags = {
-    Environment = var.environment
-    Project     = var.project
-    Terraform   = "true"
-    ManagedBy   = "terraform"
-  }
-
   # VPC Configuration
   vpc_cidr = "10.0.0.0/16"
   azs      = ["us-east-1a", "us-east-1b"]

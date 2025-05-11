@@ -16,11 +16,6 @@ data "aws_acm_certificate" "main" {
 locals {
   certificate_arn = data.aws_acm_certificate.main.arn != null ? data.aws_acm_certificate.main.arn : "arn:aws:acm:us-east-1:${data.aws_caller_identity.current.account_id}:certificate/${var.environment}-finefinds-com"
   name_prefix     = "finefinds-${var.environment}"
-  common_tags     = {
-    Project     = var.project
-    Environment = var.environment
-    ManagedBy   = "Terraform"
-  }
 }
 
 # VPC Module

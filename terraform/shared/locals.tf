@@ -5,6 +5,7 @@ locals {
     Environment = var.environment
     ManagedBy   = "Terraform"
     Service     = "FineFinds"
+    Terraform   = "true"
   }
 
   # Environment-specific configurations

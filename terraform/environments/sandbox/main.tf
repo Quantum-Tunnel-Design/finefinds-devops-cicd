@@ -12,15 +12,10 @@ data "aws_acm_certificate" "main" {
   most_recent = true
 }
 
-# Local variables for certificate handling
+# Local variables
 locals {
-  certificate_arn = data.aws_acm_certificate.main.arn != null ? data.aws_acm_certificate.main.arn : "arn:aws:acm:us-east-1:${data.aws_caller_identity.current.account_id}:certificate/${var.environment}-finefinds-com"
   name_prefix = "${var.project}-${var.environment}"
-  common_tags = {
-    Project     = var.project
-    Environment = var.environment
-    ManagedBy   = "terraform"
-  }
+  certificate_arn = data.aws_acm_certificate.main.arn != null ? data.aws_acm_certificate.main.arn : "arn:aws:acm:us-east-1:${data.aws_caller_identity.current.account_id}:certificate/${var.environment}-finefinds-com"
 }
 
 # VPC Module
