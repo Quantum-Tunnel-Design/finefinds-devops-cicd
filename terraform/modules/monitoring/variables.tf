@@ -54,12 +54,12 @@ variable "alert_email" {
 }
 
 variable "evaluation_periods" {
-  description = "Number of periods to evaluate for alarms"
+  description = "Number of periods over which the specified statistic is applied"
   type        = number
   default     = 2
   validation {
-    condition     = var.evaluation_periods >= 1 && var.evaluation_periods <= 10
-    error_message = "The evaluation periods must be between 1 and 10."
+    condition     = var.evaluation_periods >= 1
+    error_message = "The evaluation_periods must be greater than or equal to 1."
   }
 }
 
@@ -76,10 +76,10 @@ variable "period" {
 variable "datapoints_to_alarm" {
   description = "Number of datapoints that must be breaching to trigger the alarm"
   type        = number
-  default     = 2
+  default     = 1
   validation {
-    condition     = var.datapoints_to_alarm >= 1 && var.datapoints_to_alarm <= var.evaluation_periods
-    error_message = "The datapoints to alarm must be between 1 and the number of evaluation periods."
+    condition     = var.datapoints_to_alarm >= 1
+    error_message = "The datapoints_to_alarm must be greater than or equal to 1."
   }
 }
 
