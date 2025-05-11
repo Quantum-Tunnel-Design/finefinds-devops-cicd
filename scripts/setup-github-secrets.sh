@@ -27,6 +27,8 @@ set_environment_secrets() {
     gh secret set ADMIN_REPOSITORY -b"$TF_VAR_admin_repository" --env "$env"
     gh secret set SOURCE_TOKEN -b"$TF_VAR_github_token" --env "$env"
     gh secret set ALERT_EMAIL -b"$TF_VAR_alert_email" --env "$env"
+    gh secret set SLACK_WEBHOOK_URL_DEVOPS -b"$SLACK_WEBHOOK_URL_DEVOPS" --env "$env"
+    gh secret set SLACK_CHANNEL_DEVOPS -b"$SLACK_CHANNEL_DEVOPS" --env "$env"
     
     # Set environment-specific AWS credentials
     case "$env" in

@@ -216,14 +216,6 @@ module "cognito" {
   environment = var.environment
 }
 
-# S3 Module - No VPC dependencies
-module "s3" {
-  source = "../../modules/s3"
-
-  project     = var.project
-  environment = var.environment
-}
-
 # Monitoring Module
 module "monitoring" {
   source = "../../modules/monitoring"
@@ -298,11 +290,6 @@ output "rds_endpoint" {
 output "cognito_client_id" {
   description = "ID of the Cognito User Pool Client"
   value       = module.cognito.client_id
-}
-
-output "s3_bucket_name" {
-  description = "Name of the S3 bucket"
-  value       = module.s3.bucket_name
 }
 
 module "networking" {
