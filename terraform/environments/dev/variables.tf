@@ -243,3 +243,15 @@ variable "logout_urls" {
   type        = list(string)
   default     = ["http://localhost:3000"]
 }
+
+variable "db_instance_class" {
+  description = "Instance class for the RDS instance"
+  type        = string
+  default     = "db.t3.micro"
+}
+
+variable "skip_final_snapshot" {
+  description = "Whether to skip the final snapshot when destroying the RDS instance"
+  type        = bool
+  default     = false
+}
