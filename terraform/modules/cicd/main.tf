@@ -1,6 +1,6 @@
 # ECR Repository
 resource "aws_ecr_repository" "main" {
-  name = "${var.name_prefix}-repo"
+  name = "finefinds-${var.environment}-repo"
 
   image_scanning_configuration {
     scan_on_push = true

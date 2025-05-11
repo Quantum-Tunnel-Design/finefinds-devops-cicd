@@ -41,10 +41,10 @@ resource "aws_security_group" "rds" {
   vpc_id      = var.vpc_id
 
   ingress {
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    security_groups = [var.ecs_security_group_id]
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = var.vpc_cidr_blocks
   }
 
   tags = var.tags
@@ -97,10 +97,10 @@ resource "aws_security_group" "mongodb" {
   vpc_id      = var.vpc_id
 
   ingress {
-    from_port       = 27017
-    to_port         = 27017
-    protocol        = "tcp"
-    security_groups = [var.ecs_security_group_id]
+    from_port   = 27017
+    to_port     = 27017
+    protocol    = "tcp"
+    cidr_blocks = var.vpc_cidr_blocks
   }
 
   tags = var.tags
