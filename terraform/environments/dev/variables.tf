@@ -185,11 +185,6 @@ variable "availability_zones" {
   default     = ["us-east-1a", "us-east-1b"]
 }
 
-variable "repository_url" {
-  description = "URL of the repository"
-  type        = string
-}
-
 variable "db_name" {
   description = "Name of the RDS database"
   type        = string
