@@ -98,7 +98,7 @@ variable "admin_repository" {
 }
 
 variable "sonar_token" {
-  description = "SonarQube token"
+  description = "SonarQube token for authentication"
   type        = string
   sensitive   = true
 }

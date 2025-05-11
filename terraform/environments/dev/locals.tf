@@ -84,6 +84,8 @@ locals {
   # SonarQube Configuration
   sonarqube_port = 9000
   sonarqube_path = "/"
+  task_cpu       = 512
+  task_memory    = 1024
 
   # MongoDB Configuration
   mongodb_port = 27017
