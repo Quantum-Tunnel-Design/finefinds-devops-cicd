@@ -5,9 +5,8 @@ variable "db_username" {
 }
 
 variable "db_password" {
-  description = "Database password"
+  description = "Database password to store in AWS Secrets Manager"
   type        = string
-  default     = ""
 }
 
 variable "db_host" {
