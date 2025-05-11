@@ -98,4 +98,16 @@ variable "sonar_token" {
   description = "SonarQube token for authentication"
   type        = string
   sensitive   = true
+}
+
+variable "app_name" {
+  description = "Name of the Amplify app"
+  type        = string
+  default     = "finefinds"
+}
+
+variable "github_token" {
+  description = "GitHub personal access token"
+  type        = string
+  sensitive   = true
 } 

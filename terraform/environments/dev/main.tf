@@ -297,6 +297,7 @@ module "amplify" {
   client_repository = var.client_repository
   admin_repository  = var.admin_repository
   source_token     = var.source_token
+  sonar_token      = var.sonar_token
   graphql_endpoint = "https://api.${var.environment}.finefinds.com/graphql"
 
   tags = local.common_tags
