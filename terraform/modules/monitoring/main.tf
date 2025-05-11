@@ -5,19 +5,11 @@ data "aws_iam_role" "existing_grafana" {
 }
 
 # CloudWatch Log Group
-resource "aws_cloudwatch_log_group" "ecs" {
-  name              = "/ecs/${var.project}-${var.environment}"
-  retention_in_days = 30
+resource "aws_cloudwatch_log_group" "app" {
+  name              = "/ecs/${var.name_prefix}"
+  retention_in_days = var.environment == "prod" ? 30 : 7
 
-  tags = {
-    Environment = var.environment
-    Project     = var.project
-    Terraform   = "true"
-  }
-
-  lifecycle {
-    ignore_changes = [name]
-  }
+  tags = var.tags
 }
 
 # CloudWatch Dashboard
@@ -32,15 +24,16 @@ resource "aws_cloudwatch_dashboard" "main" {
         y      = 0
         width  = 12
         height = 6
+
         properties = {
           metrics = [
-            ["AWS/ECS", "CPUUtilization", "ServiceName", var.ecs_service_name, "ClusterName", var.ecs_cluster_name],
-            [".", "MemoryUtilization", ".", ".", ".", "."]
+            ["AWS/ECS", "CPUUtilization", "ClusterName", "${var.name_prefix}-cluster"],
+            ["AWS/ECS", "MemoryUtilization", "ClusterName", "${var.name_prefix}-cluster"]
           ]
           period = 300
           stat   = "Average"
           region = var.aws_region
-          title  = "ECS Service Metrics"
+          title  = "ECS Cluster Metrics"
         }
       },
       {
@@ -49,11 +42,11 @@ resource "aws_cloudwatch_dashboard" "main" {
         y      = 0
         width  = 12
         height = 6
+
         properties = {
           metrics = [
-            ["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", var.rds_instance_id],
-            [".", "FreeableMemory", ".", "."],
-            [".", "DatabaseConnections", ".", "."]
+            ["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "${var.name_prefix}-rds"],
+            ["AWS/RDS", "FreeableMemory", "DBInstanceIdentifier", "${var.name_prefix}-rds"]
           ]
           period = 300
           stat   = "Average"
@@ -67,11 +60,11 @@ resource "aws_cloudwatch_dashboard" "main" {
         y      = 6
         width  = 12
         height = 6
+
         properties = {
           metrics = [
-            ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", var.alb_arn_suffix],
-            [".", "TargetResponseTime", ".", "."],
-            [".", "HTTPCode_Target_5XX_Count", ".", "."]
+            ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", "${var.name_prefix}-alb"],
+            ["AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", "${var.name_prefix}-alb"]
           ]
           period = 300
           stat   = "Sum"
@@ -188,147 +181,71 @@ locals {
   current_thresholds = var.environment == "prod" ? local.thresholds.prod : (var.environment == "staging" ? local.thresholds.staging : local.thresholds.dev)
 }
 
-# ECS CPU Utilization Alarm
+# CloudWatch Alarms
 resource "aws_cloudwatch_metric_alarm" "ecs_cpu" {
   alarm_name          = "${var.name_prefix}-ecs-cpu-utilization"
   comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 2
+  evaluation_periods  = "2"
   metric_name         = "CPUUtilization"
   namespace           = "AWS/ECS"
-  period             = 300
+  period             = "300"
   statistic          = "Average"
-  threshold          = 80
+  threshold          = "80"
   alarm_description  = "This metric monitors ECS CPU utilization"
   alarm_actions      = [aws_sns_topic.alerts.arn]
+  ok_actions         = [aws_sns_topic.alerts.arn]
 
   dimensions = {
-    ClusterName = var.ecs_cluster_name
-    ServiceName = var.ecs_service_name
+    ClusterName = "${var.name_prefix}-cluster"
   }
 
   tags = var.tags
 }
 
-# ECS Memory Utilization Alarm
-resource "aws_cloudwatch_metric_alarm" "memory_utilization" {
-  alarm_name          = "memory-utilization-${var.environment}"
+resource "aws_cloudwatch_metric_alarm" "ecs_memory" {
+  alarm_name          = "${var.name_prefix}-ecs-memory-utilization"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
   metric_name         = "MemoryUtilization"
   namespace           = "AWS/ECS"
   period             = "300"
   statistic          = "Average"
-  threshold          = local.current_thresholds.memory_utilization
+  threshold          = "80"
   alarm_description  = "This metric monitors ECS memory utilization"
   alarm_actions      = [aws_sns_topic.alerts.arn]
   ok_actions         = [aws_sns_topic.alerts.arn]
 
   dimensions = {
-    ClusterName = "finefinds-${var.environment}"
-    ServiceName = "finefinds-${var.environment}"
-  }
-
-  tags = {
-    Environment = var.environment
-    Metric      = "MemoryUtilization"
-  }
-}
-
-# RDS CPU Utilization Alarm
-resource "aws_cloudwatch_metric_alarm" "rds_cpu" {
-  alarm_name          = "${var.name_prefix}-rds-cpu-utilization"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 2
-  metric_name         = "CPUUtilization"
-  namespace           = "AWS/RDS"
-  period             = 300
-  statistic          = "Average"
-  threshold          = 80
-  alarm_description  = "This metric monitors RDS CPU utilization"
-  alarm_actions      = [aws_sns_topic.alerts.arn]
-
-  dimensions = {
-    DBInstanceIdentifier = var.rds_instance_id
+    ClusterName = "${var.name_prefix}-cluster"
   }
 
   tags = var.tags
 }
 
-# RDS Memory Alarm
-resource "aws_cloudwatch_metric_alarm" "rds_memory" {
-  alarm_name          = "rds-memory-${var.environment}"
-  comparison_operator = "LessThanThreshold"
+resource "aws_cloudwatch_metric_alarm" "rds_cpu" {
+  alarm_name          = "${var.name_prefix}-rds-cpu-utilization"
+  comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
-  metric_name         = "FreeableMemory"
+  metric_name         = "CPUUtilization"
   namespace           = "AWS/RDS"
   period             = "300"
   statistic          = "Average"
-  threshold          = local.current_thresholds.rds_memory
-  alarm_description  = "This metric monitors RDS freeable memory"
+  threshold          = "80"
+  alarm_description  = "This metric monitors RDS CPU utilization"
   alarm_actions      = [aws_sns_topic.alerts.arn]
   ok_actions         = [aws_sns_topic.alerts.arn]
 
   dimensions = {
-    DBInstanceIdentifier = "finefinds-${var.environment}"
+    DBInstanceIdentifier = "${var.name_prefix}-rds"
   }
 
-  tags = {
-    Environment = var.environment
-    Metric      = "RDSMemory"
-  }
+  tags = var.tags
 }
 
-# Application Error Rate Alarm
-resource "aws_cloudwatch_metric_alarm" "error_rate" {
-  alarm_name          = "error-rate-${var.environment}"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = "2"
-  metric_name         = "ErrorRate"
-  namespace           = "FineFinds/Application"
-  period             = "300"
-  statistic          = "Sum"
-  threshold          = local.current_thresholds.error_rate
-  alarm_description  = "This metric monitors application error rate"
-  alarm_actions      = [aws_sns_topic.alerts.arn]
-  ok_actions         = [aws_sns_topic.alerts.arn]
-
-  dimensions = {
-    Environment = var.environment
-  }
-
-  tags = {
-    Environment = var.environment
-    Metric      = "ErrorRate"
-  }
-}
-
-# Application Latency Alarm
-resource "aws_cloudwatch_metric_alarm" "latency" {
-  alarm_name          = "latency-${var.environment}"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = "2"
-  metric_name         = "Latency"
-  namespace           = "FineFinds/Application"
-  period             = "300"
-  statistic          = "Average"
-  threshold          = local.current_thresholds.latency
-  alarm_description  = "This metric monitors application latency"
-  alarm_actions      = [aws_sns_topic.alerts.arn]
-  ok_actions         = [aws_sns_topic.alerts.arn]
-
-  dimensions = {
-    Environment = var.environment
-  }
-
-  tags = {
-    Environment = var.environment
-    Metric      = "Latency"
-  }
-}
-
-# SNS Topic for Alerts with Environment-specific Configuration
+# SNS Topic for Alerts
 resource "aws_sns_topic" "alerts" {
   name = "${var.name_prefix}-alerts"
+
   tags = var.tags
 }
 
@@ -351,7 +268,7 @@ resource "aws_sns_topic_policy" "alerts" {
   })
 }
 
-# SNS Topic Subscription (example for email)
+# SNS Topic Subscription
 resource "aws_sns_topic_subscription" "alerts" {
   topic_arn = aws_sns_topic.alerts.arn
   protocol  = "email"

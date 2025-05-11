@@ -10,47 +10,29 @@ variable "name_prefix" {
 variable "project" {
   description = "Project name"
   type        = string
-  validation {
-    condition     = can(regex("^[a-z0-9-]+$", var.project))
-    error_message = "The project name must contain only lowercase letters, numbers, and hyphens."
-  }
+  default     = "finefinds"
 }
 
 variable "environment" {
   description = "Environment name"
   type        = string
-  validation {
-    condition     = contains(["dev", "qa", "staging", "prod"], var.environment)
-    error_message = "The environment must be one of: dev, qa, staging, prod."
-  }
 }
 
 variable "aws_region" {
   description = "AWS region"
   type        = string
-  validation {
-    condition     = can(regex("^[a-z]{2}-[a-z]+-[1-9]$", var.aws_region))
-    error_message = "The AWS region must be in the format: xx-xxxxx-N (e.g., us-east-1)."
-  }
+  default     = "us-east-1"
 }
 
 variable "log_retention_days" {
   description = "Number of days to retain CloudWatch logs"
   type        = number
   default     = 30
-  validation {
-    condition     = var.log_retention_days >= 1 && var.log_retention_days <= 3653
-    error_message = "The log retention period must be between 1 and 3653 days."
-  }
 }
 
 variable "alert_email" {
-  description = "Email address for alerts"
+  description = "Email address for CloudWatch alerts"
   type        = string
-  validation {
-    condition     = can(regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", var.alert_email))
-    error_message = "The alert email must be a valid email address."
-  }
 }
 
 variable "evaluation_periods" {
@@ -136,11 +118,25 @@ variable "alb_arn_suffix" {
 }
 
 variable "tags" {
-  description = "Tags to apply to all resources"
+  description = "Additional tags for resources"
   type        = map(string)
   default     = {}
-  validation {
-    condition     = alltrue([for k, v in var.tags : can(regex("^[a-zA-Z0-9-_]+$", k)) && can(regex("^[a-zA-Z0-9-_]+$", v))])
-    error_message = "Tag keys and values must contain only letters, numbers, hyphens, and underscores."
+}
+
+variable "alarm_thresholds" {
+  description = "Thresholds for CloudWatch alarms"
+  type = object({
+    cpu_utilization    = number
+    memory_utilization = number
+    disk_utilization   = number
+    error_rate        = number
+    latency           = number
+  })
+  default = {
+    cpu_utilization    = 80
+    memory_utilization = 80
+    disk_utilization   = 80
+    error_rate        = 5
+    latency           = 1000
   }
 } 

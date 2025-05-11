@@ -139,6 +139,20 @@ resource "aws_s3_bucket" "static" {
   tags = var.tags
 }
 
+# S3 Bucket for Uploads
+resource "aws_s3_bucket" "uploads" {
+  bucket = "${var.name_prefix}-uploads"
+
+  tags = var.tags
+}
+
+# S3 Bucket for Backups
+resource "aws_s3_bucket" "backups" {
+  bucket = "${var.name_prefix}-backups"
+
+  tags = var.tags
+}
+
 # S3 Bucket Versioning
 resource "aws_s3_bucket_versioning" "static" {
   bucket = aws_s3_bucket.static.id
@@ -147,9 +161,43 @@ resource "aws_s3_bucket_versioning" "static" {
   }
 }
 
+resource "aws_s3_bucket_versioning" "uploads" {
+  bucket = aws_s3_bucket.uploads.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_versioning" "backups" {
+  bucket = aws_s3_bucket.backups.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
 # S3 Bucket Server Side Encryption
 resource "aws_s3_bucket_server_side_encryption_configuration" "static" {
   bucket = aws_s3_bucket.static.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "uploads" {
+  bucket = aws_s3_bucket.uploads.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "backups" {
+  bucket = aws_s3_bucket.backups.id
 
   rule {
     apply_server_side_encryption_by_default {
@@ -223,6 +271,18 @@ resource "aws_s3_bucket_cors_configuration" "static" {
   cors_rule {
     allowed_headers = ["*"]
     allowed_methods = ["GET", "HEAD"]
+    allowed_origins = ["*"]
+    expose_headers  = ["ETag"]
+    max_age_seconds = 3000
+  }
+}
+
+resource "aws_s3_bucket_cors_configuration" "uploads" {
+  bucket = aws_s3_bucket.uploads.id
+
+  cors_rule {
+    allowed_headers = ["*"]
+    allowed_methods = ["GET", "PUT", "POST", "DELETE"]
     allowed_origins = ["*"]
     expose_headers  = ["ETag"]
     max_age_seconds = 3000

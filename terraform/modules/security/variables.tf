@@ -1,57 +1,64 @@
+variable "project" {
+  description = "Project name"
+  type        = string
+  default     = "finefinds"
+}
+
+variable "environment" {
+  description = "Environment name"
+  type        = string
+}
+
 variable "name_prefix" {
   description = "Prefix for resource names"
   type        = string
 }
 
 variable "tags" {
-  description = "Tags to apply to all resources"
+  description = "Additional tags for resources"
   type        = map(string)
   default     = {}
 }
 
 variable "callback_urls" {
-  description = "List of callback URLs for Cognito client"
+  description = "List of callback URLs for Cognito"
   type        = list(string)
-  default     = []
 }
 
 variable "logout_urls" {
-  description = "List of logout URLs for Cognito client"
+  description = "List of logout URLs for Cognito"
   type        = list(string)
-  default     = []
 }
 
 variable "certificate_arn" {
-  description = "ARN of the SSL certificate for Cognito domain"
+  description = "ARN of the SSL certificate"
   type        = string
 }
 
 variable "db_username" {
-  description = "Username for RDS database"
+  description = "Database username"
   type        = string
-  sensitive   = true
 }
 
 variable "db_password" {
-  description = "Password for RDS database"
+  description = "Database password"
   type        = string
   sensitive   = true
 }
 
 variable "mongodb_username" {
-  description = "Username for MongoDB"
+  description = "MongoDB username"
   type        = string
-  sensitive   = true
 }
 
 variable "mongodb_password" {
-  description = "Password for MongoDB"
+  description = "MongoDB password"
   type        = string
   sensitive   = true
 }
 
 variable "sonar_token" {
-  description = "SonarQube authentication token"
+  description = "SonarQube token"
   type        = string
   sensitive   = true
 } 
