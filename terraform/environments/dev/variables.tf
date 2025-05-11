@@ -255,3 +255,16 @@ variable "skip_final_snapshot" {
   type        = bool
   default     = false
 }
+
+variable "existing_rds_security_group_id" {
+  description = "ID of existing RDS security group (optional)"
+  type        = string
+  default     = null
+}
+
+variable "sonarqube_db_password" {
+  description = "Password for SonarQube database"
+  type        = string
+  sensitive   = true
+  default     = null
+}
