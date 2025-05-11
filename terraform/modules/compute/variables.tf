@@ -107,4 +107,9 @@ variable "container_image_arn" {
 variable "alb_target_group_arn" {
   description = "ARN of the ALB Target Group to associate with the ECS service"
   type        = string
+}
+
+variable "alb_security_group_id" {
+  description = "ID of the ALB Security Group to allow traffic from"
+  type        = string
 } 

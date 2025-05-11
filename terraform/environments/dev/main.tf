@@ -112,6 +112,7 @@ module "compute" {
   certificate_arn = var.certificate_arn != null ? var.certificate_arn : module.security.certificate_arn
   rds_secret_arn = var.db_password_arn != null ? var.db_password_arn : module.secrets.database_arn
   alb_target_group_arn = module.alb.target_group_arn
+  alb_security_group_id = module.alb.security_group_id
 }
 
 # CICD Module
@@ -125,7 +126,7 @@ module "cicd" {
   client_repository_url = var.client_repository_arn != null ? var.client_repository_arn : module.secrets.client_repository_arn
   admin_repository_url = var.admin_repository_arn != null ? var.admin_repository_arn : module.secrets.admin_repository_arn
   source_token = module.secrets.source_token_arn
-  api_url = module.compute.alb_dns_name
+  api_url = module.alb.alb_dns_name
   cognito_domain = module.cognito.client_pool_domain
   cognito_client_id = module.cognito.client_app_client_id
   cognito_redirect_uri = "https://${var.client_domain}/callback"
