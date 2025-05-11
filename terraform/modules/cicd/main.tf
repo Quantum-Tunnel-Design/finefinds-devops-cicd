@@ -33,7 +33,7 @@ resource "aws_ecr_lifecycle_policy" "main" {
 
 # Amplify App
 resource "aws_amplify_app" "main" {
-  name = "${var.name_prefix}-app"
+  name = "finefinds-${var.environment}-app"
   repository = var.repository_url
   access_token = var.source_token
 
