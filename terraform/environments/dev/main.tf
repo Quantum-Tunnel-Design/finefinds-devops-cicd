@@ -65,7 +65,7 @@ module "storage" {
   environment           = var.environment
   vpc_id                = module.vpc.vpc_id
   private_subnet_ids    = module.vpc.private_subnet_ids
-  ecs_security_group_id = module.compute.ecs_security_group_id
+  vpc_cidr_blocks       = [local.vpc_cidr]
   db_instance_class     = "db.t3.small"
   db_name               = var.db_name
   db_username           = var.db_username
