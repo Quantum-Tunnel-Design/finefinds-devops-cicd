@@ -18,15 +18,6 @@ resource "aws_secretsmanager_secret" "sonar_token" {
   # Secret content is managed by generate-secrets.sh
 }
 
-# SonarQube Credentials secret (composite JSON for SonarQube's own DB or admin user)
-# generate-secrets.sh creates 'sonarqube-password' for this
-resource "aws_secretsmanager_secret" "sonarqube_password" {
-  name        = "${var.project}/${var.environment}/sonarqube-password"
-  description = "SonarQube credentials for ${var.project} ${var.environment} (stores {username, password, ...})"
-  tags        = var.tags
-  # Secret content is managed by generate-secrets.sh
-}
-
 # Source Control (GitHub PAT) secret (composite JSON)
 resource "aws_secretsmanager_secret" "source_token" {
   name        = "${var.project}/${var.environment}/source-token"

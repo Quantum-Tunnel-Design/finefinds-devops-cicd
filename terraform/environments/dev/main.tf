@@ -283,34 +283,6 @@ module "amplify" {
   tags = module.common.common_tags
 }
 
-# SonarQube Module
-module "sonarqube" { # Temporarily commenting out sonarqube to simplify cycle diagnosis
-  source = "../../modules/sonarqube"
-
-  project     = var.project
-  environment = var.environment
-  vpc_id      = module.vpc.vpc_id
-  subnet_ids  = module.vpc.private_subnet_ids
-  name        = local.sonarqube_name
-  security_group_name = local.sonarqube_sg_name
-  vpc_cidr_blocks = [local.vpc_cidr]
-
-  aws_region = var.aws_region
-  alb_security_group_id = module.alb.security_group_id
-  alb_dns_name = module.alb.alb_dns_name
-
-  db_endpoint = module.rds.db_instance_endpoint
-  db_username = local.db_username
-  db_password_arn = module.secrets.database_arn
-  sonarqube_password_arn = module.secrets.sonarqube_credentials_arn
-  db_subnet_group_name = module.rds.db_subnet_group_name
-
-  task_cpu    = local.task_cpu
-  task_memory = local.task_memory
-
-  tags = module.common.common_tags
-}
-
 # Variables
 variable "secret_suffix" {
   description = "Suffix for secret names"
@@ -319,11 +291,6 @@ variable "secret_suffix" {
 }
 
 # Outputs
-output "sonarqube_url" { # Temporarily commented out as module is commented out
-  description = "URL of the SonarQube instance"
-  value       = module.sonarqube.sonarqube_url
-}
-
 output "ecr_repository_url" {
   description = "URL of the ECR repository"
   value       = module.ecr.repository_url

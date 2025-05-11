@@ -83,12 +83,10 @@ main() {
     echo "Generating secure random strings for passwords..."
     JWT_SECRET=$(generate_secure_string)
     DB_PASSWORD=$(generate_secure_string)
-    SONARQUBE_PASSWORD=$(generate_secure_string)
 
     # Set manual usernames
     echo "Setting manual usernames..."
     DB_USERNAME="ffadmin"
-    SONARQUBE_USERNAME="ffadminsonar"
 
     # Set repository URLs
     echo "Setting repository URLs..."
@@ -119,14 +117,6 @@ main() {
         "finefindslk/${ENVIRONMENT}/database" \
         "$db_secret_json" \
         "Database credentials for ${PROJECT} ${ENVIRONMENT}" \
-        "$REGION"
-
-    # SonarQube credentials
-    sonarqube_secret_json=$(printf '{"username":"%s","password":"%s","host":"","port":9000,"database":"finefindslk"}' "$SONARQUBE_USERNAME" "$SONARQUBE_PASSWORD")
-    create_or_update_secret \
-        "finefindslk/${ENVIRONMENT}/sonarqube-password" \
-        "$sonarqube_secret_json" \
-        "SonarQube credentials for ${PROJECT} ${ENVIRONMENT}" \
         "$REGION"
 
     # SonarQube token
@@ -174,7 +164,6 @@ main() {
     DATABASE_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/database" "$REGION")
     JWT_SECRET_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/jwt-secret" "$REGION")
     SONAR_TOKEN_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/sonar-token" "$REGION")
-    SONARQUBE_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/sonarqube-password" "$REGION")
     SOURCE_TOKEN_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/source-token" "$REGION")
     CLIENT_REPOSITORY_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/client-repository" "$REGION")
     ADMIN_REPOSITORY_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/admin-repository" "$REGION")
@@ -202,10 +191,6 @@ jwt_secret_arn = "${JWT_SECRET_ARN}"
 db_username_arn = "${DATABASE_ARN}"
 db_password_arn = "${DATABASE_ARN}"
 
-# SonarQube secrets (username is within the 'sonarqube-password' secret)
-sonarqube_username_arn = "${SONARQUBE_ARN}"
-sonarqube_password_arn = "${SONARQUBE_ARN}"
-
 # Token ARNs
 sonar_token_arn = "${SONAR_TOKEN_ARN}"
 source_token_arn = "${SOURCE_TOKEN_ARN}" # ARN for the secret containing the GitHub PAT
@@ -222,8 +207,6 @@ container_image_arn = "${CONTAINER_IMAGE_ARN}"
 # jwt_secret = "${JWT_SECRET}"
 # db_username = "${DB_USERNAME}"
 # db_password = "${DB_PASSWORD}"
-# sonarqube_username = "${SONARQUBE_USERNAME}"
-# sonarqube_password = "${SONARQUBE_PASSWORD}"
 # sonar_token = "${SONAR_TOKEN}"
 # source_token_actual = "${SOURCE_TOKEN}" # Note: root var is 'source_token', not 'source_token_actual'
 # client_repository_url_actual = "${CLIENT_REPOSITORY}"

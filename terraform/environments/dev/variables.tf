@@ -53,12 +53,6 @@ variable "db_password" {
   default     = null
 }
 
-variable "sonarqube_db_username" {
-  description = "Master username for SonarQube"
-  type        = string
-  default     = "sonarqube"
-}
-
 variable "alert_email" {
   description = "Email for alerts"
   type        = string
@@ -235,13 +229,6 @@ variable "skip_final_snapshot" {
 variable "existing_rds_security_group_id" {
   description = "ID of existing RDS security group (optional)"
   type        = string
-  default     = null
-}
-
-variable "sonarqube_db_password" {
-  description = "Password for SonarQube database"
-  type        = string
-  sensitive   = true
   default     = null
 }
 
