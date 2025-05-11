@@ -245,5 +245,5 @@ data "aws_secretsmanager_secret_version" "container_image" {
 }
 
 locals {
-  container_image = jsondecode(data.aws_secretsmanager_secret_version.container_image.secret_string)
+  container_image = data.aws_secretsmanager_secret_version.container_image.secret_string
 } 

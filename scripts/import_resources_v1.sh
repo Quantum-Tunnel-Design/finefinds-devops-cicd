@@ -72,5 +72,4 @@ terraform import module.storage.aws_s3_bucket.buckets["backups"] finefindslk-dev
 echo "Importing S3 Bucket finefindslk-dev-static-assets"
 terraform import module.storage.aws_s3_bucket.buckets["static"] finefindslk-dev-static-assets
 
-echo "
-All import commands prepared." 
+echo "All import commands prepared." 
