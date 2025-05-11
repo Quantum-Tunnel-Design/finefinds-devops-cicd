@@ -3,11 +3,6 @@ output "security_group_id" {
   value       = aws_security_group.main.id
 }
 
-output "target_group_arn" {
-  description = "ARN of the target group"
-  value       = aws_lb_target_group.main.arn
-}
-
 output "cluster_name" {
   description = "Name of the ECS cluster"
   value       = aws_ecs_cluster.main.name
