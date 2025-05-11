@@ -24,15 +24,6 @@ terraform import module.compute.aws_cloudwatch_log_group.main "/ecs/${NAME_PREFI
 echo "Importing RDS Subnet Group..."
 terraform import module.rds.aws_db_subnet_group.main "${NAME_PREFIX}-rds-subnet-group"
 
-# Import Secrets Manager Secrets
-echo "Importing Secrets Manager Secrets..."
-terraform import module.secrets.aws_secretsmanager_secret.database "${PROJECT}/${ENVIRONMENT}/database"
-terraform import module.secrets.aws_secretsmanager_secret.sonar_token "${PROJECT}/${ENVIRONMENT}/sonar-token"
-terraform import module.secrets.aws_secretsmanager_secret.source_token "${PROJECT}/${ENVIRONMENT}/source-token"
-terraform import module.secrets.aws_secretsmanager_secret.client_repository "${PROJECT}/${ENVIRONMENT}/client-repository"
-terraform import module.secrets.aws_secretsmanager_secret.admin_repository "${PROJECT}/${ENVIRONMENT}/admin-repository"
-terraform import module.secrets.aws_secretsmanager_secret.container_image "${PROJECT}/${ENVIRONMENT}/container-image"
-
 # Import Backup Plan
 echo "Importing Backup Plan..."
 BACKUP_PLAN_ID=$(aws backup list-backup-plans --query "BackupPlansList[?BackupPlanName=='${NAME_PREFIX}-backup-plan'].BackupPlanId" --output text)
