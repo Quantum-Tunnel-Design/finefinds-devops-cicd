@@ -229,21 +229,21 @@ module "rds" {
 }
 
 # MongoDB Module
-# module "mongodb" { # Temporarily commenting out mongodb to simplify cycle diagnosis
-#   source = "../../modules/mongodb"
-# 
-#   project     = var.project
-#   environment = var.environment
-#   vpc_id      = module.vpc.vpc_id
-#   subnet_ids  = module.vpc.private_subnet_ids
-#   name        = local.mongodb_name
-#   security_group_name = local.mongodb_sg_name
-#   vpc_cidr_blocks = [local.vpc_cidr]
-# 
-#   mongodb_password_arn = module.secrets.mongodb_arn
-# 
-#   tags = module.common.common_tags
-# }
+module "mongodb" { # Temporarily commenting out mongodb to simplify cycle diagnosis
+  source = "../../modules/mongodb"
+
+  project     = var.project
+  environment = var.environment
+  vpc_id      = module.vpc.vpc_id
+  subnet_ids  = module.vpc.private_subnet_ids
+  name        = local.mongodb_name
+  security_group_name = local.mongodb_sg_name
+  vpc_cidr_blocks = [local.vpc_cidr]
+
+  mongodb_password_arn = module.secrets.mongodb_arn
+
+  tags = module.common.common_tags
+}
 
 # SonarQube Module
 # module "sonarqube" { # Temporarily commenting out sonarqube to simplify cycle diagnosis
@@ -345,10 +345,10 @@ variable "secret_suffix" {
 }
 
 # Outputs
-output "sonarqube_url" {
-  description = "URL of the SonarQube instance"
-  value       = module.sonarqube.sonarqube_url
-}
+# output "sonarqube_url" { # Temporarily commented out as module is commented out
+#   description = "URL of the SonarQube instance"
+#   value       = module.sonarqube.sonarqube_url
+# }
 
 output "ecr_repository_url" {
   description = "URL of the ECR repository"
@@ -375,7 +375,7 @@ output "s3_bucket_name" {
   value       = module.s3.bucket_name
 }
 
-output "mongodb_endpoint" {
+output "mongodb_endpoint" { # Temporarily commented out as module is commented out
   description = "Endpoint of the MongoDB instance"
   value       = module.mongodb.endpoint
 }
