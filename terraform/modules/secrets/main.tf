@@ -53,18 +53,14 @@ resource "aws_secretsmanager_secret" "database_password" {
 
 # MongoDB Password Secret
 resource "aws_secretsmanager_secret" "mongodb_password" {
-  count = var.use_existing_secrets ? 0 : 1
-  name  = "${var.project}-${var.environment}-mongodb-password-${var.secret_suffix}"
+  name        = "${var.project}/${var.environment}/mongodb-password"
+  description = "MongoDB password for ${var.environment} environment"
+  tags        = var.tags
+}
 
-  tags = {
-    Environment = var.environment
-    Project     = var.project
-    Terraform   = "true"
-  }
-
-  lifecycle {
-    ignore_changes = [name]
-  }
+resource "aws_secretsmanager_secret_version" "mongodb_password" {
+  secret_id     = aws_secretsmanager_secret.mongodb_password.id
+  secret_string = var.mongodb_password
 }
 
 # SonarQube Password Secret
@@ -87,7 +83,7 @@ resource "aws_secretsmanager_secret" "sonarqube_password" {
 locals {
   jwt_secret_arn      = var.use_existing_secrets ? "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${var.project}-${var.environment}-jwt-secret-${var.secret_suffix}" : aws_secretsmanager_secret.jwt_secret[0].arn
   db_password_arn     = var.use_existing_secrets ? "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${var.project}-${var.environment}-db-password-${var.secret_suffix}" : aws_secretsmanager_secret.database_password[0].arn
-  mongodb_password_arn = var.use_existing_secrets ? "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${var.project}-${var.environment}-mongodb-password-${var.secret_suffix}" : aws_secretsmanager_secret.mongodb_password[0].arn
+  mongodb_password_arn = var.use_existing_secrets ? "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${var.project}-${var.environment}-mongodb-password-${var.secret_suffix}" : aws_secretsmanager_secret.mongodb_password.arn
   sonarqube_password_arn = var.use_existing_secrets ? "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${var.project}-${var.environment}-sonarqube-password-${var.secret_suffix}" : aws_secretsmanager_secret.sonarqube_password[0].arn
 }
 
