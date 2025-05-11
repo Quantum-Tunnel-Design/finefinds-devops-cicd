@@ -67,14 +67,14 @@ module "security" {
   admin_domain  = var.admin_domain
 
   db_username = var.db_username
-  db_password_arn = var.db_password_arn
+  db_password_arn = var.db_password_arn != null ? var.db_password_arn : module.secrets.db_password_arn
 
   mongodb_username = var.mongodb_username
-  mongodb_password_arn = var.mongodb_password_arn
+  mongodb_password_arn = var.mongodb_password_arn != null ? var.mongodb_password_arn : module.secrets.mongodb_password_arn
 
-  sonar_token_arn = var.sonar_token_arn
+  sonar_token_arn = var.sonar_token_arn != null ? var.sonar_token_arn : module.secrets.sonar_token_arn
 
-  certificate_arn = var.certificate_arn
+  certificate_arn = var.certificate_arn != null ? var.certificate_arn : module.secrets.certificate_arn
 
   callback_urls = [
     "https://${var.client_domain}/callback",
@@ -161,7 +161,7 @@ module "alb" {
   security_group_name = "${var.project}-${var.environment}-alb-sg"
   vpc_cidr_blocks = [var.vpc_cidr]
   container_port = var.container_port
-  certificate_arn = var.certificate_arn
+  certificate_arn = var.certificate_arn != null ? var.certificate_arn : module.security.certificate_arn
 
   health_check_path     = "/health"
   health_check_port     = var.container_port

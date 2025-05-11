@@ -194,6 +194,7 @@ variable "subnet_ids" {
 variable "certificate_arn" {
   description = "ARN of the SSL certificate"
   type        = string
+  default     = null
 }
 
 variable "vpc_cidr" {
