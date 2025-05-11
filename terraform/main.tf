@@ -26,7 +26,7 @@ module "amplify" {
 
   environment   = var.environment
   app_name      = var.app_name
-  github_token  = var.github_token
+  source_token  = var.source_token
   domain_name   = var.domain_name
 }
 

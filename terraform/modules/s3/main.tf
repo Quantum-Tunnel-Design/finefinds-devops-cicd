@@ -80,9 +80,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "static" {
     id     = "cleanup-old-versions"
     status = "Enabled"
 
-    filter {
-      prefix = ""
-    }
+    filter {}
 
     noncurrent_version_expiration {
       noncurrent_days = 90
@@ -97,6 +95,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "uploads" {
     id     = "cleanup-old-versions"
     status = "Enabled"
 
+    filter {}
+
     noncurrent_version_expiration {
       noncurrent_days = 90
     }
@@ -109,6 +109,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "backups" {
   rule {
     id     = "cleanup-old-versions"
     status = "Enabled"
+
+    filter {}
 
     noncurrent_version_expiration {
       noncurrent_days = 90

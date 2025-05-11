@@ -230,7 +230,7 @@ resource "aws_amplify_branch" "admin_main" {
 resource "aws_amplify_app" "main" {
   name         = var.app_name
   repository   = var.repository
-  access_token = var.github_token
+  access_token = var.source_token
   platform     = "WEB"
 
   # Build settings
