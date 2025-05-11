@@ -9,24 +9,24 @@ output "ecs_task_role_arn" {
 }
 
 output "cognito_user_pool_id" {
-  description = "ID of the Cognito User Pool"
-  value       = aws_cognito_user_pool.client.id
+  description = "ID of the (Client) Cognito User Pool (from cognito module)"
+  value       = module.cognito.client_user_pool_id
 }
 
 output "cognito_user_pool_client_id" {
-  description = "ID of the Cognito User Pool Client"
-  value       = aws_cognito_user_pool_client.client.id
+  description = "ID of the (Client App) Cognito User Pool Client (from cognito module)"
+  value       = module.cognito.client_app_client_id
 }
 
 output "cognito_user_pool_client_secret" {
-  description = "Client secret of the Cognito user pool client"
-  value       = aws_cognito_user_pool_client.main.client_secret
+  description = "Client secret of the (Client App) Cognito user pool client (from cognito module)"
+  value       = module.cognito.client_app_client_secret
   sensitive   = true
 }
 
 output "cognito_domain" {
-  description = "Domain of the Cognito User Pool"
-  value       = aws_cognito_user_pool_domain.main.domain
+  description = "Domain of the (Client) Cognito User Pool (from cognito module)"
+  value       = module.cognito.client_pool_domain
 }
 
 output "kms_key_id" {
@@ -67,36 +67,6 @@ output "cloudwatch_dashboard_url" {
 output "certificate_arn" {
   description = "ARN of the ACM certificate"
   value       = var.certificate_arn
-}
-
-output "client_user_pool_id" {
-  description = "ID of the client application user pool"
-  value       = aws_cognito_user_pool.client.id
-}
-
-output "client_user_pool_arn" {
-  description = "ARN of the client application user pool"
-  value       = aws_cognito_user_pool.client.arn
-}
-
-output "client_user_pool_client_id" {
-  description = "ID of the client application user pool client"
-  value       = aws_cognito_user_pool_client.client.id
-}
-
-output "admin_user_pool_id" {
-  description = "ID of the admin application user pool"
-  value       = aws_cognito_user_pool.admin.id
-}
-
-output "admin_user_pool_arn" {
-  description = "ARN of the admin application user pool"
-  value       = aws_cognito_user_pool.admin.arn
-}
-
-output "admin_user_pool_client_id" {
-  description = "ID of the admin application user pool client"
-  value       = aws_cognito_user_pool_client.admin.id
 }
 
 output "db_security_group_id" {
