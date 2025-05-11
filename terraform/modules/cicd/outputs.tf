@@ -1,6 +1,6 @@
-output "ecr_repository_url" {
-  description = "URL of the ECR repository"
-  value       = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/finefinds-${var.environment}-repo"
+output "ecr_repository_name" {
+  description = "Name of the ECR repository"
+  value       = "finefinds-${var.environment}-repo"
 }
 
 output "ecr_repository_arn" {
