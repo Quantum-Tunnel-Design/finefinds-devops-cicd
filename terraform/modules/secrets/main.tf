@@ -91,15 +91,15 @@ resource "aws_secretsmanager_secret_version" "sonarqube_password" {
 
 # Get existing secrets from AWS Secrets Manager
 data "aws_secretsmanager_secret" "db_password" {
-  name = "finefinds/${var.environment}/db-password"
+  name = "finefindslk/${var.environment}/db-password"
 }
 
 data "aws_secretsmanager_secret" "mongodb_password" {
-  name = "finefinds/${var.environment}/mongodb-password"
+  name = "finefindslk/${var.environment}/mongodb-password"
 }
 
 data "aws_secretsmanager_secret" "sonarqube_password" {
-  name = "finefinds/${var.environment}/sonarqube-password"
+  name = "finefindslk/${var.environment}/sonarqube-password"
 }
 
 # Get secret versions

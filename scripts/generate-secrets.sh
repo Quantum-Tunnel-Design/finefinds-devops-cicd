@@ -107,65 +107,65 @@ main() {
 
     # Passwords (automatically generated)
     create_or_update_secret \
-        "finefinds/${ENVIRONMENT}/db-password" \
+        "finefindslk/${ENVIRONMENT}/db-password" \
         "$DB_PASSWORD" \
         "Database password for ${ENVIRONMENT}" \
         "$REGION"
 
     create_or_update_secret \
-        "finefinds/${ENVIRONMENT}/mongodb-password" \
+        "finefindslk/${ENVIRONMENT}/mongodb-password" \
         "$MONGODB_PASSWORD" \
         "MongoDB password for ${ENVIRONMENT}" \
         "$REGION"
 
     create_or_update_secret \
-        "finefinds/${ENVIRONMENT}/sonar-token" \
+        "finefindslk/${ENVIRONMENT}/sonar-token" \
         "$SONAR_TOKEN" \
         "SonarQube token for ${ENVIRONMENT}" \
         "$REGION"
 
     create_or_update_secret \
-        "finefinds/${ENVIRONMENT}/source-token" \
+        "finefindslk/${ENVIRONMENT}/source-token" \
         "$SOURCE_TOKEN" \
         "GitHub source token for ${ENVIRONMENT}" \
         "$REGION"
 
     # Usernames (manually set)
     create_or_update_secret \
-        "finefinds/${ENVIRONMENT}/db-username" \
+        "finefindslk/${ENVIRONMENT}/db-username" \
         "$DB_USERNAME" \
         "Database username for ${ENVIRONMENT}" \
         "$REGION"
 
     create_or_update_secret \
-        "finefinds/${ENVIRONMENT}/mongodb-username" \
+        "finefindslk/${ENVIRONMENT}/mongodb-username" \
         "$MONGODB_USERNAME" \
         "MongoDB username for ${ENVIRONMENT}" \
         "$REGION"
 
     # Repository URLs (manually set)
     create_or_update_secret \
-        "finefinds/${ENVIRONMENT}/client-repository" \
+        "finefindslk/${ENVIRONMENT}/client-repository" \
         "$CLIENT_REPOSITORY" \
         "Client repository URL for ${ENVIRONMENT}" \
         "$REGION"
 
     create_or_update_secret \
-        "finefinds/${ENVIRONMENT}/admin-repository" \
+        "finefindslk/${ENVIRONMENT}/admin-repository" \
         "$ADMIN_REPOSITORY" \
         "Admin repository URL for ${ENVIRONMENT}" \
         "$REGION"
 
     # Get ARNs
     echo "Retrieving secret ARNs..."
-    DB_PASSWORD_ARN=$(get_secret_arn "finefinds/${ENVIRONMENT}/db-password" "$REGION")
-    MONGODB_PASSWORD_ARN=$(get_secret_arn "finefinds/${ENVIRONMENT}/mongodb-password" "$REGION")
-    SONAR_TOKEN_ARN=$(get_secret_arn "finefinds/${ENVIRONMENT}/sonar-token" "$REGION")
-    SOURCE_TOKEN_ARN=$(get_secret_arn "finefinds/${ENVIRONMENT}/source-token" "$REGION")
-    DB_USERNAME_ARN=$(get_secret_arn "finefinds/${ENVIRONMENT}/db-username" "$REGION")
-    MONGODB_USERNAME_ARN=$(get_secret_arn "finefinds/${ENVIRONMENT}/mongodb-username" "$REGION")
-    CLIENT_REPOSITORY_ARN=$(get_secret_arn "finefinds/${ENVIRONMENT}/client-repository" "$REGION")
-    ADMIN_REPOSITORY_ARN=$(get_secret_arn "finefinds/${ENVIRONMENT}/admin-repository" "$REGION")
+    DB_PASSWORD_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/db-password" "$REGION")
+    MONGODB_PASSWORD_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/mongodb-password" "$REGION")
+    SONAR_TOKEN_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/sonar-token" "$REGION")
+    SOURCE_TOKEN_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/source-token" "$REGION")
+    DB_USERNAME_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/db-username" "$REGION")
+    MONGODB_USERNAME_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/mongodb-username" "$REGION")
+    CLIENT_REPOSITORY_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/client-repository" "$REGION")
+    ADMIN_REPOSITORY_ARN=$(get_secret_arn "finefindslk/${ENVIRONMENT}/admin-repository" "$REGION")
 
     # Create tfvars file
     TFVARS_PATH="terraform/environments/${ENVIRONMENT}/secrets.auto.tfvars"
