@@ -174,6 +174,9 @@ data "aws_secretsmanager_secret_version" "sonar_token" {
 locals {
   db_password = jsondecode(data.aws_secretsmanager_secret_version.db_password.secret_string)["password"]
   mongodb_password = try(jsondecode(data.aws_secretsmanager_secret_version.mongodb_password.secret_string)["password"], data.aws_secretsmanager_secret_version.mongodb_password.secret_string)
+  sonar_token = try(jsondecode(data.aws_secretsmanager_secret_version.sonar_token.secret_string)["token"], data.aws_secretsmanager_secret_version.sonar_token.secret_string)
+}
+
 # Cognito User Pool Client
 resource "aws_cognito_user_pool_client" "main" {
   name                         = "${var.name_prefix}-client"
@@ -390,143 +393,6 @@ resource "aws_cloudwatch_dashboard" "main" {
       }
     ]
   })
-}
-
-# Get current region
-data "aws_region" "current" {}
-
-data "aws_secretsmanager_secret_version" "db_password" {
-  secret_id = var.db_password_arn
-}
-
-locals {
-  db_password = jsondecode(data.aws_secretsmanager_secret_version.db_password.secret_string)["password"]
-}
-
-# Get secret versions
-data "aws_secretsmanager_secret_version" "mongodb_password" {
-  secret_id = data.aws_secretsmanager_secret.mongodb_password.id
-}
-
-data "aws_secretsmanager_secret_version" "sonar_token" {
-  secret_id = data.aws_secretsmanager_secret.sonar_token.id
-}
-
-# Local variables for secrets
-locals {
-  mongodb_password = try(jsondecode(data.aws_secretsmanager_secret_version.mongodb_password.secret_string)["password"], data.aws_secretsmanager_secret_version.mongodb_password.secret_string)
-  sonar_token = try(jsondecode(data.aws_secretsmanager_secret_version.sonar_token.secret_string)["token"], data.aws_secretsmanager_secret_version.sonar_token.secret_string)
-}
-
-# Cognito User Pools
-resource "aws_cognito_user_pool" "client" {
-  name = "${var.name_prefix}-client-pool"
-
-  auto_verified_attributes = ["email"]
-  username_attributes     = ["email"]
-
-  password_policy {
-    minimum_length    = 8
-    require_lowercase = true
-    require_numbers   = true
-    require_symbols   = true
-    require_uppercase = true
-  }
-
-  tags = var.tags
-}
-
-resource "aws_cognito_user_pool_client" "client" {
-  name = "${var.name_prefix}-client"
-
-  user_pool_id = aws_cognito_user_pool.client.id
-
-  callback_urls = var.callback_urls
-  logout_urls   = var.logout_urls
-
-  allowed_oauth_flows = ["code"]
-  allowed_oauth_scopes = ["email", "openid", "profile"]
-  allowed_oauth_flows_user_pool_client = true
-
-  supported_identity_providers = ["COGNITO"]
-}
-
-resource "aws_cognito_user_pool" "admin" {
-  name = "${var.name_prefix}-admin-pool"
-
-  auto_verified_attributes = ["email"]
-  username_attributes     = ["email"]
-
-  password_policy {
-    minimum_length    = 8
-    require_lowercase = true
-    require_numbers   = true
-    require_symbols   = true
-    require_uppercase = true
-  }
-
-  tags = var.tags
-}
-
-resource "aws_cognito_user_pool_client" "admin" {
-  name = "${var.name_prefix}-admin"
-
-  user_pool_id = aws_cognito_user_pool.admin.id
-
-  callback_urls = var.callback_urls
-  logout_urls   = var.logout_urls
-
-  allowed_oauth_flows = ["code"]
-  allowed_oauth_scopes = ["email", "openid", "profile"]
-  allowed_oauth_flows_user_pool_client = true
-
-  supported_identity_providers = ["COGNITO"]
-}
-
-# Security Groups
-resource "aws_security_group" "db" {
-  name        = "${var.name_prefix}-db-sg"
-  description = "Security group for database"
-  vpc_id      = var.vpc_id
-
-  ingress {
-    from_port   = 5432
-    to_port     = 5432
-    protocol    = "tcp"
-    cidr_blocks = ["10.0.0.0/8"]
-  }
-
-  tags = var.tags
-}
-
-resource "aws_security_group" "mongodb" {
-  name        = "${var.name_prefix}-mongodb-sg"
-  description = "Security group for MongoDB"
-  vpc_id      = var.vpc_id
-
-  ingress {
-    from_port   = 27017
-    to_port     = 27017
-    protocol    = "tcp"
-    cidr_blocks = ["10.0.0.0/8"]
-  }
-
-  tags = var.tags
-}
-
-resource "aws_security_group" "sonarqube" {
-  name        = "${var.name_prefix}-sonarqube-sg"
-  description = "Security group for SonarQube"
-  vpc_id      = var.vpc_id
-
-  ingress {
-    from_port   = 9000
-    to_port     = 9000
-    protocol    = "tcp"
-    cidr_blocks = ["10.0.0.0/8"]
-  }
-
-  tags = var.tags
 }
 
 # Secrets Manager Data Sources
