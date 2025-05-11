@@ -55,10 +55,10 @@ module "security" {
   logout_urls   = var.logout_urls
   certificate_arn   = local.certificate_arn
   db_username       = var.db_username
-  db_password       = var.db_password
+  db_password_arn   = module.secrets.db_password_arn
   mongodb_username  = var.mongodb_username
-  mongodb_password  = var.mongodb_password
-  sonar_token       = var.sonar_token
+  mongodb_password_arn = module.secrets.mongodb_password_arn
+  sonar_token_arn   = module.secrets.sonarqube_password_arn
 }
 
 # Storage Module
@@ -100,8 +100,8 @@ module "compute" {
   container_port           = var.container_port
   container_image_arn    = module.secrets.container_image_arn
   certificate_arn        = module.security.certificate_arn
-  rds_secret_arn           = module.security.rds_secret_arn
-  mongodb_secret_arn       = module.security.mongodb_secret_arn
+  rds_secret_arn           = module.secrets.database_secret_arn
+  mongodb_secret_arn       = module.secrets.mongodb_secret_arn
 }
 
 # CICD Module

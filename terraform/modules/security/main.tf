@@ -97,48 +97,6 @@ resource "aws_cognito_user_pool_domain" "main" {
   certificate_arn = var.certificate_arn
 }
 
-# Secrets for Database Credentials
-resource "aws_secretsmanager_secret" "rds" {
-  name = "${var.name_prefix}-rds-credentials"
-  description = "RDS database credentials"
-  tags = var.tags
-}
-
-resource "aws_secretsmanager_secret_version" "rds" {
-  secret_id = aws_secretsmanager_secret.rds.id
-  secret_string = jsonencode({
-    username = var.db_username
-    password = var.db_password
-  })
-}
-
-# Secrets for MongoDB Credentials
-resource "aws_secretsmanager_secret" "mongodb" {
-  name = "${var.name_prefix}-mongodb-credentials"
-  description = "MongoDB credentials"
-  tags = var.tags
-}
-
-resource "aws_secretsmanager_secret_version" "mongodb" {
-  secret_id = aws_secretsmanager_secret.mongodb.id
-  secret_string = jsonencode({
-    username = var.mongodb_username
-    password = var.mongodb_password
-  })
-}
-
-# Secrets for SonarQube Token
-resource "aws_secretsmanager_secret" "sonarqube" {
-  name = "${var.name_prefix}-sonarqube-token"
-  description = "SonarQube authentication token"
-  tags = var.tags
-}
-
-resource "aws_secretsmanager_secret_version" "sonarqube" {
-  secret_id = aws_secretsmanager_secret.sonarqube.id
-  secret_string = var.sonar_token
-}
-
 # KMS Key
 resource "aws_kms_key" "main" {
   count                   = var.enable_encryption ? 1 : 0
@@ -326,4 +284,28 @@ resource "aws_cloudwatch_dashboard" "main" {
 }
 
 # Get current region
-data "aws_region" "current" {} 
+data "aws_region" "current" {}
+
+data "aws_secretsmanager_secret_version" "db_password" {
+  secret_id = var.db_password_arn
+}
+
+locals {
+  db_password = jsondecode(data.aws_secretsmanager_secret_version.db_password.secret_string)["password"]
+}
+
+data "aws_secretsmanager_secret_version" "mongodb_password" {
+  secret_id = var.mongodb_password_arn
+}
+
+locals {
+  mongodb_password = jsondecode(data.aws_secretsmanager_secret_version.mongodb_password.secret_string)["password"]
+}
+
+data "aws_secretsmanager_secret_version" "sonar_token" {
+  secret_id = var.sonar_token_arn
+}
+
+locals {
+  sonar_token = jsondecode(data.aws_secretsmanager_secret_version.sonar_token.secret_string)["token"]
+} 

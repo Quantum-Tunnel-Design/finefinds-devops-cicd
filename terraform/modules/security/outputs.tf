@@ -29,21 +29,6 @@ output "cognito_domain" {
   value       = aws_cognito_user_pool_domain.main.domain
 }
 
-output "rds_secret_arn" {
-  description = "ARN of the RDS credentials secret"
-  value       = aws_secretsmanager_secret.rds.arn
-}
-
-output "mongodb_secret_arn" {
-  description = "ARN of the MongoDB credentials secret"
-  value       = aws_secretsmanager_secret.mongodb.arn
-}
-
-output "sonarqube_secret_arn" {
-  description = "ARN of the SonarQube token secret"
-  value       = aws_secretsmanager_secret.sonarqube.arn
-}
-
 output "kms_key_id" {
   description = "ID of the KMS key"
   value       = var.enable_encryption ? aws_kms_key.main[0].key_id : null

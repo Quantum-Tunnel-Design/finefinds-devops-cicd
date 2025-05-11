@@ -40,10 +40,9 @@ variable "db_username" {
   type        = string
 }
 
-variable "db_password" {
-  description = "Database password"
+variable "db_password_arn" {
+  description = "ARN of the database password secret in AWS Secrets Manager"
   type        = string
-  sensitive   = true
 }
 
 variable "mongodb_username" {
@@ -51,16 +50,14 @@ variable "mongodb_username" {
   type        = string
 }
 
-variable "mongodb_password" {
-  description = "MongoDB password"
+variable "mongodb_password_arn" {
+  description = "ARN of the MongoDB password secret in AWS Secrets Manager"
   type        = string
-  sensitive   = true
 }
 
-variable "sonar_token" {
-  description = "SonarQube token"
+variable "sonar_token_arn" {
+  description = "ARN of the SonarQube token secret in AWS Secrets Manager"
   type        = string
-  sensitive   = true
 }
 
 variable "enable_encryption" {
