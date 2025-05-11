@@ -21,6 +21,21 @@ jobs:
       uses: actions/checkout@v3
       with:
         fetch-depth: 0  # Fetch all history for better logging
+    
+    - name: Set environment name
+      id: setenv
+      run: |
+        if [[ "${GITHUB_REF##*/}" == "main" ]]; then
+          echo "env=prod" >> $GITHUB_OUTPUT
+        elif [[ "${GITHUB_REF##*/}" == "staging" ]]; then
+          echo "env=staging" >> $GITHUB_OUTPUT
+        elif [[ "${GITHUB_REF##*/}" == "qa" ]]; then
+          echo "env=qa" >> $GITHUB_OUTPUT
+        elif [[ "${GITHUB_REF##*/}" == "sandbox" ]]; then
+          echo "env=sandbox" >> $GITHUB_OUTPUT
+        else
+          echo "env=dev" >> $GITHUB_OUTPUT
+        fi
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v2
@@ -64,6 +79,11 @@ jobs:
         echo "Terraform initialization completed"
         echo "================================"
 
+    - name: Terraform Validate
+      id: validate
+      run: terraform validate
+      working-directory: terraform/environments/${{ steps.setenv.outputs.env }}
+
     - name: Terraform Plan
       id: plan
       run: |
@@ -93,6 +113,21 @@ jobs:
           -auto-approve
         echo "Terraform apply completed"
         echo "============================="
+
+    - name: Set Environment Emoji
+      id: emoji
+      run: |
+        if [[ "${{ steps.setenv.outputs.env }}" == "prod" ]]; then
+          echo "emoji=🚀" >> $GITHUB_OUTPUT
+        elif [[ "${{ steps.setenv.outputs.env }}" == "staging" ]]; then
+          echo "emoji=🔄" >> $GITHUB_OUTPUT
+        elif [[ "${{ steps.setenv.outputs.env }}" == "qa" ]]; then
+          echo "emoji=🔍" >> $GITHUB_OUTPUT
+        elif [[ "${{ steps.setenv.outputs.env }}" == "sandbox" ]]; then
+          echo "emoji=🏖️" >> $GITHUB_OUTPUT
+        else
+          echo "emoji=🛠️" >> $GITHUB_OUTPUT
+        fi
 
     - name: Generate Summary Report
       if: always()
@@ -143,4 +178,39 @@ jobs:
         aws iam update-assume-role-policy --role-name "github-actions-${ENV_NAME}" --policy-document file://trust-policy.json
         
         # Clean up
-        rm trust-policy.json 
+        rm trust-policy.json
+    - name: Slack Notification (Success)
+      if: success() && github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'qa' || github.ref_name == 'sandbox' || github.ref_name == 'staging')
+      uses: rtCamp/action-slack-notify@v2
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL_DEVOPS }}
+        SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_DEVOPS }}
+        SLACK_COLOR: good
+        SLACK_TITLE: '${{ steps.emoji.outputs.emoji }} Terraform Deploy Succeeded'
+        SLACK_MESSAGE: |
+          *Environment:* ${{ steps.setenv.outputs.env }}
+          *Branch:* `${{ github.ref_name }}`
+          *Triggered by:* ${{ github.actor }}
+          *Commit:* <${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>
+          *Workflow:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>
+          *Changes:* <${{ github.server_url }}/${{ github.repository }}/compare/${{ github.event.before }}...${{ github.sha }}|View Changes>
+        SLACK_USERNAME: 'GitHub Actions'
+        SLACK_ICON_EMOJI: ':white_check_mark:'
+  
+    - name: Slack Notification (Failure)
+      if: failure() && github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'qa' || github.ref_name == 'sandbox' || github.ref_name == 'staging')
+      uses: rtCamp/action-slack-notify@v2
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL_DEVOPS }}
+        SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_DEVOPS }}
+        SLACK_COLOR: danger
+        SLACK_TITLE: '${{ steps.emoji.outputs.emoji }} Terraform Deploy Failed'
+        SLACK_MESSAGE: |
+          *Environment:* ${{ steps.setenv.outputs.env }}
+          *Branch:* `${{ github.ref_name }}`
+          *Triggered by:* ${{ github.actor }}
+          *Commit:* <${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>
+          *Workflow:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>
+          *Changes:* <${{ github.server_url }}/${{ github.repository }}/compare/${{ github.event.before }}...${{ github.sha }}|View Changes>
+        SLACK_USERNAME: 'GitHub Actions'
+        SLACK_ICON_EMOJI: ':x:'

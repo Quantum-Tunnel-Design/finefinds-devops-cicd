@@ -8,27 +8,6 @@ output "ecs_task_role_arn" {
   value       = aws_iam_role.ecs_task.arn
 }
 
-output "cognito_user_pool_id" {
-  description = "ID of the Cognito User Pool"
-  value       = aws_cognito_user_pool.client.id
-}
-
-output "cognito_user_pool_client_id" {
-  description = "ID of the Cognito User Pool Client"
-  value       = aws_cognito_user_pool_client.client.id
-}
-
-output "cognito_user_pool_client_secret" {
-  description = "Client secret of the Cognito user pool client"
-  value       = aws_cognito_user_pool_client.main.client_secret
-  sensitive   = true
-}
-
-output "cognito_domain" {
-  description = "Domain of the Cognito User Pool"
-  value       = aws_cognito_user_pool_domain.main.domain
-}
-
 output "kms_key_id" {
   description = "ID of the KMS key"
   value       = var.enable_encryption ? aws_kms_key.main[0].key_id : null
@@ -67,36 +46,6 @@ output "cloudwatch_dashboard_url" {
 output "certificate_arn" {
   description = "ARN of the ACM certificate"
   value       = var.certificate_arn
-}
-
-output "client_user_pool_id" {
-  description = "ID of the client application user pool"
-  value       = aws_cognito_user_pool.client.id
-}
-
-output "client_user_pool_arn" {
-  description = "ARN of the client application user pool"
-  value       = aws_cognito_user_pool.client.arn
-}
-
-output "client_user_pool_client_id" {
-  description = "ID of the client application user pool client"
-  value       = aws_cognito_user_pool_client.client.id
-}
-
-output "admin_user_pool_id" {
-  description = "ID of the admin application user pool"
-  value       = aws_cognito_user_pool.admin.id
-}
-
-output "admin_user_pool_arn" {
-  description = "ARN of the admin application user pool"
-  value       = aws_cognito_user_pool.admin.arn
-}
-
-output "admin_user_pool_client_id" {
-  description = "ID of the admin application user pool client"
-  value       = aws_cognito_user_pool_client.admin.id
 }
 
 output "db_security_group_id" {
