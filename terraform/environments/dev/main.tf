@@ -5,20 +5,11 @@ provider "aws" {
 # Get current AWS account ID
 data "aws_caller_identity" "current" {}
 
-# Get Amplify domains
-data "aws_amplify_app" "client" {
-  name = "${var.project}-client-${var.environment}"
-}
-
-data "aws_amplify_app" "admin" {
-  name = "${var.project}-admin-${var.environment}"
-}
-
 # Local variables for domains
 locals {
-  client_domain = data.aws_amplify_app.client.default_domain
-  admin_domain = data.aws_amplify_app.admin.default_domain
-  graphql_endpoint = "https://${data.aws_amplify_app.client.default_domain}/graphql"
+  client_domain = "${var.project}-client-${var.environment}.amplifyapp.com"
+  admin_domain = "${var.project}-admin-${var.environment}.amplifyapp.com"
+  graphql_endpoint = "https://${local.client_domain}/graphql"
 }
 
 # Use common module for standard variables

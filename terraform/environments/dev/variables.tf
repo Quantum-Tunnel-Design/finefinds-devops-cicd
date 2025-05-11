@@ -269,3 +269,13 @@ variable "sonarqube_db_password" {
   sensitive   = true
   default     = null
 }
+
+variable "tags" {
+  description = "Common tags for all resources"
+  type        = map(string)
+  default     = {
+    Project     = "finefinds"
+    Environment = "dev"
+    ManagedBy   = "Terraform"
+  }
+}
