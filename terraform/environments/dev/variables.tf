@@ -43,7 +43,6 @@ variable "image_tag" {
 variable "db_username" {
   description = "Database username"
   type        = string
-  sensitive   = true
 }
 
 variable "db_password" {
@@ -72,7 +71,6 @@ variable "mongodb_admin_username" {
 variable "mongodb_username" {
   description = "MongoDB username"
   type        = string
-  sensitive   = true
 }
 
 variable "mongodb_password" {
@@ -82,18 +80,18 @@ variable "mongodb_password" {
 }
 
 variable "source_token" {
-  description = "GitHub personal access token"
+  description = "Token for source control"
   type        = string
   sensitive   = true
 }
 
 variable "client_repository" {
-  description = "GitHub repository URL for the client web app"
+  description = "URL of the client repository"
   type        = string
 }
 
 variable "admin_repository" {
-  description = "GitHub repository URL for the admin dashboard"
+  description = "URL of the admin repository"
   type        = string
 }
 
@@ -194,9 +192,8 @@ variable "subnet_ids" {
 }
 
 variable "certificate_arn" {
-  description = "ARN of the SSL certificate for the ALB"
+  description = "ARN of the SSL certificate"
   type        = string
-  default     = null
 }
 
 variable "vpc_cidr" {
@@ -212,7 +209,7 @@ variable "availability_zones" {
 }
 
 variable "repository_url" {
-  description = "URL of the GitHub repository"
+  description = "URL of the repository"
   type        = string
 }
 
@@ -278,4 +275,31 @@ variable "tags" {
     Environment = "dev"
     ManagedBy   = "Terraform"
   }
+}
+
+variable "client_domain" {
+  description = "Client application domain"
+  type        = string
+  default     = "finefinds-client-dev.amplifyapp.com"
+}
+
+variable "admin_domain" {
+  description = "Admin application domain"
+  type        = string
+  default     = "finefinds-admin-dev.amplifyapp.com"
+}
+
+variable "db_password_arn" {
+  description = "ARN of the database password in Secrets Manager"
+  type        = string
+}
+
+variable "mongodb_password_arn" {
+  description = "ARN of the MongoDB password in Secrets Manager"
+  type        = string
+}
+
+variable "sonar_token_arn" {
+  description = "ARN of the SonarQube token in Secrets Manager"
+  type        = string
 }

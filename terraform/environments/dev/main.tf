@@ -35,7 +35,7 @@ module "vpc" {
   availability_zones = ["${var.aws_region}a", "${var.aws_region}b"]
   public_subnet_cidrs  = ["10.1.101.0/24", "10.1.102.0/24"]
   private_subnet_cidrs = ["10.1.1.0/24", "10.1.2.0/24"]
-  tags = module.common.common_tags
+  tags        = var.tags
 }
 
 # Secrets Module
@@ -58,21 +58,37 @@ module "security" {
   
   project     = var.project
   environment = var.environment
-  name_prefix = module.common.name_prefix
-  tags        = module.common.common_tags
+  name_prefix = "${var.project}-${var.environment}"
+  tags        = var.tags
   
-  client_domain     = local.client_domain
-  admin_domain      = local.admin_domain
-  db_username       = var.db_username
-  db_password_arn   = module.secrets.db_password_arn
-  mongodb_username  = var.mongodb_username
-  mongodb_password_arn = module.secrets.mongodb_password_arn
-  sonar_token_arn   = module.secrets.sonarqube_password_arn
-  
-  # Required arguments
-  certificate_arn = module.alb.certificate_arn
-  logout_urls     = ["https://${local.client_domain}/logout", "https://${local.admin_domain}/logout"]
-  callback_urls   = ["https://${local.client_domain}/callback", "https://${local.admin_domain}/callback"]
+  vpc_id = module.vpc.vpc_id
+
+  client_domain = var.client_domain
+  admin_domain  = var.admin_domain
+
+  db_username = var.db_username
+  db_password_arn = var.db_password_arn
+
+  mongodb_username = var.mongodb_username
+  mongodb_password_arn = var.mongodb_password_arn
+
+  sonar_token_arn = var.sonar_token_arn
+
+  certificate_arn = var.certificate_arn
+
+  callback_urls = [
+    "https://${var.client_domain}/callback",
+    "https://${var.admin_domain}/callback"
+  ]
+
+  logout_urls = [
+    "https://${var.client_domain}",
+    "https://${var.admin_domain}"
+  ]
+
+  enable_encryption = true
+  enable_backup     = true
+  enable_monitoring = true
 }
 
 # Storage Module
@@ -141,20 +157,20 @@ module "alb" {
   environment = var.environment
   vpc_id      = module.vpc.vpc_id
   subnet_ids  = module.vpc.public_subnet_ids
-  name        = local.alb_name
-  security_group_name = local.alb_sg_name
-  vpc_cidr_blocks = [local.vpc_cidr]
-  container_port = local.container_port
-  certificate_arn = local.certificate_arn
+  name        = "${var.project}-${var.environment}-alb"
+  security_group_name = "${var.project}-${var.environment}-alb-sg"
+  vpc_cidr_blocks = [var.vpc_cidr]
+  container_port = var.container_port
+  certificate_arn = var.certificate_arn
 
-  health_check_path     = local.health_check_path
-  health_check_port     = local.health_check_port
-  health_check_interval = local.health_check_interval
-  health_check_timeout  = local.health_check_timeout
-  health_check_healthy_threshold   = local.health_check_healthy_threshold
-  health_check_unhealthy_threshold = local.health_check_unhealthy_threshold
+  health_check_path     = "/health"
+  health_check_port     = var.container_port
+  health_check_interval = 30
+  health_check_timeout  = 5
+  health_check_healthy_threshold   = 2
+  health_check_unhealthy_threshold = 3
 
-  tags = module.common.common_tags
+  tags = var.tags
 }
 
 # ECR Module

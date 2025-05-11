@@ -9,13 +9,13 @@ output "ecs_task_role_arn" {
 }
 
 output "cognito_user_pool_id" {
-  description = "ID of the Cognito user pool"
-  value       = aws_cognito_user_pool.main.id
+  description = "ID of the Cognito User Pool"
+  value       = aws_cognito_user_pool.client.id
 }
 
 output "cognito_user_pool_client_id" {
-  description = "ID of the Cognito user pool client"
-  value       = aws_cognito_user_pool_client.main.id
+  description = "ID of the Cognito User Pool Client"
+  value       = aws_cognito_user_pool_client.client.id
 }
 
 output "cognito_user_pool_client_secret" {
@@ -25,7 +25,7 @@ output "cognito_user_pool_client_secret" {
 }
 
 output "cognito_domain" {
-  description = "Domain of the Cognito user pool"
+  description = "Domain of the Cognito User Pool"
   value       = aws_cognito_user_pool_domain.main.domain
 }
 
@@ -112,4 +112,19 @@ output "mongodb_security_group_id" {
 output "sonarqube_security_group_id" {
   description = "ID of the SonarQube security group"
   value       = aws_security_group.sonarqube.id
+}
+
+output "vpc_id" {
+  description = "ID of the VPC"
+  value       = var.vpc_id
+}
+
+output "security_group_id" {
+  description = "ID of the security group"
+  value       = aws_security_group.db.id
+}
+
+output "cloudwatch_dashboard_arn" {
+  description = "ARN of the CloudWatch dashboard"
+  value       = var.enable_monitoring ? aws_cloudwatch_dashboard.main[0].dashboard_arn : null
 } 

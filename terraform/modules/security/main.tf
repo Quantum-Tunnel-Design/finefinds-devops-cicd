@@ -189,7 +189,7 @@ locals {
 # Cognito User Pool Client
 resource "aws_cognito_user_pool_client" "main" {
   name                         = "${var.name_prefix}-client"
-  user_pool_id                 = aws_cognito_user_pool.main.id
+  user_pool_id                 = aws_cognito_user_pool.client.id
   generate_secret              = true
   refresh_token_validity       = 30
   prevent_user_existence_errors = "ENABLED"
@@ -214,7 +214,7 @@ resource "aws_cognito_user_pool_client" "main" {
 # Cognito User Pool Domain
 resource "aws_cognito_user_pool_domain" "main" {
   domain       = "${var.name_prefix}-auth"
-  user_pool_id = aws_cognito_user_pool.main.id
+  user_pool_id = aws_cognito_user_pool.client.id
   certificate_arn = var.certificate_arn
 }
 
