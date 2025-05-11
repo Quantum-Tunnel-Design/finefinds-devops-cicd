@@ -8,6 +8,11 @@ locals {
     Service     = "FineFinds"
   }
 
+  # Domain and Endpoint Configurations (for Amplify, Cognito callbacks, etc.)
+  client_domain    = "${var.project}-client-${var.environment}.amplifyapp.com"
+  admin_domain     = "${var.project}-admin-${var.environment}.amplifyapp.com"
+  graphql_endpoint = "https://${local.client_domain}/graphql"
+
   # Environment-specific configurations
   env_config = {
     dev = {

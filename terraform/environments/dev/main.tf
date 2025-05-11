@@ -41,7 +41,6 @@ module "secrets" {
   
   container_image = var.container_image
   db_password = var.db_password
-  mongodb_password = var.mongodb_password
 }
 
 # Security Module
