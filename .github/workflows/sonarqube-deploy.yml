@@ -1,4 +1,4 @@
-name: Terraform Deploy
+name: SonarQube Deploy
 
 on:
   push:
@@ -8,25 +8,10 @@ on:
       - qa
       - sandbox
       - staging
-    paths:
-      - 'terraform/**'
-      - '.github/workflows/terraform-deploy.yml'
-      - 'scripts/**'
-  pull_request:
-    branches:
-      - main
-      - dev
-      - qa
-      - sandbox
-      - staging
-    paths:
-      - 'terraform/**'
-      - '.github/workflows/terraform-deploy.yml'
-      - 'scripts/**'
 
 jobs:
   terraform:
-    name: 'Terraform'
+    name: 'SonarQube'
     runs-on: ubuntu-latest
     env:
       TF_ENV: >-
