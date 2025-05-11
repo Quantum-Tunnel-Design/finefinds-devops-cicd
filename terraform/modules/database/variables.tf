@@ -31,14 +31,19 @@ variable "private_subnet_ids" {
 }
 
 variable "ecs_security_group_id" {
-  description = "Security group ID of the ECS tasks"
+  description = "Security group ID for ECS tasks"
+  type        = string
+}
+
+variable "kms_key_id" {
+  description = "KMS key ID for encryption"
   type        = string
 }
 
 variable "instance_class" {
   description = "RDS instance class"
   type        = string
-  default     = "db.t3.micro"
+  default     = "db.t3.small"
 }
 
 variable "allocated_storage" {
@@ -47,23 +52,31 @@ variable "allocated_storage" {
   default     = 20
 }
 
-variable "kms_key_id" {
-  description = "KMS key ID for encryption"
-  type        = string
-}
-
 variable "db_name" {
   description = "Name of the database"
   type        = string
 }
 
-variable "db_username" {
-  description = "Username for the database"
-  type        = string
+variable "backup_retention_period" {
+  description = "Number of days to retain backups"
+  type        = number
+  default     = 7
 }
 
-variable "db_password" {
-  description = "Password for the database"
-  type        = string
-  sensitive   = true
+variable "multi_az" {
+  description = "Enable multi-AZ deployment"
+  type        = bool
+  default     = false
+}
+
+variable "skip_final_snapshot" {
+  description = "Skip final snapshot when destroying"
+  type        = bool
+  default     = false
+}
+
+variable "deletion_protection" {
+  description = "Enable deletion protection"
+  type        = bool
+  default     = true
 } 

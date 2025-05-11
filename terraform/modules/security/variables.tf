@@ -61,4 +61,22 @@ variable "sonar_token" {
   description = "SonarQube token"
   type        = string
   sensitive   = true
+}
+
+variable "enable_encryption" {
+  description = "Enable KMS encryption"
+  type        = bool
+  default     = true
+}
+
+variable "enable_backup" {
+  description = "Enable AWS Backup"
+  type        = bool
+  default     = true
+}
+
+variable "enable_monitoring" {
+  description = "Enable CloudWatch monitoring"
+  type        = bool
+  default     = true
 } 

@@ -14,7 +14,7 @@ data "aws_acm_certificate" "main" {
 
 # Local variables
 locals {
-  name_prefix = "${var.project}-${var.environment}"
+  name_prefix = "finefinds-${var.environment}"
   certificate_arn = data.aws_acm_certificate.main.arn != null ? data.aws_acm_certificate.main.arn : "arn:aws:acm:us-east-1:${data.aws_caller_identity.current.account_id}:certificate/${var.environment}-finefinds-com"
 }
 
@@ -123,16 +123,24 @@ module "monitoring" {
 
   project     = var.project
   environment = var.environment
-  aws_region  = var.aws_region
-  alert_email = var.alert_email
-  
-  name_prefix       = local.name_prefix
-  ecs_cluster_name  = module.ecs.cluster_name
-  ecs_service_name  = module.ecs.service_name
-  rds_instance_id   = module.rds.db_instance_id
-  alb_arn_suffix    = module.alb.alb_arn_suffix
+  name_prefix = local.name_prefix
+  tags        = var.tags
 
-  tags = local.common_tags
+  vpc_id             = module.networking.vpc_id
+  private_subnet_ids = module.networking.private_subnet_ids
+  public_subnet_ids  = module.networking.public_subnet_ids
+
+  alb_arn            = module.compute.alb_arn
+  alb_dns_name       = module.compute.alb_dns_name
+  ecs_cluster_arn    = module.compute.cluster_arn
+  ecs_service_arn    = module.compute.service_arn
+  rds_instance_id    = module.database.db_instance_id
+  rds_endpoint       = module.database.db_endpoint
+
+  enable_cloudwatch = var.monitoring_config.enable_cloudwatch
+  enable_xray       = var.monitoring_config.enable_xray
+  enable_cloudtrail = var.monitoring_config.enable_cloudtrail
+  log_retention_days = var.monitoring_config.log_retention_days
 }
 
 # SonarQube Module
@@ -169,129 +177,112 @@ module "amplify" {
 # Outputs
 output "vpc_id" {
   description = "ID of the VPC"
-  value       = module.vpc.vpc_id
+  value       = module.networking.vpc_id
 }
 
-output "ecs_cluster_name" {
+output "cluster_name" {
   description = "Name of the ECS cluster"
-  value       = module.ecs.cluster_name
+  value       = module.compute.cluster_name
 }
 
-output "ecs_service_name" {
+output "service_name" {
   description = "Name of the ECS service"
-  value       = module.ecs.service_name
+  value       = module.compute.service_name
 }
 
-output "rds_endpoint" {
+output "db_endpoint" {
   description = "Endpoint of the RDS instance"
-  value       = module.rds.db_instance_endpoint
+  value       = module.database.db_endpoint
 }
 
-output "cognito_user_pool_id" {
-  description = "ID of the Cognito User Pool"
-  value       = module.cognito.user_pool_id
+output "alb_dns_name" {
+  description = "DNS name of the ALB"
+  value       = module.compute.alb_dns_name
 }
 
-output "cognito_client_id" {
-  description = "ID of the Cognito User Pool Client"
-  value       = module.cognito.client_id
+output "log_group_name" {
+  description = "Name of the CloudWatch log group"
+  value       = module.compute.log_group_name
 }
 
-output "s3_bucket_name" {
-  description = "Name of the S3 bucket"
-  value       = module.s3.bucket_name
-}
-
-output "mongodb_endpoint" {
-  description = "Endpoint of the MongoDB instance"
-  value       = module.mongodb.endpoint
-}
-
-output "cloudwatch_dashboard" {
-  description = "Name of the CloudWatch dashboard"
-  value       = module.monitoring.dashboard_name
-}
-
+# Networking Module
 module "networking" {
-  source              = "../../modules/networking"
-  name_prefix         = local.name_prefix
-  vpc_cidr            = var.vpc_cidr
-  availability_zones  = var.availability_zones
-  tags                = local.common_tags
+  source = "../../modules/networking"
+
+  project     = var.project
+  environment = var.environment
+  name_prefix = local.name_prefix
+  tags        = var.tags
+
+  vpc_config = var.vpc_config
 }
 
-# Update security module to use local.certificate_arn
-module "security" {
-  source            = "../../modules/security"
-  name_prefix       = "${var.project}-${var.environment}"
-  tags              = local.common_tags
-  callback_urls     = ["https://${var.environment}.finefinds.com/callback"]
-  logout_urls       = ["https://${var.environment}.finefinds.com/logout"]
-  certificate_arn   = local.certificate_arn
-  db_username       = var.db_username
-  db_password       = var.db_password
-  mongodb_username  = var.mongodb_username
-  mongodb_password  = var.mongodb_password
-  sonar_token       = var.sonar_token
-  depends_on        = [module.secrets]
+# Database Module
+module "database" {
+  source = "../../modules/database"
+
+  project     = var.project
+  environment = var.environment
+  name_prefix = local.name_prefix
+  tags        = var.tags
+
+  vpc_id             = module.networking.vpc_id
+  private_subnet_ids = module.networking.private_subnet_ids
+  ecs_security_group_id = module.ecs.security_group_id
+  kms_key_id         = module.security.kms_key_id
+
+  instance_class         = var.database_config.instance_class
+  allocated_storage     = var.database_config.allocated_storage
+  db_name              = var.database_config.db_name
+  backup_retention_period = var.database_config.backup_retention_period
+  multi_az             = var.database_config.multi_az
+  skip_final_snapshot  = var.database_config.skip_final_snapshot
+  deletion_protection  = var.database_config.deletion_protection
 }
 
-module "storage" {
-  source                = "../../modules/storage"
-  name_prefix           = "${var.project}-${var.environment}"
-  environment           = var.environment
-  vpc_id                = module.vpc.vpc_id
-  private_subnet_ids    = module.vpc.private_subnet_ids
-  ecs_security_group_id = module.compute.ecs_security_group_id
-  db_instance_class     = "db.t3.small"
-  db_name               = var.db_name
-  db_username           = var.db_username
-  db_password           = var.db_password
-  use_existing_cluster  = false
-  mongodb_ami           = var.mongodb_ami
-  mongodb_instance_type = "t3.small"
-  allocated_storage     = 50
-  skip_final_snapshot   = true
-  tags                  = local.common_tags
-  depends_on            = [module.vpc, module.security]
-}
-
+# Compute Module
 module "compute" {
-  source                   = "../../modules/compute"
-  name_prefix              = "${var.project}-${var.environment}"
-  environment              = var.environment
-  aws_region               = var.aws_region
-  vpc_id                   = module.vpc.vpc_id
-  public_subnet_ids        = module.vpc.public_subnet_ids
-  private_subnet_ids       = module.vpc.private_subnet_ids
-  certificate_arn          = var.certificate_arn
-  task_cpu                 = 512
-  task_memory              = 1024
-  task_execution_role_arn  = module.security.ecs_task_execution_role_arn
-  task_role_arn            = module.security.ecs_task_role_arn
-  container_image          = module.cicd.ecr_repository_url
-  container_port           = var.container_port
-  container_environment    = []
-  service_desired_count    = 2
-  rds_secret_arn           = module.security.rds_secret_arn
-  mongodb_secret_arn       = module.security.mongodb_secret_arn
-  tags                     = local.common_tags
-  depends_on               = [module.vpc, module.security, module.storage]
+  source = "../../modules/compute"
+
+  project     = var.project
+  environment = var.environment
+  name_prefix = local.name_prefix
+  tags        = var.tags
+
+  vpc_id             = module.networking.vpc_id
+  private_subnet_ids = module.networking.private_subnet_ids
+  public_subnet_ids  = module.networking.public_subnet_ids
+
+  task_cpu    = var.compute_config.task_cpu
+  task_memory = var.compute_config.task_memory
+
+  service_desired_count = var.compute_config.service_desired_count
+  container_image      = var.compute_config.container_image
+  container_port       = var.compute_config.container_port
+
+  certificate_arn    = var.certificate_arn
+  rds_secret_arn     = module.database.rds_secret_arn
+  mongodb_secret_arn = var.mongodb_secret_arn
+
+  health_check_path               = var.compute_config.health_check_path
+  health_check_interval          = var.compute_config.health_check_interval
+  health_check_timeout           = var.compute_config.health_check_timeout
+  health_check_healthy_threshold = var.compute_config.health_check_healthy_threshold
+  health_check_unhealthy_threshold = var.compute_config.health_check_unhealthy_threshold
 }
 
-module "cicd" {
-  source            = "../../modules/cicd"
-  name_prefix       = "${var.project}-${var.environment}"
-  environment       = var.environment
-  repository_url    = var.repository_url
-  source_token      = var.source_token
-  api_url           = module.compute.alb_dns_name
-  cognito_domain    = module.security.cognito_domain
-  cognito_client_id = module.security.cognito_user_pool_client_id
-  cognito_redirect_uri = "https://${var.environment}.finefinds.com/callback"
-  domain_name       = "${var.environment}.finefinds.com"
-  tags              = local.common_tags
-  depends_on        = [module.compute]
+# Security Module
+module "security" {
+  source = "../../modules/security"
+
+  project     = var.project
+  environment = var.environment
+  name_prefix = local.name_prefix
+  tags        = var.tags
+
+  enable_encryption = var.security_config.enable_encryption
+  enable_backup     = var.security_config.enable_backup
+  enable_monitoring = var.security_config.enable_monitoring
 }
 
 # Variables

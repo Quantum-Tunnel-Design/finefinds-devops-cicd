@@ -137,4 +137,193 @@ resource "aws_secretsmanager_secret" "sonarqube" {
 resource "aws_secretsmanager_secret_version" "sonarqube" {
   secret_id = aws_secretsmanager_secret.sonarqube.id
   secret_string = var.sonar_token
-} 
+}
+
+# KMS Key
+resource "aws_kms_key" "main" {
+  count                   = var.enable_encryption ? 1 : 0
+  description             = "KMS key for ${var.name_prefix}"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
+
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.name_prefix}-kms-key"
+    }
+  )
+}
+
+resource "aws_kms_alias" "main" {
+  count         = var.enable_encryption ? 1 : 0
+  name          = "alias/${var.name_prefix}-kms-key"
+  target_key_id = aws_kms_key.main[0].key_id
+}
+
+# AWS Backup Vault
+resource "aws_backup_vault" "main" {
+  count = var.enable_backup ? 1 : 0
+  name  = "${var.name_prefix}-backup-vault"
+
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.name_prefix}-backup-vault"
+    }
+  )
+}
+
+# AWS Backup Plan
+resource "aws_backup_plan" "main" {
+  count = var.enable_backup ? 1 : 0
+  name  = "${var.name_prefix}-backup-plan"
+
+  rule {
+    rule_name         = "daily_backups"
+    target_vault_name = aws_backup_vault.main[0].name
+    schedule          = "cron(0 5 ? * * *)"
+
+    lifecycle {
+      delete_after = 30
+    }
+  }
+
+  rule {
+    rule_name         = "weekly_backups"
+    target_vault_name = aws_backup_vault.main[0].name
+    schedule          = "cron(0 5 ? * 1 *)"
+
+    lifecycle {
+      delete_after = 90
+    }
+  }
+
+  rule {
+    rule_name         = "monthly_backups"
+    target_vault_name = aws_backup_vault.main[0].name
+    schedule          = "cron(0 5 1 * ? *)"
+
+    lifecycle {
+      delete_after = 365
+    }
+  }
+
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.name_prefix}-backup-plan"
+    }
+  )
+}
+
+# AWS Backup IAM Role
+resource "aws_iam_role" "backup" {
+  count = var.enable_backup ? 1 : 0
+  name  = "${var.name_prefix}-backup-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "backup.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.name_prefix}-backup-role"
+    }
+  )
+}
+
+resource "aws_iam_role_policy_attachment" "backup" {
+  count      = var.enable_backup ? 1 : 0
+  role       = aws_iam_role.backup[0].name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForBackup"
+}
+
+# CloudWatch Alarm Role
+resource "aws_iam_role" "cloudwatch" {
+  count = var.enable_monitoring ? 1 : 0
+  name  = "${var.name_prefix}-cloudwatch-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "monitoring.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.name_prefix}-cloudwatch-role"
+    }
+  )
+}
+
+resource "aws_iam_role_policy_attachment" "cloudwatch" {
+  count      = var.enable_monitoring ? 1 : 0
+  role       = aws_iam_role.cloudwatch[0].name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonCloudWatchAgentServerPolicy"
+}
+
+# CloudWatch Dashboard
+resource "aws_cloudwatch_dashboard" "main" {
+  count          = var.enable_monitoring ? 1 : 0
+  dashboard_name = "${var.name_prefix}-dashboard"
+
+  dashboard_body = jsonencode({
+    widgets = [
+      {
+        type   = "metric"
+        x      = 0
+        y      = 0
+        width  = 12
+        height = 6
+        properties = {
+          metrics = [
+            ["AWS/ECS", "CPUUtilization", "ServiceName", "${var.name_prefix}-service", "ClusterName", "${var.name_prefix}-cluster"],
+            ["AWS/ECS", "MemoryUtilization", "ServiceName", "${var.name_prefix}-service", "ClusterName", "${var.name_prefix}-cluster"]
+          ]
+          period = 300
+          stat   = "Average"
+          region = data.aws_region.current.name
+          title  = "ECS Service Metrics"
+        }
+      },
+      {
+        type   = "metric"
+        x      = 12
+        y      = 0
+        width  = 12
+        height = 6
+        properties = {
+          metrics = [
+            ["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "${var.name_prefix}-db"],
+            ["AWS/RDS", "FreeableMemory", "DBInstanceIdentifier", "${var.name_prefix}-db"]
+          ]
+          period = 300
+          stat   = "Average"
+          region = data.aws_region.current.name
+          title  = "RDS Metrics"
+        }
+      }
+    ]
+  })
+}
+
+# Get current region
+data "aws_region" "current" {} 

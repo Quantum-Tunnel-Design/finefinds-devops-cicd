@@ -1,8 +1,8 @@
 # VPC
 resource "aws_vpc" "main" {
-  cidr_block           = var.vpc_config.cidr_block
-  enable_dns_hostnames = true
+  cidr_block           = var.vpc_config.cidr
   enable_dns_support   = true
+  enable_dns_hostnames = true
 
   tags = merge(
     var.tags,
@@ -10,10 +10,6 @@ resource "aws_vpc" "main" {
       Name = "${var.name_prefix}-vpc"
     }
   )
-
-  lifecycle {
-    create_before_destroy = true
-  }
 }
 
 # Public Subnets
@@ -21,7 +17,7 @@ resource "aws_subnet" "public" {
   count             = length(var.vpc_config.public_subnets)
   vpc_id            = aws_vpc.main.id
   cidr_block        = var.vpc_config.public_subnets[count.index]
-  availability_zone = var.vpc_config.availability_zones[count.index]
+  availability_zone = data.aws_availability_zones.available.names[count.index]
 
   map_public_ip_on_launch = true
 
@@ -32,10 +28,6 @@ resource "aws_subnet" "public" {
       Tier = "Public"
     }
   )
-
-  lifecycle {
-    create_before_destroy = true
-  }
 }
 
 # Private Subnets
@@ -43,7 +35,7 @@ resource "aws_subnet" "private" {
   count             = length(var.vpc_config.private_subnets)
   vpc_id            = aws_vpc.main.id
   cidr_block        = var.vpc_config.private_subnets[count.index]
-  availability_zone = var.vpc_config.availability_zones[count.index]
+  availability_zone = data.aws_availability_zones.available.names[count.index]
 
   tags = merge(
     var.tags,
@@ -52,10 +44,6 @@ resource "aws_subnet" "private" {
       Tier = "Private"
     }
   )
-
-  lifecycle {
-    create_before_destroy = true
-  }
 }
 
 # Database Subnets
@@ -63,7 +51,7 @@ resource "aws_subnet" "database" {
   count             = length(var.vpc_config.database_subnets)
   vpc_id            = aws_vpc.main.id
   cidr_block        = var.vpc_config.database_subnets[count.index]
-  availability_zone = var.vpc_config.availability_zones[count.index]
+  availability_zone = data.aws_availability_zones.available.names[count.index]
 
   tags = merge(
     var.tags,
@@ -72,10 +60,6 @@ resource "aws_subnet" "database" {
       Tier = "Database"
     }
   )
-
-  lifecycle {
-    create_before_destroy = true
-  }
 }
 
 # Internet Gateway
@@ -88,15 +72,11 @@ resource "aws_internet_gateway" "main" {
       Name = "${var.name_prefix}-igw"
     }
   )
-
-  lifecycle {
-    create_before_destroy = true
-  }
 }
 
 # Elastic IPs for NAT Gateways
 resource "aws_eip" "nat" {
-  count  = var.vpc_config.single_nat_gateway ? 1 : length(var.vpc_config.private_subnets)
+  count  = length(var.vpc_config.private_subnets)
   domain = "vpc"
 
   tags = merge(
@@ -105,15 +85,11 @@ resource "aws_eip" "nat" {
       Name = "${var.name_prefix}-nat-eip-${count.index + 1}"
     }
   )
-
-  lifecycle {
-    create_before_destroy = true
-  }
 }
 
 # NAT Gateways
 resource "aws_nat_gateway" "main" {
-  count         = var.vpc_config.enable_nat_gateway ? (var.vpc_config.single_nat_gateway ? 1 : length(var.vpc_config.private_subnets)) : 0
+  count         = length(var.vpc_config.private_subnets)
   allocation_id = aws_eip.nat[count.index].id
   subnet_id     = aws_subnet.public[count.index].id
 
@@ -125,10 +101,6 @@ resource "aws_nat_gateway" "main" {
   )
 
   depends_on = [aws_internet_gateway.main]
-
-  lifecycle {
-    create_before_destroy = true
-  }
 }
 
 # Public Route Table
@@ -146,23 +118,16 @@ resource "aws_route_table" "public" {
       Name = "${var.name_prefix}-public-rt"
     }
   )
-
-  lifecycle {
-    create_before_destroy = true
-  }
 }
 
 # Private Route Tables
 resource "aws_route_table" "private" {
-  count  = var.vpc_config.enable_nat_gateway ? (var.vpc_config.single_nat_gateway ? 1 : length(var.vpc_config.private_subnets)) : 1
+  count  = length(var.vpc_config.private_subnets)
   vpc_id = aws_vpc.main.id
 
-  dynamic "route" {
-    for_each = var.vpc_config.enable_nat_gateway ? [1] : []
-    content {
-      cidr_block     = "0.0.0.0/0"
-      nat_gateway_id = var.vpc_config.single_nat_gateway ? aws_nat_gateway.main[0].id : aws_nat_gateway.main[count.index].id
-    }
+  route {
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.main[count.index].id
   }
 
   tags = merge(
@@ -171,10 +136,6 @@ resource "aws_route_table" "private" {
       Name = "${var.name_prefix}-private-rt-${count.index + 1}"
     }
   )
-
-  lifecycle {
-    create_before_destroy = true
-  }
 }
 
 # Database Route Table
@@ -187,10 +148,6 @@ resource "aws_route_table" "database" {
       Name = "${var.name_prefix}-database-rt"
     }
   )
-
-  lifecycle {
-    create_before_destroy = true
-  }
 }
 
 # Public Route Table Associations
@@ -204,7 +161,7 @@ resource "aws_route_table_association" "public" {
 resource "aws_route_table_association" "private" {
   count          = length(var.vpc_config.private_subnets)
   subnet_id      = aws_subnet.private[count.index].id
-  route_table_id = var.vpc_config.single_nat_gateway ? aws_route_table.private[0].id : aws_route_table.private[count.index].id
+  route_table_id = aws_route_table.private[count.index].id
 }
 
 # Database Route Table Associations
@@ -216,10 +173,8 @@ resource "aws_route_table_association" "database" {
 
 # VPC Flow Logs
 resource "aws_flow_log" "main" {
-  count = var.vpc_config.enable_flow_log ? 1 : 0
-
-  iam_role_arn    = aws_iam_role.flow_log[0].arn
-  log_destination = aws_cloudwatch_log_group.flow_log[0].arn
+  iam_role_arn    = aws_iam_role.flow_log.arn
+  log_destination = aws_cloudwatch_log_group.flow_log.arn
   traffic_type    = "ALL"
   vpc_id          = aws_vpc.main.id
 
@@ -228,17 +183,14 @@ resource "aws_flow_log" "main" {
 
 # CloudWatch Log Group for VPC Flow Logs
 resource "aws_cloudwatch_log_group" "flow_log" {
-  count             = var.vpc_config.enable_flow_log ? 1 : 0
   name              = "/aws/vpc/${var.name_prefix}-flow-log"
-  retention_in_days = var.vpc_config.flow_log_retention
+  retention_in_days = 30
 
   tags = var.tags
 }
 
 # IAM Role for VPC Flow Logs
 resource "aws_iam_role" "flow_log" {
-  count = var.vpc_config.enable_flow_log ? 1 : 0
-
   name = "${var.name_prefix}-flow-log-role"
 
   assume_role_policy = jsonencode({
@@ -259,10 +211,8 @@ resource "aws_iam_role" "flow_log" {
 
 # IAM Policy for VPC Flow Logs
 resource "aws_iam_role_policy" "flow_log" {
-  count = var.vpc_config.enable_flow_log ? 1 : 0
-
   name = "${var.name_prefix}-flow-log-policy"
-  role = aws_iam_role.flow_log[0].id
+  role = aws_iam_role.flow_log.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -280,4 +230,9 @@ resource "aws_iam_role_policy" "flow_log" {
       }
     ]
   })
+}
+
+# Data source for availability zones
+data "aws_availability_zones" "available" {
+  state = "available"
 } 

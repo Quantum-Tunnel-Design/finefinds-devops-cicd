@@ -11,11 +11,19 @@ variable "project" {
   description = "Project name"
   type        = string
   default     = "finefinds"
+  validation {
+    condition     = can(regex("^[a-z0-9-]+$", var.project))
+    error_message = "The project name must contain only lowercase letters, numbers, and hyphens."
+  }
 }
 
 variable "environment" {
   description = "Environment name"
   type        = string
+  validation {
+    condition     = contains(["dev", "staging", "prod", "qa", "sandbox"], var.environment)
+    error_message = "The environment must be one of: dev, staging, prod, qa, sandbox."
+  }
 }
 
 variable "aws_region" {
@@ -25,14 +33,22 @@ variable "aws_region" {
 }
 
 variable "log_retention_days" {
-  description = "Number of days to retain CloudWatch logs"
+  description = "Number of days to retain logs"
   type        = number
   default     = 30
+  validation {
+    condition     = var.log_retention_days >= 1 && var.log_retention_days <= 3653
+    error_message = "Log retention days must be between 1 and 3653."
+  }
 }
 
 variable "alert_email" {
   description = "Email address for CloudWatch alerts"
   type        = string
+  validation {
+    condition     = can(regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", var.alert_email))
+    error_message = "The alert email must be a valid email address."
+  }
 }
 
 variable "evaluation_periods" {
@@ -139,4 +155,94 @@ variable "alarm_thresholds" {
     error_rate        = 5
     latency           = 1000
   }
+}
+
+variable "vpc_id" {
+  description = "ID of the VPC"
+  type        = string
+  validation {
+    condition     = can(regex("^vpc-[a-z0-9]+$", var.vpc_id))
+    error_message = "The VPC ID must be a valid AWS VPC ID."
+  }
+}
+
+variable "private_subnet_ids" {
+  description = "List of private subnet IDs"
+  type        = list(string)
+  validation {
+    condition     = alltrue([for id in var.private_subnet_ids : can(regex("^subnet-[a-z0-9]+$", id))])
+    error_message = "All subnet IDs must be valid AWS subnet IDs."
+  }
+}
+
+variable "public_subnet_ids" {
+  description = "List of public subnet IDs"
+  type        = list(string)
+  validation {
+    condition     = alltrue([for id in var.public_subnet_ids : can(regex("^subnet-[a-z0-9]+$", id))])
+    error_message = "All subnet IDs must be valid AWS subnet IDs."
+  }
+}
+
+variable "alb_arn" {
+  description = "ARN of the ALB"
+  type        = string
+  validation {
+    condition     = can(regex("^arn:aws:elasticloadbalancing:", var.alb_arn))
+    error_message = "The ALB ARN must be a valid AWS ALB ARN."
+  }
+}
+
+variable "alb_dns_name" {
+  description = "DNS name of the ALB"
+  type        = string
+  validation {
+    condition     = can(regex("^[a-zA-Z0-9.-]+$", var.alb_dns_name))
+    error_message = "The ALB DNS name must be a valid DNS name."
+  }
+}
+
+variable "ecs_cluster_arn" {
+  description = "ARN of the ECS cluster"
+  type        = string
+  validation {
+    condition     = can(regex("^arn:aws:ecs:", var.ecs_cluster_arn))
+    error_message = "The ECS cluster ARN must be a valid AWS ECS cluster ARN."
+  }
+}
+
+variable "ecs_service_arn" {
+  description = "ARN of the ECS service"
+  type        = string
+  validation {
+    condition     = can(regex("^arn:aws:ecs:", var.ecs_service_arn))
+    error_message = "The ECS service ARN must be a valid AWS ECS service ARN."
+  }
+}
+
+variable "rds_endpoint" {
+  description = "Endpoint of the RDS instance"
+  type        = string
+  validation {
+    condition     = can(regex("^[a-zA-Z0-9.-]+$", var.rds_endpoint))
+    error_message = "The RDS endpoint must be a valid DNS name."
+  }
+}
+
+variable "enable_cloudwatch" {
+  description = "Enable CloudWatch monitoring"
+  type        = bool
+  default     = true
+}
+
+variable "enable_xray" {
+  description = "Enable X-Ray tracing"
+  type        = bool
+  default     = true
+}
+
+variable "enable_cloudtrail" {
+  description = "Enable CloudTrail logging"
+  type        = bool
+  default     = true
 } 

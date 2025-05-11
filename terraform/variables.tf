@@ -1,3 +1,9 @@
+variable "aws_region" {
+  description = "AWS region"
+  type        = string
+  default     = "us-east-1"
+}
+
 variable "project" {
   description = "Project name"
   type        = string
@@ -20,41 +26,34 @@ variable "tags" {
   default     = {}
 }
 
-variable "vpc_id" {
-  description = "ID of the VPC"
-  type        = string
-}
-
-variable "private_subnet_ids" {
-  description = "List of private subnet IDs"
-  type        = list(string)
-}
-
-variable "public_subnet_ids" {
-  description = "List of public subnet IDs"
-  type        = list(string)
-}
-
 variable "task_cpu" {
   description = "CPU units for the ECS task"
   type        = number
   default     = 256
+  validation {
+    condition     = contains([256, 512, 1024, 2048, 4096], var.task_cpu)
+    error_message = "The task CPU must be one of: 256, 512, 1024, 2048, 4096."
+  }
 }
 
 variable "task_memory" {
   description = "Memory for the ECS task in MB"
   type        = number
   default     = 512
+  validation {
+    condition     = contains([512, 1024, 2048, 4096, 8192], var.task_memory)
+    error_message = "The task memory must be one of: 512, 1024, 2048, 4096, 8192."
+  }
 }
 
 variable "service_desired_count" {
-  description = "Desired number of tasks"
+  description = "Desired number of tasks for the ECS service"
   type        = number
   default     = 1
 }
 
 variable "container_image" {
-  description = "Container image to use"
+  description = "Container image to deploy"
   type        = string
 }
 
@@ -65,34 +64,29 @@ variable "container_port" {
 }
 
 variable "certificate_arn" {
-  description = "ARN of the SSL certificate"
-  type        = string
-}
-
-variable "rds_secret_arn" {
-  description = "ARN of the RDS credentials secret"
+  description = "ARN of the SSL certificate for the ALB"
   type        = string
 }
 
 variable "mongodb_secret_arn" {
-  description = "ARN of the MongoDB credentials secret"
+  description = "ARN of the MongoDB secret"
   type        = string
 }
 
 variable "health_check_path" {
-  description = "Path for health checks"
+  description = "Path for the ALB health check"
   type        = string
   default     = "/health"
 }
 
 variable "health_check_interval" {
-  description = "Interval between health checks in seconds"
+  description = "Interval for the ALB health check in seconds"
   type        = number
   default     = 30
 }
 
 variable "health_check_timeout" {
-  description = "Timeout for health checks in seconds"
+  description = "Timeout for the ALB health check in seconds"
   type        = number
   default     = 5
 }
