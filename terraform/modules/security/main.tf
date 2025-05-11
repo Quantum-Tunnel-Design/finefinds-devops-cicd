@@ -70,6 +70,17 @@ resource "aws_cognito_user_pool" "main" {
     allow_admin_create_user_only = false
   }
 
+  # Use Amplify domains for callbacks
+  callback_urls = [
+    "https://${var.client_domain}/callback",
+    "https://${var.admin_domain}/callback"
+  ]
+
+  logout_urls = [
+    "https://${var.client_domain}",
+    "https://${var.admin_domain}"
+  ]
+
   tags = var.tags
 }
 
@@ -86,8 +97,16 @@ resource "aws_cognito_user_pool_client" "main" {
     "ALLOW_REFRESH_TOKEN_AUTH"
   ]
 
-  callback_urls = var.callback_urls
-  logout_urls   = var.logout_urls
+  # Use Amplify domains for callbacks
+  callback_urls = [
+    "https://${var.client_domain}/callback",
+    "https://${var.admin_domain}/callback"
+  ]
+
+  logout_urls = [
+    "https://${var.client_domain}",
+    "https://${var.admin_domain}"
+  ]
 }
 
 # Cognito User Pool Domain
@@ -294,18 +313,17 @@ locals {
   db_password = jsondecode(data.aws_secretsmanager_secret_version.db_password.secret_string)["password"]
 }
 
+# Get secret versions
 data "aws_secretsmanager_secret_version" "mongodb_password" {
-  secret_id = var.mongodb_password_arn
-}
-
-locals {
-  mongodb_password = jsondecode(data.aws_secretsmanager_secret_version.mongodb_password.secret_string)["password"]
+  secret_id = data.aws_secretsmanager_secret.mongodb_password.id
 }
 
 data "aws_secretsmanager_secret_version" "sonar_token" {
-  secret_id = var.sonar_token_arn
+  secret_id = data.aws_secretsmanager_secret.sonar_token.id
 }
 
+# Local variables for secrets
 locals {
-  sonar_token = jsondecode(data.aws_secretsmanager_secret_version.sonar_token.secret_string)["token"]
+  mongodb_password = try(jsondecode(data.aws_secretsmanager_secret_version.mongodb_password.secret_string)["password"], data.aws_secretsmanager_secret_version.mongodb_password.secret_string)
+  sonar_token = try(jsondecode(data.aws_secretsmanager_secret_version.sonar_token.secret_string)["token"], data.aws_secretsmanager_secret_version.sonar_token.secret_string)
 } 

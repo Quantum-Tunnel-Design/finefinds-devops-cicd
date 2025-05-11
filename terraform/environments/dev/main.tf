@@ -5,19 +5,25 @@ provider "aws" {
 # Get current AWS account ID
 data "aws_caller_identity" "current" {}
 
-# Check if certificate exists
-data "aws_acm_certificate" "main" {
-  count = var.certificate_arn != null ? 0 : 1
-  domain      = "${var.environment}.finefinds.com"
-  statuses    = ["ISSUED", "PENDING_VALIDATION"]
-  most_recent = true
+# Get Amplify domains
+data "aws_amplify_app" "client" {
+  name = "${var.project}-client-${var.environment}"
 }
 
-# Local variables for certificate handling
+data "aws_amplify_app" "admin" {
+  name = "${var.project}-admin-${var.environment}"
+}
+
+# Local variables for domains
 locals {
-  certificate_arn = var.certificate_arn != null ? var.certificate_arn : (
-    length(data.aws_acm_certificate.main) > 0 ? data.aws_acm_certificate.main[0].arn : null
-  )
+  client_domain = data.aws_amplify_app.client.default_domain
+  admin_domain = data.aws_amplify_app.admin.default_domain
+  graphql_endpoint = "https://${data.aws_amplify_app.client.default_domain}/graphql"
+  common_tags = {
+    Environment = var.environment
+    Project     = var.project
+    Terraform   = "true"
+  }
 }
 
 # VPC Module
@@ -304,7 +310,7 @@ module "amplify" {
   admin_repository  = var.admin_repository
   source_token     = var.source_token
   sonar_token      = var.sonar_token
-  graphql_endpoint = "https://api.${var.environment}.finefinds.com/graphql"
+  graphql_endpoint = local.graphql_endpoint
 
   tags = local.common_tags
 }
