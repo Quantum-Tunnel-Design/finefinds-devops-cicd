@@ -5,8 +5,6 @@ resource "aws_ecr_repository" "main" {
   image_scanning_configuration {
     scan_on_push = true
   }
-
-  tags = var.tags
 }
 
 # ECR Lifecycle Policy
@@ -62,8 +60,6 @@ resource "aws_amplify_app" "main" {
     REACT_APP_AUTH_CLIENT_ID = var.cognito_client_id
     REACT_APP_AUTH_REDIRECT_URI = var.cognito_redirect_uri
   }
-
-  tags = var.tags
 }
 
 # Amplify Branch
@@ -80,8 +76,6 @@ resource "aws_amplify_branch" "main" {
   environment_variables = {
     REACT_APP_ENV = var.environment
   }
-
-  tags = var.tags
 }
 
 # Amplify Domain
