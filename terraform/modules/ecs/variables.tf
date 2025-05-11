@@ -89,15 +89,6 @@ variable "database_url_arn" {
   }
 }
 
-variable "mongodb_uri_arn" {
-  description = "ARN of the MongoDB URI secret in AWS Secrets Manager"
-  type        = string
-  validation {
-    condition     = can(regex("^arn:aws:secretsmanager:[a-z0-9-]+:[0-9]+:secret:[a-zA-Z0-9-_/]+$", var.mongodb_uri_arn))
-    error_message = "The MongoDB URI ARN must be a valid Secrets Manager ARN."
-  }
-}
-
 variable "ecr_repository_url" {
   description = "URL of the ECR repository"
   type        = string

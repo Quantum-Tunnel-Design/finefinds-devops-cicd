@@ -43,15 +43,15 @@ variable "db_password_arn" {
   type        = string
 }
 
-variable "mongodb_username" {
-  description = "MongoDB username"
-  type        = string
-}
-
-variable "mongodb_password_arn" {
-  description = "ARN of the MongoDB password in Secrets Manager"
-  type        = string
-}
+# variable "mongodb_username" { # REMOVED
+#   description = "MongoDB username"
+#   type        = string
+# }
+# 
+# variable "mongodb_password_arn" { # REMOVED
+#   description = "ARN of the MongoDB password in Secrets Manager"
+#   type        = string
+# }
 
 variable "sonar_token_arn" {
   description = "ARN of the SonarQube token in Secrets Manager"

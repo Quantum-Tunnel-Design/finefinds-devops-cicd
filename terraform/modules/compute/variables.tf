@@ -69,11 +69,6 @@ variable "rds_secret_arn" {
   type        = string
 }
 
-variable "mongodb_secret_arn" {
-  description = "ARN of the MongoDB credentials secret"
-  type        = string
-}
-
 variable "health_check_path" {
   description = "Path for health checks"
   type        = string

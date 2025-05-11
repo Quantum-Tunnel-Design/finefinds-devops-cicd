@@ -55,15 +55,11 @@ locals {
   alb_sg_name        = "${var.project}-${var.environment}-alb-sg"
   ecs_sg_name        = "${var.project}-${var.environment}-ecs-sg"
   rds_sg_name        = "${var.project}-${var.environment}-rds-sg"
-  mongodb_sg_name    = "${var.project}-${var.environment}-mongodb-sg"
-  sonarqube_sg_name  = "${var.project}-${var.environment}-sonarqube-sg"
 
   # Resource Names
   alb_name           = "${var.project}-${var.environment}-alb"
   ecs_cluster_name   = "${var.project}-${var.environment}-ecs"
   rds_name           = "${var.project}-${var.environment}-rds"
-  mongodb_name       = "${var.project}-${var.environment}-mongodb"
-  sonarqube_name     = "${var.project}-${var.environment}-sonarqube"
 
   # Database Configuration
   db_username = "admin"
@@ -82,11 +78,6 @@ locals {
   health_check_unhealthy_threshold = 2
 
   # SonarQube Configuration
-  sonarqube_port = 9000
-  sonarqube_path = "/"
   task_cpu       = 512
   task_memory    = 1024
-
-  # MongoDB Configuration
-  mongodb_port = 27017
 } 

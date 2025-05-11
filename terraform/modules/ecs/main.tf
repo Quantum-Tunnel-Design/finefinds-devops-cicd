@@ -114,10 +114,6 @@ resource "aws_ecs_task_definition" "main" {
         {
           name      = "DATABASE_URL"
           valueFrom = var.database_url_arn
-        },
-        {
-          name      = "MONGODB_URI"
-          valueFrom = var.mongodb_uri_arn
         }
       ]
       logConfiguration = {
@@ -183,8 +179,7 @@ resource "aws_iam_role_policy" "ecs_task_role_policy" {
           "secretsmanager:GetSecretValue"
         ]
         Resource = [
-          var.database_url_arn,
-          var.mongodb_uri_arn
+          var.database_url_arn
         ]
       }
     ]

@@ -84,8 +84,7 @@ resource "aws_iam_role_policy" "task" {
           "secretsmanager:GetSecretValue"
         ]
         Resource = [
-          var.rds_secret_arn,
-          var.mongodb_secret_arn
+          var.rds_secret_arn
         ]
       }
     ]
@@ -142,10 +141,6 @@ resource "aws_ecs_task_definition" "main" {
         {
           name      = "DB_PASSWORD"
           valueFrom = "${var.rds_secret_arn}:password::"
-        },
-        {
-          name      = "MONGODB_URI"
-          valueFrom = var.mongodb_secret_arn
         }
       ]
 

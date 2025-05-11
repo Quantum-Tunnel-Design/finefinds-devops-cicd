@@ -61,9 +61,6 @@ module "security" {
   db_username = var.db_username_arn != null ? var.db_username_arn : module.secrets.database_arn
   db_password_arn = var.db_password_arn != null ? var.db_password_arn : module.secrets.database_arn
 
-  mongodb_username = var.mongodb_username_arn != null ? var.mongodb_username_arn : module.secrets.mongodb_arn
-  mongodb_password_arn = var.mongodb_password_arn != null ? var.mongodb_password_arn : module.secrets.mongodb_arn
-
   sonar_token_arn = var.sonar_token_arn != null ? var.sonar_token_arn : module.secrets.sonar_token_arn
 
   certificate_arn = var.certificate_arn
@@ -97,9 +94,6 @@ module "storage" {
   db_name               = var.db_name
   db_username           = var.db_username
   db_password           = var.db_password
-  use_existing_cluster  = false
-  mongodb_ami           = var.mongodb_ami
-  mongodb_instance_type = local.env_config[var.environment].instance_type
   tags                  = module.common.common_tags
 }
 

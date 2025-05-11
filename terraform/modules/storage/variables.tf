@@ -182,30 +182,6 @@ variable "skip_final_snapshot" {
   default     = true
 }
 
-variable "use_existing_cluster" {
-  description = "Whether to use an existing MongoDB cluster"
-  type        = bool
-  default     = false
-}
-
-variable "mongodb_ami" {
-  description = "AMI ID for MongoDB instance"
-  type        = string
-  validation {
-    condition     = can(regex("^ami-[a-z0-9]+$", var.mongodb_ami))
-    error_message = "The AMI ID must be in the format: ami-xxxxxxxx."
-  }
-}
-
-variable "mongodb_instance_type" {
-  description = "Instance type for MongoDB"
-  type        = string
-  validation {
-    condition     = can(regex("^[a-z0-9]+\\.[a-z0-9]+$", var.mongodb_instance_type))
-    error_message = "The instance type must be in the format: type.size (e.g., t3.small)."
-  }
-}
-
 variable "cloudfront_distribution_arn" {
   description = "ARN of the CloudFront distribution"
   type        = string

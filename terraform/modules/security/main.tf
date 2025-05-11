@@ -124,36 +124,6 @@ resource "aws_security_group" "db" {
   tags = var.tags
 }
 
-resource "aws_security_group" "mongodb" {
-  name        = "${var.name_prefix}-mongodb-sg"
-  description = "Security group for MongoDB"
-  vpc_id      = var.vpc_id
-
-  ingress {
-    from_port   = 27017
-    to_port     = 27017
-    protocol    = "tcp"
-    cidr_blocks = ["10.0.0.0/8"]
-  }
-
-  tags = var.tags
-}
-
-resource "aws_security_group" "sonarqube" {
-  name        = "${var.name_prefix}-sonarqube-sg"
-  description = "Security group for SonarQube"
-  vpc_id      = var.vpc_id
-
-  ingress {
-    from_port   = 9000
-    to_port     = 9000
-    protocol    = "tcp"
-    cidr_blocks = ["10.0.0.0/8"]
-  }
-
-  tags = var.tags
-}
-
 # Get current region
 data "aws_region" "current" {}
 
@@ -171,9 +141,9 @@ data "aws_secretsmanager_secret_version" "db_credentials" {
   secret_id = var.db_password_arn # This ARN now points to the secret holding {username, password}
 }
 
-data "aws_secretsmanager_secret_version" "mongodb_credentials" {
-  secret_id = var.mongodb_password_arn # This ARN now points to the secret holding {username, password}
-}
+# data "aws_secretsmanager_secret_version" "mongodb_credentials" { # REMOVED
+#   secret_id = var.mongodb_password_arn # This ARN now points to the secret holding {username, password}
+# }
 
 data "aws_secretsmanager_secret_version" "sonar_token" {
   # If var.sonar_token_arn is preferred (passed from dev environment):
@@ -188,9 +158,9 @@ locals {
   db_password       = local.db_secret_content.password
   # db_username       = local.db_secret_content.username # If needed by the security module
 
-  mongodb_secret_content = jsondecode(data.aws_secretsmanager_secret_version.mongodb_credentials.secret_string)
-  mongodb_password       = local.mongodb_secret_content.password
-  # mongodb_username     = local.mongodb_secret_content.username # If needed
+  # mongodb_secret_content = jsondecode(data.aws_secretsmanager_secret_version.mongodb_credentials.secret_string) # REMOVED
+  # mongodb_password       = local.mongodb_secret_content.password # REMOVED
+  # mongodb_username     = local.mongodb_secret_content.username # If needed # REMOVED
 
   sonar_token_content = jsondecode(data.aws_secretsmanager_secret_version.sonar_token.secret_string)
   sonar_token         = local.sonar_token_content.token

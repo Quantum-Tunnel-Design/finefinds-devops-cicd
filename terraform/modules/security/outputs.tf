@@ -104,16 +104,6 @@ output "db_security_group_id" {
   value       = aws_security_group.db.id
 }
 
-output "mongodb_security_group_id" {
-  description = "ID of the MongoDB security group"
-  value       = aws_security_group.mongodb.id
-}
-
-output "sonarqube_security_group_id" {
-  description = "ID of the SonarQube security group"
-  value       = aws_security_group.sonarqube.id
-}
-
 output "vpc_id" {
   description = "ID of the VPC"
   value       = var.vpc_id
