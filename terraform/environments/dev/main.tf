@@ -66,10 +66,10 @@ module "security" {
   client_domain = var.client_domain
   admin_domain  = var.admin_domain
 
-  db_username = var.db_username
+  db_username = var.db_username_arn != null ? var.db_username_arn : module.secrets.db_username_arn
   db_password_arn = var.db_password_arn != null ? var.db_password_arn : module.secrets.db_password_arn
 
-  mongodb_username = var.mongodb_username
+  mongodb_username = var.mongodb_username_arn != null ? var.mongodb_username_arn : module.secrets.mongodb_username_arn
   mongodb_password_arn = var.mongodb_password_arn != null ? var.mongodb_password_arn : module.secrets.mongodb_password_arn
 
   sonar_token_arn = var.sonar_token_arn != null ? var.sonar_token_arn : module.secrets.sonar_token_arn
@@ -113,40 +113,41 @@ module "storage" {
 
 # Compute Module
 module "compute" {
-  source                   = "../../modules/compute"
+  source = "../../modules/compute"
   
   project     = var.project
-  name_prefix              = local.name_prefix
-  environment              = var.environment
-  tags                     = module.common.common_tags
+  environment = var.environment
+  tags        = var.tags
   
-  vpc_id             = module.networking.vpc_id
-  private_subnet_ids = module.networking.private_subnet_ids
-  public_subnet_ids  = module.networking.public_subnet_ids
+  vpc_id = module.vpc.vpc_id
+  private_subnet_ids = module.vpc.private_subnet_ids
+  public_subnet_ids  = module.vpc.public_subnet_ids
 
-  task_cpu                = local.current_env_config.task_cpu
-  task_memory            = local.current_env_config.task_memory
-  service_desired_count  = local.current_env_config.service_count
-  container_port           = var.container_port
-  container_image_arn    = module.secrets.container_image_arn
-  certificate_arn        = module.security.certificate_arn
-  rds_secret_arn           = module.secrets.database_secret_arn
-  mongodb_secret_arn       = module.secrets.mongodb_secret_arn
+  task_cpu    = 512
+  task_memory = 1024
+  container_port = var.container_port
+  container_image_arn = var.container_image_arn != null ? var.container_image_arn : module.secrets.container_image_arn
+  certificate_arn = var.certificate_arn != null ? var.certificate_arn : module.security.certificate_arn
+  rds_secret_arn = var.db_password_arn != null ? var.db_password_arn : module.secrets.db_password_arn
+  mongodb_secret_arn = var.mongodb_password_arn != null ? var.mongodb_password_arn : module.secrets.mongodb_password_arn
 }
 
 # CICD Module
 module "cicd" {
-  source            = "../../modules/cicd"
-  name_prefix       = local.name_prefix
-  environment       = var.environment
-  repository_url    = var.repository_url
-  source_token      = var.source_token
-  api_url           = module.compute.alb_dns_name
-  cognito_domain    = module.security.cognito_domain
+  source = "../../modules/cicd"
+  
+  project     = var.project
+  environment = var.environment
+  tags        = var.tags
+  
+  repository_url = var.client_repository_arn != null ? var.client_repository_arn : module.secrets.client_repository_arn
+  admin_repository_url = var.admin_repository_arn != null ? var.admin_repository_arn : module.secrets.admin_repository_arn
+  source_token = var.source_token_arn != null ? var.source_token_arn : module.secrets.source_token_arn
+  api_url = module.compute.alb_dns_name
+  cognito_domain = module.security.cognito_domain
   cognito_client_id = module.security.cognito_user_pool_client_id
-  cognito_redirect_uri = "https://dev.finefinds.com/callback"
-  domain_name       = "dev.finefinds.com"
-  tags              = module.common.common_tags
+  cognito_redirect_uri = "https://${var.client_domain}/callback"
+  domain_name = "${var.environment}.finefinds.com"
 }
 
 # ALB Module

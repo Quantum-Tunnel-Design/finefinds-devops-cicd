@@ -298,14 +298,41 @@ variable "admin_domain" {
 variable "db_password_arn" {
   description = "ARN of the database password in Secrets Manager"
   type        = string
+  default     = null
 }
 
 variable "mongodb_password_arn" {
   description = "ARN of the MongoDB password in Secrets Manager"
   type        = string
+  default     = null
 }
 
 variable "sonar_token_arn" {
   description = "ARN of the SonarQube token in Secrets Manager"
   type        = string
+  default     = null
+}
+
+variable "db_username_arn" {
+  description = "ARN of the database username in Secrets Manager"
+  type        = string
+  default     = null
+}
+
+variable "mongodb_username_arn" {
+  description = "ARN of the MongoDB username in Secrets Manager"
+  type        = string
+  default     = null
+}
+
+variable "client_repository_arn" {
+  description = "ARN of the client repository URL in Secrets Manager"
+  type        = string
+  default     = null
+}
+
+variable "admin_repository_arn" {
+  description = "ARN of the admin repository URL in Secrets Manager"
+  type        = string
+  default     = null
 }
