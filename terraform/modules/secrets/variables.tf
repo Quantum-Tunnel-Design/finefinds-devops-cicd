@@ -97,4 +97,11 @@ variable "sonarqube_password" {
   type        = string
   sensitive   = true
   default     = null
+}
+
+variable "source_token" {
+  description = "GitHub source token for repository access"
+  type        = string
+  sensitive   = true
+  default     = null
 } 

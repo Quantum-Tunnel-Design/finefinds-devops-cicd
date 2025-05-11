@@ -277,6 +277,19 @@ output "api_keys_secret_arn" {
   value       = aws_secretsmanager_secret.api_keys.arn
 }
 
+# Source Token Secret
+resource "aws_secretsmanager_secret" "source_token" {
+  name        = "${var.project}/${var.environment}/source-token"
+  description = "GitHub source token for ${var.environment} environment"
+  tags        = var.tags
+}
+
+resource "aws_secretsmanager_secret_version" "source_token" {
+  secret_id     = aws_secretsmanager_secret.source_token.id
+  secret_string = var.source_token
+}
+
+# Container Image Secret (using default AWS image)
 resource "aws_secretsmanager_secret" "container_image" {
   name        = "${var.project}/${var.environment}/container-image"
   description = "Container image URI for ${var.environment} environment"
@@ -285,7 +298,13 @@ resource "aws_secretsmanager_secret" "container_image" {
 
 resource "aws_secretsmanager_secret_version" "container_image" {
   secret_id     = aws_secretsmanager_secret.container_image.id
-  secret_string = var.container_image
+  secret_string = var.container_image != null ? var.container_image : "public.ecr.aws/amazonlinux/amazonlinux:latest"
+}
+
+# Outputs
+output "source_token_arn" {
+  description = "ARN of the source token secret"
+  value       = aws_secretsmanager_secret.source_token.arn
 }
 
 output "container_image_arn" {

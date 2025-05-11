@@ -127,7 +127,7 @@ module "compute" {
   task_cpu    = 512
   task_memory = 1024
   container_port = var.container_port
-  container_image_arn = var.container_image_arn != null ? var.container_image_arn : module.secrets.container_image_arn
+  container_image_arn = module.secrets.container_image_arn
   certificate_arn = var.certificate_arn != null ? var.certificate_arn : module.security.certificate_arn
   rds_secret_arn = var.db_password_arn != null ? var.db_password_arn : module.secrets.db_password_arn
   mongodb_secret_arn = var.mongodb_password_arn != null ? var.mongodb_password_arn : module.secrets.mongodb_password_arn
@@ -143,7 +143,7 @@ module "cicd" {
   
   client_repository_url = var.client_repository_arn != null ? var.client_repository_arn : module.secrets.client_repository_arn
   admin_repository_url = var.admin_repository_arn != null ? var.admin_repository_arn : module.secrets.admin_repository_arn
-  source_token = var.source_token_arn != null ? var.source_token_arn : module.secrets.source_token_arn
+  source_token = module.secrets.source_token_arn
   api_url = module.compute.alb_dns_name
   cognito_domain = module.security.cognito_domain
   cognito_client_id = module.security.cognito_user_pool_client_id

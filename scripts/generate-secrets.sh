@@ -98,6 +98,10 @@ main() {
     echo "Setting SonarQube token..."
     SONAR_TOKEN="UPDATE_TOKEN"
 
+    # Set GitHub source token
+    echo "Setting GitHub source token..."
+    SOURCE_TOKEN="UPDATE_TOKEN"
+
     # Create or update secrets
     echo "Creating/updating secrets in AWS Secrets Manager..."
 
@@ -118,6 +122,12 @@ main() {
         "finefinds/${ENVIRONMENT}/sonar-token" \
         "$SONAR_TOKEN" \
         "SonarQube token for ${ENVIRONMENT}" \
+        "$REGION"
+
+    create_or_update_secret \
+        "finefinds/${ENVIRONMENT}/source-token" \
+        "$SOURCE_TOKEN" \
+        "GitHub source token for ${ENVIRONMENT}" \
         "$REGION"
 
     # Usernames (manually set)
@@ -151,6 +161,7 @@ main() {
     DB_PASSWORD_ARN=$(get_secret_arn "finefinds/${ENVIRONMENT}/db-password" "$REGION")
     MONGODB_PASSWORD_ARN=$(get_secret_arn "finefinds/${ENVIRONMENT}/mongodb-password" "$REGION")
     SONAR_TOKEN_ARN=$(get_secret_arn "finefinds/${ENVIRONMENT}/sonar-token" "$REGION")
+    SOURCE_TOKEN_ARN=$(get_secret_arn "finefinds/${ENVIRONMENT}/source-token" "$REGION")
     DB_USERNAME_ARN=$(get_secret_arn "finefinds/${ENVIRONMENT}/db-username" "$REGION")
     MONGODB_USERNAME_ARN=$(get_secret_arn "finefinds/${ENVIRONMENT}/mongodb-username" "$REGION")
     CLIENT_REPOSITORY_ARN=$(get_secret_arn "finefinds/${ENVIRONMENT}/client-repository" "$REGION")
@@ -169,6 +180,7 @@ main() {
 db_password_arn = "${DB_PASSWORD_ARN}"
 mongodb_password_arn = "${MONGODB_PASSWORD_ARN}"
 sonar_token_arn = "${SONAR_TOKEN_ARN}"
+source_token_arn = "${SOURCE_TOKEN_ARN}"
 
 # Username ARNs
 db_username_arn = "${DB_USERNAME_ARN}"
@@ -184,6 +196,7 @@ db_password = "${DB_PASSWORD}"
 mongodb_username = "${MONGODB_USERNAME}"
 mongodb_password = "${MONGODB_PASSWORD}"
 sonar_token = "${SONAR_TOKEN}"
+source_token = "${SOURCE_TOKEN}"
 client_repository = "${CLIENT_REPOSITORY}"
 admin_repository = "${ADMIN_REPOSITORY}"
 EOF
