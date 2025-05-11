@@ -18,21 +18,6 @@ output "mongodb_ebs_volume_id" {
   value       = var.use_existing_cluster ? null : aws_ebs_volume.mongodb_data[0].id
 }
 
-output "static_bucket_name" {
-  description = "Name of the static assets S3 bucket"
-  value       = aws_s3_bucket.static.bucket
-}
-
-output "static_bucket_arn" {
-  description = "ARN of the static assets S3 bucket"
-  value       = aws_s3_bucket.static.arn
-}
-
-output "static_bucket_domain_name" {
-  description = "Domain name of the static assets S3 bucket"
-  value       = aws_s3_bucket.static.bucket_domain_name
-}
-
 output "bucket_ids" {
   description = "Map of bucket names to their IDs"
   value       = { for k, v in aws_s3_bucket.buckets : k => v.id }
