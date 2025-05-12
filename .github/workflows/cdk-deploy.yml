@@ -54,17 +54,17 @@ jobs:
           cd infra
           npm ci
 
+      - name: CDK Bootstrap
+        if: github.event_name == 'push'
+        run: |
+          cd infra
+          npm run cdk bootstrapb -- --qualifier finefinds-${{ env.CDK_ENV }} aws://${{ secrets.AWS_ACCOUNT_ID }}/${{ secrets.AWS_REGION }}
+      
       - name: CDK Diff
         if: github.event_name == 'pull_request'
         run: |
           cd infra
           npm run cdk diff ${{ env.CDK_ENV }}
-
-      - name: CDK Bootstrap
-        if: github.event_name == 'push'
-        run: |
-          cd infra
-          npm run cdk bootstrapb --qualifier finefinds-${{ env.CDK_ENV }} aws://${{ secrets.AWS_ACCOUNT_ID }}/${{ secrets.AWS_REGION }} -- --require-approval never
 
       - name: CDK Deploy
         if: github.event_name == 'push' 
