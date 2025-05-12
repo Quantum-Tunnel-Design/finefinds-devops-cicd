@@ -1,0 +1,56 @@
+name: Deploy Infrastructure
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+      - qa
+      - staging
+      - sandbox
+  pull_request:
+    branches:
+      - main
+      - dev
+      - qa
+      - staging
+      - sandbox
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name == 'main' && 'prod' || github.ref_name }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-${{ github.ref_name == 'main' && 'prod' || github.ref_name }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: |
+          cd infra
+          npm ci
+
+      - name: Deploy Infrastructure
+        run: |
+          cd infra
+          npm run cdk deploy -- --require-approval never
+        env:
+          CDK_DEPLOY_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+          CDK_DEPLOY_REGION: ${{ secrets.AWS_REGION }} 

@@ -30,40 +30,12 @@ set_environment_secrets() {
     gh secret set SLACK_WEBHOOK_URL_DEVOPS -b"$SLACK_WEBHOOK_URL_DEVOPS" --env "$env"
     gh secret set SLACK_CHANNEL_DEVOPS -b"$SLACK_CHANNEL_DEVOPS" --env "$env"
     gh secret set SLACK_BOT_DEVOPS_TOKEN -b"$SLACK_BOT_DEVOPS_TOKEN" --env "$env"
-    gh secret set AWS_ROLE_ARN -b"$AWS_ROLE_ARN" --env "$env"
     
-    # Set environment-specific AWS credentials
-    case "$env" in
-        "prod")
-            gh secret set AWS_ACCESS_KEY_ID -b"$AWS_PROD_ACCESS_KEY" --env "$env"
-            gh secret set AWS_SECRET_ACCESS_KEY -b"$AWS_PROD_SECRET_KEY" --env "$env"
-            ;;
-        "staging")
-            gh secret set AWS_ACCESS_KEY_ID -b"$AWS_STAGING_ACCESS_KEY" --env "$env"
-            gh secret set AWS_SECRET_ACCESS_KEY -b"$AWS_STAGING_SECRET_KEY" --env "$env"
-            ;;
-        "dev")
-            gh secret set AWS_ACCESS_KEY_ID -b"$AWS_DEV_ACCESS_KEY" --env "$env"
-            gh secret set AWS_SECRET_ACCESS_KEY -b"$AWS_DEV_SECRET_KEY" --env "$env"
-            ;;
-        "qa")
-            gh secret set AWS_ACCESS_KEY_ID -b"$AWS_QA_ACCESS_KEY" --env "$env"
-            gh secret set AWS_SECRET_ACCESS_KEY -b"$AWS_QA_SECRET_KEY" --env "$env"
-            ;;
-        "sandbox")
-            gh secret set AWS_ACCESS_KEY_ID -b"$AWS_SANDBOX_ACCESS_KEY" --env "$env"
-            gh secret set AWS_SECRET_ACCESS_KEY -b"$AWS_SANDBOX_SECRET_KEY" --env "$env"
-            ;;
-    esac
-    
-    # Set repository information (using non-GITHUB_ prefixed names)
+    # Set repository information
     gh secret set REPO_ORG -b"$REPO_ORG" --env "$env"
     gh secret set REPO_NAME -b"$REPO_NAME" --env "$env"
     
-    # Set new secrets for CDK workflow
-    gh secret set SLACK_BOT_TOKEN -b"$SLACK_BOT_TOKEN" --env "$env"
-    gh secret set SLACK_CHANNEL -b"$SLACK_CHANNEL" --env "$env"
-    gh secret set AWS_ROLE_ARN -b"$AWS_ROLE_ARN" --env "$env"
+    # Set SonarQube secrets
     gh secret set SONAR_TOKEN -b"$SONAR_TOKEN" --env "$env"
     gh secret set SONAR_HOST_URL -b"$SONAR_HOST_URL" --env "$env"
     
@@ -97,7 +69,7 @@ set_repo_secrets() {
     gh secret set SOURCE_TOKEN --body "$SOURCE_TOKEN" --repo "$repo"
     
     # Only set SonarQube secrets for non-devops repositories
-    if [[ "$repo" != *"finefindslk-devops-cicd"* ]]; then
+    if [[ "$repo" != *"finefinds-devops-cicd"* ]]; then
         gh secret set SONAR_TOKEN --body "$SONAR_TOKEN" --repo "$repo"
     fi
 }
