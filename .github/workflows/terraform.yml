@@ -27,8 +27,8 @@ jobs:
         path: |
           .terraform
           .terraform.lock.hcl
-        key: terraform-${{ hashFiles('**/*.tf') }}
-        restore-keys: terraform-
+        key: terraform-${{ runner.os }}-${{ hashFiles('**/*.tf') }}
+        restore-keys: terraform-${{ runner.os }}-
     
     - name: Set environment name
       id: setenv
