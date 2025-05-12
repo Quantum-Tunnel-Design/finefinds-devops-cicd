@@ -1,13 +1,14 @@
 import * as cdk from 'aws-cdk-lib';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as kms from 'aws-cdk-lib/aws-kms';
 import { Construct } from 'constructs';
 import { BaseConfig } from '../../env/base-config';
 
 export interface SecretsConstructProps {
   environment: string;
   config: BaseConfig;
-  kmsKey: cdk.aws_kms.Key;
+  kmsKey: kms.IKey;
 }
 
 export class SecretsConstruct extends Construct {
@@ -22,31 +23,33 @@ export class SecretsConstruct extends Construct {
 
     // Create database secret
     this.databaseSecret = new secretsmanager.Secret(this, 'DatabaseSecret', {
-      secretName: `finefinds-${props.environment}-database`,
-      description: 'Database credentials for FineFinds application',
+      secretName: `${props.config.environment}/database`,
+      description: 'Database credentials',
       encryptionKey: props.kmsKey,
       generateSecretString: {
         secretStringTemplate: JSON.stringify({
-          username: 'finefinds',
+          username: 'admin',
         }),
         generateStringKey: 'password',
         excludePunctuation: false,
-        passwordLength: 32,
+        passwordLength: 16,
       },
     });
 
     // Create Redis secret
     this.redisSecret = new secretsmanager.Secret(this, 'RedisSecret', {
-      secretName: `finefinds-${props.environment}-redis`,
-      description: 'Redis credentials for FineFinds application',
+      secretName: `${props.config.environment}/redis`,
+      description: 'Redis connection details',
       encryptionKey: props.kmsKey,
       generateSecretString: {
         secretStringTemplate: JSON.stringify({
+          host: 'localhost', // This will be updated after Redis cluster creation
+          port: 6379,
           username: 'default',
         }),
         generateStringKey: 'password',
         excludePunctuation: false,
-        passwordLength: 32,
+        passwordLength: 16,
       },
     });
 
@@ -110,14 +113,14 @@ export class SecretsConstruct extends Construct {
     // Output secret ARNs
     new cdk.CfnOutput(this, 'DatabaseSecretArn', {
       value: this.databaseSecret.secretArn,
-      description: 'Database Secret ARN',
-      exportName: `finefinds-${props.environment}-database-secret-arn`,
+      description: 'Database secret ARN',
+      exportName: `finefinds-${props.config.environment}-database-secret-arn`,
     });
 
     new cdk.CfnOutput(this, 'RedisSecretArn', {
       value: this.redisSecret.secretArn,
-      description: 'Redis Secret ARN',
-      exportName: `finefinds-${props.environment}-redis-secret-arn`,
+      description: 'Redis secret ARN',
+      exportName: `finefinds-${props.config.environment}-redis-secret-arn`,
     });
 
     new cdk.CfnOutput(this, 'OpenSearchSecretArn', {

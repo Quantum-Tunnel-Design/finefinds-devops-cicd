@@ -64,7 +64,10 @@ jobs:
         if: github.event_name == 'push' 
         run: |
           cd infra
-          npm run cdk deploy ${{ env.CDK_ENV }} --require-approval never
+          npm run cdk deploy -- --require-approval never
+        env:
+          CDK_DEPLOY_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+          CDK_DEPLOY_REGION: ${{ secrets.AWS_REGION }} 
 
       - name: Slack Notification (Success)
         if: success()

@@ -10,6 +10,7 @@ export interface BaseConfig {
     cpu: number;
     memoryLimitMiB: number;
     desiredCount: number;
+    minCapacity: number;
     maxCapacity: number;
   };
   monitoring: {
@@ -111,6 +112,7 @@ export interface BaseConfig {
   };
   dns: {
     domainName: string;
+    hostedZoneId: string;
     certificateValidation: boolean;
   };
   tags: {
@@ -126,5 +128,13 @@ export interface BaseConfig {
   };
   opensearch: {
     endpoint: string;
+  };
+  redis: {
+    nodeType: string;
+    numNodes: number;
+    engineVersion: string;
+    snapshotRetentionLimit: number;
+    snapshotWindow: string;
+    maintenanceWindow: string;
   };
 } 

@@ -48,7 +48,11 @@
     "@aws-cdk/aws-stepfunctions-tasks:enableEmrServicePolicyV2": true,
     "@aws-cdk/aws-ec2:launchTemplateDefaultUserData": true,
     "@aws-cdk/aws-secretsmanager:useAttachedSecretResourcePolicyForSecretTargetAttachments": true,
-    "@aws-cdk/aws-redshift-alpha:columnId": true,
-    "@aws-cdk/aws-kms:aliasNameRef": true
+    "@aws-cdk/aws-redshift-alpha:enableV2Api": true,
+    "@aws-cdk/aws-kms:aliasNameRef": true,
+    "@aws-cdk/aws-apigateway:requestValidatorUniqueId": true,
+    "@aws-cdk/aws-ec2:restrictDefaultSecurityGroup": true,
+    "@aws-cdk/aws-apigateway:authorizerChangeDeploymentLogicalId": true,
+    "@aws-cdk/aws-ec2:uniqueLaunchTemplateNames": true
   }
 } 

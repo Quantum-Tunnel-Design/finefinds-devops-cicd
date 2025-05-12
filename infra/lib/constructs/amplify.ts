@@ -1,5 +1,5 @@
 import * as cdk from 'aws-cdk-lib';
-import * as amplify from 'aws-cdk-lib/aws-amplify';
+import * as amplify from '@aws-cdk/aws-amplify-alpha';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
 import { Construct } from 'constructs';
 import { BaseConfig } from '../../env/base-config';
