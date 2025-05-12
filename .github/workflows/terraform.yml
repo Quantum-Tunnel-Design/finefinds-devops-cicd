@@ -88,6 +88,10 @@ jobs:
         echo "Terraform initialization completed"
         echo "================================"
 
+    - name: List current terraform state
+      run: terraform state list
+      working-directory: terraform/environments/${{ steps.setenv.outputs.env }}
+
     - name: Terraform Validate
       id: validate
       run: terraform validate
@@ -95,6 +99,7 @@ jobs:
 
     - name: Terraform Plan
       id: plan
+      working-directory: terraform/environments/${{ steps.setenv.outputs.env }}
       run: |
         echo "=== Creating Terraform Plan ==="
         cd terraform/environments/${{ github.ref_name }}
@@ -110,6 +115,7 @@ jobs:
 
     - name: Terraform Apply
       id: apply
+      working-directory: terraform/environments/${{ steps.setenv.outputs.env }}
       run: |
         echo "=== Applying Terraform Changes ==="
         cd terraform/environments/${{ github.ref_name }}
