@@ -26,8 +26,8 @@ jobs:
       uses: actions/cache@v3
       with:
         path: |
-          .terraform
-          .terraform.lock.hcl
+          terraform/environments/${{ github.ref_name }}/.terraform
+          terraform/environments/${{ github.ref_name }}/.terraform.lock.hcl
         key: terraform-${{ runner.os }}-${{ hashFiles('**/*.tf') }}
         restore-keys: terraform-${{ runner.os }}-
     
@@ -97,13 +97,8 @@ jobs:
         echo "================================"
 
     - name: List current terraform state
-      run: |
-        echo "=== Initializing Terraform ==="
-        cd terraform/environments/${{ github.ref_name }}
-        echo "Working directory: $(pwd)"
-        echo "Terraform version: $(terraform version)"
-        terraform state list
-        echo "================================"
+      id: state 
+      run: terraform state list
 
     - name: Terraform Validate
       id: validate
