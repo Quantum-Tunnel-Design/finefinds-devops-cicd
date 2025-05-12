@@ -66,19 +66,20 @@ export class SonarQubeConstruct extends Construct {
 
       // Create ECS task definition
       const taskDefinition = new ecs.FargateTaskDefinition(this, 'TaskDef', {
-        memoryLimitMiB: 2048,
+        memoryLimitMiB: 4096,
         cpu: 1024,
       });
 
       // Add container to task definition
       const container = taskDefinition.addContainer('SonarQubeContainer', {
-        image: ecs.ContainerImage.fromRegistry('docker.io/sonarqube:latest'),
+        image: ecs.ContainerImage.fromRegistry('sonarqube:community'),
         logging: ecs.LogDrivers.awsLogs({
           streamPrefix: 'sonarqube',
         }),
         environment: {
           SONAR_JDBC_URL: `jdbc:postgresql://${this.database.instanceEndpoint.hostname}:5432/sonarqube`,
           SONAR_JDBC_USERNAME: 'sonarqube',
+          SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: 'true', // disables production check for dev
         },
         secrets: {
           SONAR_JDBC_PASSWORD: ecs.Secret.fromSecretsManager(

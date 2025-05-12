@@ -40,7 +40,8 @@ export class EcsConstruct extends Construct {
 
     // Add container to task definition
     const container = taskDefinition.addContainer('AppContainer', {
-      image: ecs.ContainerImage.fromRegistry('docker.io/library/node:20-alpine'),
+      image: ecs.ContainerImage.fromRegistry('node:20-alpine'),
+      command: ['node', '-e', 'require("http").createServer((_, res) => res.end("OK")).listen(3000)'],
       logging: ecs.LogDrivers.awsLogs({
         streamPrefix: 'finefinds',
         logGroup: new logs.LogGroup(this, 'AppLogGroup', {
