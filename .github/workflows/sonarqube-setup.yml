@@ -25,10 +25,10 @@ jobs:
     runs-on: ubuntu-latest
     environment: >-
       ${{ 
-        github.event.inputs.environment == 'prod' && 'production' || 
+        github.event.inputs.environment == 'prod' && 'prod' || 
         github.event.inputs.environment == 'staging' && 'staging' || 
         github.event.inputs.environment == 'qa' && 'qa' || 
-        'development' 
+        'dev' 
       }}
     permissions:
       id-token: write

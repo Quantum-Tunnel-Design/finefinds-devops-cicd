@@ -30,6 +30,7 @@ set_environment_secrets() {
     gh secret set SLACK_WEBHOOK_URL_DEVOPS -b"$SLACK_WEBHOOK_URL_DEVOPS" --env "$env"
     gh secret set SLACK_CHANNEL_DEVOPS -b"$SLACK_CHANNEL_DEVOPS" --env "$env"
     gh secret set SLACK_BOT_DEVOPS_TOKEN -b"$SLACK_BOT_DEVOPS_TOKEN" --env "$env"
+    gh secret set AWS_ROLE_ARN -b"$AWS_ROLE_ARN" --env "$env"
     
     # Set environment-specific AWS credentials
     case "$env" in

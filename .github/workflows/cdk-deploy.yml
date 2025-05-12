@@ -11,10 +11,10 @@ jobs:
     # Map branches to environments for GitHub Actions
     environment: >-
       ${{ 
-        github.ref == 'refs/heads/main' && 'production' || 
+        github.ref == 'refs/heads/main' && 'prod' || 
         github.ref == 'refs/heads/staging' && 'staging' || 
         github.ref == 'refs/heads/qa' && 'qa' || 
-        'development' 
+        'dev' 
       }}
     permissions:
       id-token: write
