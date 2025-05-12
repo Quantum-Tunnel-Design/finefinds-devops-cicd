@@ -58,6 +58,13 @@ set_environment_secrets() {
     gh secret set REPO_ORG -b"$REPO_ORG" --env "$env"
     gh secret set REPO_NAME -b"$REPO_NAME" --env "$env"
     
+    # Set new secrets for CDK workflow
+    gh secret set SLACK_BOT_TOKEN -b"$SLACK_BOT_TOKEN" --env "$env"
+    gh secret set SLACK_CHANNEL -b"$SLACK_CHANNEL" --env "$env"
+    gh secret set AWS_ROLE_ARN -b"$AWS_ROLE_ARN" --env "$env"
+    gh secret set SONAR_TOKEN -b"$SONAR_TOKEN" --env "$env"
+    gh secret set SONAR_HOST_URL -b"$SONAR_HOST_URL" --env "$env"
+    
     echo "✅ Secrets set for $env environment"
 }
 

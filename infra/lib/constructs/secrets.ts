@@ -1,0 +1,141 @@
+import * as cdk from 'aws-cdk-lib';
+import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import { Construct } from 'constructs';
+import { BaseConfig } from '../../env/base-config';
+
+export interface SecretsConstructProps {
+  environment: string;
+  config: BaseConfig;
+  kmsKey: cdk.aws_kms.Key;
+}
+
+export class SecretsConstruct extends Construct {
+  public readonly databaseSecret: secretsmanager.Secret;
+  public readonly redisSecret: secretsmanager.Secret;
+  public readonly opensearchSecret: secretsmanager.Secret;
+  public readonly jwtSecret: secretsmanager.Secret;
+  public readonly smtpSecret: secretsmanager.Secret;
+
+  constructor(scope: Construct, id: string, props: SecretsConstructProps) {
+    super(scope, id);
+
+    // Create database secret
+    this.databaseSecret = new secretsmanager.Secret(this, 'DatabaseSecret', {
+      secretName: `finefinds-${props.environment}-database`,
+      description: 'Database credentials for FineFinds application',
+      encryptionKey: props.kmsKey,
+      generateSecretString: {
+        secretStringTemplate: JSON.stringify({
+          username: 'finefinds',
+        }),
+        generateStringKey: 'password',
+        excludePunctuation: false,
+        passwordLength: 32,
+      },
+    });
+
+    // Create Redis secret
+    this.redisSecret = new secretsmanager.Secret(this, 'RedisSecret', {
+      secretName: `finefinds-${props.environment}-redis`,
+      description: 'Redis credentials for FineFinds application',
+      encryptionKey: props.kmsKey,
+      generateSecretString: {
+        secretStringTemplate: JSON.stringify({
+          username: 'default',
+        }),
+        generateStringKey: 'password',
+        excludePunctuation: false,
+        passwordLength: 32,
+      },
+    });
+
+    // Create OpenSearch secret
+    this.opensearchSecret = new secretsmanager.Secret(this, 'OpenSearchSecret', {
+      secretName: `finefinds-${props.environment}-opensearch-admin-password`,
+      description: 'OpenSearch admin password for FineFinds application',
+      encryptionKey: props.kmsKey,
+      generateSecretString: {
+        generateStringKey: 'password',
+        excludePunctuation: false,
+        passwordLength: 32,
+      },
+    });
+
+    // Create JWT secret
+    this.jwtSecret = new secretsmanager.Secret(this, 'JwtSecret', {
+      secretName: `finefinds-${props.environment}-jwt`,
+      description: 'JWT signing key for FineFinds application',
+      encryptionKey: props.kmsKey,
+      generateSecretString: {
+        generateStringKey: 'key',
+        excludePunctuation: false,
+        passwordLength: 64,
+      },
+    });
+
+    // Create SMTP secret
+    this.smtpSecret = new secretsmanager.Secret(this, 'SmtpSecret', {
+      secretName: `finefinds-${props.environment}-smtp`,
+      description: 'SMTP credentials for FineFinds application',
+      encryptionKey: props.kmsKey,
+      generateSecretString: {
+        secretStringTemplate: JSON.stringify({
+          host: props.config.smtp.host,
+          port: props.config.smtp.port,
+          username: props.config.smtp.username,
+        }),
+        generateStringKey: 'password',
+        excludePunctuation: false,
+        passwordLength: 32,
+      },
+    });
+
+    // Create IAM policy for ECS tasks to access secrets
+    const secretsPolicy = new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        'secretsmanager:GetSecretValue',
+        'secretsmanager:DescribeSecret',
+      ],
+      resources: [
+        this.databaseSecret.secretArn,
+        this.redisSecret.secretArn,
+        this.opensearchSecret.secretArn,
+        this.jwtSecret.secretArn,
+        this.smtpSecret.secretArn,
+      ],
+    });
+
+    // Output secret ARNs
+    new cdk.CfnOutput(this, 'DatabaseSecretArn', {
+      value: this.databaseSecret.secretArn,
+      description: 'Database Secret ARN',
+      exportName: `finefinds-${props.environment}-database-secret-arn`,
+    });
+
+    new cdk.CfnOutput(this, 'RedisSecretArn', {
+      value: this.redisSecret.secretArn,
+      description: 'Redis Secret ARN',
+      exportName: `finefinds-${props.environment}-redis-secret-arn`,
+    });
+
+    new cdk.CfnOutput(this, 'OpenSearchSecretArn', {
+      value: this.opensearchSecret.secretArn,
+      description: 'OpenSearch Secret ARN',
+      exportName: `finefinds-${props.environment}-opensearch-secret-arn`,
+    });
+
+    new cdk.CfnOutput(this, 'JwtSecretArn', {
+      value: this.jwtSecret.secretArn,
+      description: 'JWT Secret ARN',
+      exportName: `finefinds-${props.environment}-jwt-secret-arn`,
+    });
+
+    new cdk.CfnOutput(this, 'SmtpSecretArn', {
+      value: this.smtpSecret.secretArn,
+      description: 'SMTP Secret ARN',
+      exportName: `finefinds-${props.environment}-smtp-secret-arn`,
+    });
+  }
+} 

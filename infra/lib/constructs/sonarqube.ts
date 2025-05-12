@@ -1,0 +1,114 @@
+import * as cdk from 'aws-cdk-lib';
+import * as ecs from 'aws-cdk-lib/aws-ecs';
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as rds from 'aws-cdk-lib/aws-rds';
+import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import { Construct } from 'constructs';
+import { BaseConfig } from '../../env/base-config';
+
+export interface SonarQubeConstructProps {
+  environment: string;
+  config: BaseConfig;
+  vpc: ec2.Vpc;
+  kmsKey: cdk.aws_kms.Key;
+}
+
+export class SonarQubeConstruct extends Construct {
+  public readonly service: ecs.FargateService;
+  public readonly database: rds.DatabaseInstance;
+
+  constructor(scope: Construct, id: string, props: SonarQubeConstructProps) {
+    super(scope, id);
+
+    // Create security group for SonarQube
+    const securityGroup = new ec2.SecurityGroup(this, 'SonarQubeSecurityGroup', {
+      vpc: props.vpc,
+      description: 'Security group for SonarQube',
+      allowAllOutbound: true,
+    });
+
+    // Allow inbound SonarQube access
+    securityGroup.addIngressRule(
+      ec2.Peer.ipv4(props.vpc.vpcCidrBlock),
+      ec2.Port.tcp(9000),
+      'Allow SonarQube access from within VPC'
+    );
+
+    // Create database for SonarQube
+    this.database = new rds.DatabaseInstance(this, 'Database', {
+      engine: rds.DatabaseInstanceEngine.postgres({
+        version: rds.PostgresEngineVersion.VER_13,
+      }),
+      instanceType: ec2.InstanceType.of(
+        ec2.InstanceClass.T3,
+        ec2.InstanceSize.MICRO
+      ),
+      vpc: props.vpc,
+      vpcSubnets: {
+        subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+      },
+      securityGroups: [securityGroup],
+      allocatedStorage: 20,
+      maxAllocatedStorage: 100,
+      backupRetention: cdk.Duration.days(7),
+      removalPolicy: props.environment === 'prod' 
+        ? cdk.RemovalPolicy.RETAIN 
+        : cdk.RemovalPolicy.DESTROY,
+      databaseName: 'sonarqube',
+      credentials: rds.Credentials.fromGeneratedSecret('sonarqube'),
+    });
+
+    // Create ECS task definition
+    const taskDefinition = new ecs.FargateTaskDefinition(this, 'TaskDef', {
+      memoryLimitMiB: 2048,
+      cpu: 1024,
+    });
+
+    // Add container to task definition
+    const container = taskDefinition.addContainer('SonarQubeContainer', {
+      image: ecs.ContainerImage.fromRegistry('sonarqube:latest'),
+      logging: ecs.LogDrivers.awsLogs({
+        streamPrefix: 'sonarqube',
+      }),
+      environment: {
+        SONAR_JDBC_URL: `jdbc:postgresql://${this.database.instanceEndpoint.hostname}:5432/sonarqube`,
+        SONAR_JDBC_USERNAME: 'sonarqube',
+      },
+      secrets: {
+        SONAR_JDBC_PASSWORD: ecs.Secret.fromSecretsManager(
+          this.database.secret!,
+          'password'
+        ),
+      },
+      portMappings: [
+        {
+          containerPort: 9000,
+          protocol: ecs.Protocol.TCP,
+        },
+      ],
+    });
+
+    // Create ECS service
+    this.service = new ecs.FargateService(this, 'Service', {
+      cluster: new ecs.Cluster(this, 'Cluster', {
+        vpc: props.vpc,
+        clusterName: `sonarqube-${props.environment}`,
+      }),
+      taskDefinition,
+      desiredCount: 1,
+      securityGroups: [securityGroup],
+      vpcSubnets: {
+        subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+      },
+      assignPublicIp: false,
+    });
+
+    // Output SonarQube URL
+    new cdk.CfnOutput(this, 'SonarQubeUrl', {
+      value: `http://${this.service.loadBalancer.loadBalancerDnsName}:9000`,
+      description: 'SonarQube URL',
+      exportName: `finefinds-${props.environment}-sonarqube-url`,
+    });
+  }
+} 

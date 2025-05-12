@@ -1,0 +1,136 @@
+name: CDK Deploy
+
+on:
+  push:
+    branches: [main, qa, staging, dev]
+    paths: ['infra/**', '.github/workflows/cdk-deploy.yml']
+  pull_request:
+    branches: [main, qa, staging, dev]
+    paths: ['infra/**', '.github/workflows/cdk-deploy.yml']
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Map branches to environments for GitHub Actions
+    environment: >-
+      ${{ 
+        github.ref == 'refs/heads/main' && 'production' || 
+        github.ref == 'refs/heads/staging' && 'staging' || 
+        github.ref == 'refs/heads/qa' && 'qa' || 
+        'development' 
+      }}
+    permissions:
+      id-token: write
+      contents: read
+
+    env:
+      AWS_REGION: us-east-1
+      CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+      CDK_DEFAULT_REGION: us-east-1
+      # Define environment for CDK deployment
+      CDK_ENV: >-
+        ${{ 
+          github.ref == 'refs/heads/main' && 'prod' || 
+          github.ref == 'refs/heads/staging' && 'staging' || 
+          github.ref == 'refs/heads/qa' && 'qa' || 
+          'dev' 
+        }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: infra/package-lock.json
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install Dependencies
+        run: |
+          cd infra
+          npm ci
+
+      - name: Run Tests
+        run: |
+          cd infra
+          npm test
+
+      - name: CDK Diff
+        if: github.event_name == 'pull_request'
+        run: |
+          cd infra
+          npm run cdk diff ${{ env.CDK_ENV }}
+
+      - name: CDK Deploy
+        if: github.event_name == 'push' 
+        run: |
+          cd infra
+          npm run cdk deploy ${{ env.CDK_ENV }} --require-approval never
+
+      - name: Slack Notification (Success)
+        if: success()
+        uses: slackapi/slack-github-action@v1.25.0
+        with:
+          payload: |
+            {
+              "channel": "${{ secrets.SLACK_CHANNEL }}",
+              "attachments": [
+                {
+                  "color": "#36a64f",
+                  "pretext": ":white_check_mark: *CDK Deploy Succeeded*",
+                  "fields": [
+                    { "title": "Environment", "value": "${{ env.CDK_ENV }}", "short": true },
+                    { "title": "Branch", "value": "${{ github.ref_name }}", "short": true },
+                    { "title": "Actor", "value": "${{ github.actor }}", "short": true },
+                    { "title": "Commit", "value": "${{ github.sha }}", "short": false }
+                  ],
+                  "actions": [
+                    {
+                      "type": "button",
+                      "text": "View Workflow",
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
+      - name: Slack Notification (Failure)
+        if: failure()
+        uses: slackapi/slack-github-action@v1.25.0
+        with:
+          payload: |
+            {
+              "channel": "${{ secrets.SLACK_CHANNEL }}",
+              "attachments": [
+                {
+                  "color": "#ff0000",
+                  "pretext": ":x: *CDK Deploy Failed*",
+                  "fields": [
+                    { "title": "Environment", "value": "${{ env.CDK_ENV }}", "short": true },
+                    { "title": "Branch", "value": "${{ github.ref_name }}", "short": true },
+                    { "title": "Actor", "value": "${{ github.actor }}", "short": true },
+                    { "title": "Commit", "value": "${{ github.sha }}", "short": false }
+                  ],
+                  "actions": [
+                    {
+                      "type": "button",
+                      "text": "View Workflow",
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }} 
