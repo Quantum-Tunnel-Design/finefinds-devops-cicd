@@ -10,53 +10,65 @@ export interface DnsConstructProps {
   environment: string;
   config: BaseConfig;
   loadBalancer: elbv2.IApplicationLoadBalancer;
+  domainName?: string;  // Make domain name optional
 }
 
 export class DnsConstruct extends Construct {
-  public readonly hostedZone: route53.IHostedZone;
-  public readonly certificate: acm.ICertificate;
-  private readonly domainName: string;
+  public readonly hostedZone?: route53.IHostedZone;
+  public readonly certificate?: acm.ICertificate;
+  private readonly domainName?: string;
 
   constructor(scope: Construct, id: string, props: DnsConstructProps) {
     super(scope, id);
 
-    // Set domain name based on environment
-    this.domainName = props.environment === 'prod' 
-      ? 'finefinds.com' 
-      : `${props.environment}.finefinds.com`;
+    // Only proceed with DNS setup if domain name is provided
+    if (props.domainName) {
+      // Set domain name based on environment
+      this.domainName = props.environment === 'prod' 
+        ? props.domainName 
+        : `${props.environment}.${props.domainName}`;
 
-    // Import existing hosted zone
-    this.hostedZone = route53.HostedZone.fromLookup(this, 'HostedZone', {
-      domainName: 'finefinds.com',
-    });
+      try {
+        // Import existing hosted zone
+        this.hostedZone = route53.HostedZone.fromLookup(this, 'HostedZone', {
+          domainName: props.domainName,
+        });
 
-    // Create SSL certificate
-    this.certificate = new acm.Certificate(this, 'Certificate', {
-      domainName: this.domainName,
-      validation: acm.CertificateValidation.fromDns(this.hostedZone),
-    });
+        // Create SSL certificate
+        this.certificate = new acm.Certificate(this, 'Certificate', {
+          domainName: this.domainName,
+          validation: acm.CertificateValidation.fromDns(this.hostedZone),
+        });
 
-    // Create A record for the load balancer
-    new route53.ARecord(this, 'AliasRecord', {
-      zone: this.hostedZone,
-      recordName: this.domainName,
-      target: route53.RecordTarget.fromAlias(
-        new targets.LoadBalancerTarget(props.loadBalancer)
-      ),
-    });
+        // Create A record for the load balancer
+        new route53.ARecord(this, 'AliasRecord', {
+          zone: this.hostedZone,
+          recordName: this.domainName,
+          target: route53.RecordTarget.fromAlias(
+            new targets.LoadBalancerTarget(props.loadBalancer)
+          ),
+        });
 
-    // Output domain name
-    new cdk.CfnOutput(this, 'DomainName', {
-      value: this.domainName,
-      description: 'Domain Name',
-      exportName: `finefinds-${props.environment}-domain-name`,
-    });
+        // Output domain name
+        new cdk.CfnOutput(this, 'DomainName', {
+          value: this.domainName,
+          description: 'Domain Name',
+          exportName: `finefinds-${props.environment}-domain-name`,
+        });
 
-    // Output certificate ARN
-    new cdk.CfnOutput(this, 'CertificateArn', {
-      value: this.certificate.certificateArn,
-      description: 'Certificate ARN',
-      exportName: `finefinds-${props.environment}-certificate-arn`,
-    });
+        // Output certificate ARN
+        new cdk.CfnOutput(this, 'CertificateArn', {
+          value: this.certificate.certificateArn,
+          description: 'Certificate ARN',
+          exportName: `finefinds-${props.environment}-certificate-arn`,
+        });
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          console.warn(`DNS setup skipped: ${error.message}`);
+        } else {
+          console.warn('DNS setup skipped due to an unknown error');
+        }
+      }
+    }
   }
 } 

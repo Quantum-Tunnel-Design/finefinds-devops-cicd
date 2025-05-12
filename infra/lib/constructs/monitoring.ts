@@ -144,7 +144,7 @@ export class MonitoringConstruct extends Construct {
     new logs.MetricFilter(this, 'ErrorMetricFilter', {
       logGroup: logs.LogGroup.fromLogGroupName(
         this,
-        'ApplicationLogGroup',
+        'ErrorLogGroupRef',
         `/finefinds/${props.environment}/application`
       ),
       metricNamespace: `FineFinds/${props.environment}`,
@@ -157,7 +157,7 @@ export class MonitoringConstruct extends Construct {
     new logs.MetricFilter(this, 'WarningMetricFilter', {
       logGroup: logs.LogGroup.fromLogGroupName(
         this,
-        'ApplicationLogGroup',
+        'WarningLogGroupRef',
         `/finefinds/${props.environment}/application`
       ),
       metricNamespace: `FineFinds/${props.environment}`,

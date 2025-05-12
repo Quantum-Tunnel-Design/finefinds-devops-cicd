@@ -79,6 +79,7 @@ export class FineFindsStack extends cdk.Stack {
       environment: props.config.environment,
       config: props.config,
       loadBalancer: ecs.loadBalancer,
+      domainName: props.config.dns.domainName,
     });
 
     // Create Backup Resources

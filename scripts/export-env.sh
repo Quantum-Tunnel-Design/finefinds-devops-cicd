@@ -31,3 +31,5 @@ export ALERT_EMAIL="amal.c.gamage@gmail.com"
 export OIDC_PROVIDER_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:oidc-provider/token.actions.githubusercontent.com"
 export OIDC_THUMBPRINT="6938fd4d98bab03faadb97b34396831e3780aea1"
 
+export CDK_DEPLOY_ACCOUNT=891076991993
+export CDK_DEPLOY_REGION=us-east-1

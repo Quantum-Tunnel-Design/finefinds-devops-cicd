@@ -59,6 +59,7 @@ export class SecretsConstruct extends Construct {
       description: 'OpenSearch admin password for FineFinds application',
       encryptionKey: props.kmsKey,
       generateSecretString: {
+        secretStringTemplate: JSON.stringify({}),
         generateStringKey: 'password',
         excludePunctuation: false,
         passwordLength: 32,
@@ -71,6 +72,7 @@ export class SecretsConstruct extends Construct {
       description: 'JWT signing key for FineFinds application',
       encryptionKey: props.kmsKey,
       generateSecretString: {
+        secretStringTemplate: JSON.stringify({}),
         generateStringKey: 'key',
         excludePunctuation: false,
         passwordLength: 64,
