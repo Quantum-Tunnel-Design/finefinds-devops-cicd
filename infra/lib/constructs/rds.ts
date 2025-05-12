@@ -63,7 +63,9 @@ export class RdsConstruct extends Construct {
           : ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.SMALL),
         vpc: props.vpc,
         vpcSubnets: {
-          subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+          subnetType: props.environment === 'prod' 
+            ? ec2.SubnetType.PRIVATE_WITH_EGRESS 
+            : ec2.SubnetType.PRIVATE_ISOLATED,
         },
         securityGroups: [securityGroup],
         parameterGroup,

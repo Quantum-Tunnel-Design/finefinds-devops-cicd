@@ -31,8 +31,8 @@ switch (env) {
 // Create the stack
 new FineFindsStack(app, `FineFinds-${env}`, {
   env: {
-    account: process.env.CDK_DEPLOY_ACCOUNT || '123456789012',
-    region: process.env.CDK_DEPLOY_REGION || 'us-east-1',
+    account: process.env.CDK_DEPLOY_ACCOUNT || app.node.tryGetContext(env)?.account || process.env.CDK_DEFAULT_ACCOUNT || '123456789012',
+    region: process.env.CDK_DEPLOY_REGION || app.node.tryGetContext(env)?.region || process.env.CDK_DEFAULT_REGION || 'us-east-1',
   },
   config,
   description: `FineFinds Infrastructure Stack for ${env} environment`,

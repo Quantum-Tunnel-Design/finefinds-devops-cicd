@@ -120,7 +120,9 @@ export class EcsConstruct extends Construct {
       minHealthyPercent: 50,
       securityGroups: [securityGroup],
       vpcSubnets: {
-        subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+        subnetType: props.environment === 'prod' 
+          ? ec2.SubnetType.PRIVATE_WITH_EGRESS 
+          : ec2.SubnetType.PRIVATE_ISOLATED,
       },
       assignPublicIp: false,
     });

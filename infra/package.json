@@ -2,7 +2,7 @@
   "name": "finefinds-infrastructure",
   "version": "0.1.0",
   "bin": {
-    "finefinds-infrastructure": "bin/app.js"
+    "finefinds-infrastructure": "infra/bin/app.js"
   },
   "scripts": {
     "build": "tsc",
@@ -11,7 +11,8 @@
     "cdk": "cdk",
     "deploy": "cdk deploy",
     "destroy": "cdk destroy",
-    "synth": "cdk synth"
+    "synth": "cdk synth",
+    "bootstrap": "cdk bootstrap --qualifier finefinds"
   },
   "devDependencies": {
     "@types/jest": "^29.5.5",

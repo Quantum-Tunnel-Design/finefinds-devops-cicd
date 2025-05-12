@@ -18,7 +18,7 @@ export class VpcConstruct extends Construct {
     this.vpc = new ec2.Vpc(this, 'Vpc', {
       maxAzs: props.environment === 'prod' ? props.config.vpc.maxAzs : 2,
       natGateways: props.environment === 'prod' ? props.config.vpc.natGateways : 0,
-      cidr: props.config.vpc.cidr,
+      ipAddresses: ec2.IpAddresses.cidr(props.config.vpc.cidr),
       subnetConfiguration: props.environment === 'prod' 
         ? [
             {

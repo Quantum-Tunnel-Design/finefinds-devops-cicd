@@ -49,7 +49,9 @@ export class SonarQubeConstruct extends Construct {
         ),
         vpc: props.vpc,
         vpcSubnets: {
-          subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+          subnetType: props.environment === 'prod' 
+            ? ec2.SubnetType.PRIVATE_WITH_EGRESS 
+            : ec2.SubnetType.PRIVATE_ISOLATED,
         },
         securityGroups: [securityGroup],
         allocatedStorage: 20,
@@ -102,7 +104,9 @@ export class SonarQubeConstruct extends Construct {
         desiredCount: 1,
         securityGroups: [securityGroup],
         vpcSubnets: {
-          subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+          subnetType: props.environment === 'prod' 
+            ? ec2.SubnetType.PRIVATE_WITH_EGRESS 
+            : ec2.SubnetType.PRIVATE_ISOLATED,
         },
         assignPublicIp: false,
       });
