@@ -57,6 +57,8 @@
     "dev": {
       "account": "891076991993",
       "region": "us-east-1"
-    }
+    },
+    "@aws-cdk/core:stackRelativeExports": true,
+    "@aws-cdk/aws-cloudformation:stackResourceTimeoutInMinutes": 60
   }
 }
