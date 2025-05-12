@@ -131,4 +131,61 @@ resource "aws_s3_bucket_policy" "buckets" {
       }
     ]
   })
-} 
+}
+
+# S3 Bucket for CloudTrail
+resource "aws_s3_bucket" "cloudtrail" {
+  count  = var.include_cloudtrail ? 1 : 0
+  bucket = "${var.name_prefix}-cloudtrail-${random_id.bucket_suffix.hex}"
+  tags   = var.tags
+}
+
+resource "aws_s3_bucket_versioning" "cloudtrail" {
+  count  = var.include_cloudtrail ? 1 : 0
+  bucket = aws_s3_bucket.cloudtrail[0].id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "cloudtrail" {
+  count  = var.include_cloudtrail && var.cloudtrail_lifecycle.enabled ? 1 : 0
+  bucket = aws_s3_bucket.cloudtrail[0].id
+
+  rule {
+    id     = "cleanup"
+    status = "Enabled"
+    filter {
+      prefix = "AWSLogs/"
+    }
+    expiration {
+      days = var.cloudtrail_lifecycle.expiration_days
+    }
+  }
+}
+data "aws_caller_identity" "current" {}
+
+resource "aws_s3_bucket_policy" "cloudtrail" {
+  bucket   = aws_s3_bucket.cloudtrail[0].id
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Sid       = "AWSCloudTrailAclCheck",
+        Effect    = "Allow",
+        Principal = { Service = "cloudtrail.amazonaws.com" },
+        Action    = "s3:GetBucketAcl",
+        Resource  = aws_s3_bucket.cloudtrail[0].arn
+      },
+      {
+        Sid       = "AWSCloudTrailWrite",
+        Effect    = "Allow",
+        Principal = { Service = "cloudtrail.amazonaws.com" },
+        Action    = "s3:PutObject",
+        Resource  = "${aws_s3_bucket.cloudtrail[0].arn}/AWSLogs/${data.aws_caller_identity.current.account_id}/*",
+        Condition = { StringEquals = { "s3:x-amz-acl" = "bucket-owner-full-control" } }
+      }
+    ]
+  })
+}

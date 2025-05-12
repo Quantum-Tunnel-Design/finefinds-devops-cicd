@@ -26,3 +26,8 @@ output "bucket_names" {
 output "bucket_suffix" {
   value = random_id.bucket_suffix.hex
 }
+
+output "cloudtrail_bucket_name" {
+  description = "S3 bucket name used by CloudTrail"
+  value       = var.include_cloudtrail ? aws_s3_bucket.cloudtrail[0].id : null
+}

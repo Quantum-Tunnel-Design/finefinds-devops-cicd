@@ -132,4 +132,22 @@ variable "cloudfront_distribution_arn" {
   description = "ARN of the CloudFront distribution"
   type        = string
   default     = null
-} 
+}
+
+variable "include_cloudtrail" {
+  description = "Whether to create a CloudTrail S3 bucket"
+  type        = bool
+  default     = false
+}
+
+variable "cloudtrail_lifecycle" {
+  description = "Lifecycle settings for the CloudTrail S3 bucket"
+  type = object({
+    enabled         = bool
+    expiration_days = number
+  })
+  default = {
+    enabled         = true
+    expiration_days = 90
+  }
+}

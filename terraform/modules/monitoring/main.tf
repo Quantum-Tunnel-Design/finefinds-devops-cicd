@@ -362,7 +362,7 @@ resource "aws_xray_group" "main" {
 # CloudTrail
 resource "aws_cloudtrail" "main" {
   name                          = "${var.name_prefix}-trail"
-  s3_bucket_name               = aws_s3_bucket.cloudtrail.id
+  s3_bucket_name               = var.cloudtrail_bucket_name
   include_global_service_events = true
   is_multi_region_trail        = true
   enable_logging               = true
@@ -370,67 +370,6 @@ resource "aws_cloudtrail" "main" {
   cloud_watch_logs_role_arn    = aws_iam_role.cloudtrail.arn
 
   tags = var.tags
-}
-
-# S3 Bucket for CloudTrail
-resource "aws_s3_bucket" "cloudtrail" {
-  bucket = "${var.name_prefix}-cloudtrail"
-
-  tags = var.tags
-}
-
-# S3 Bucket Versioning
-resource "aws_s3_bucket_versioning" "cloudtrail" {
-  bucket = aws_s3_bucket.cloudtrail.id
-
-  versioning_configuration {
-    status = "Enabled"
-  }
-}
-
-# S3 Bucket Lifecycle Configuration
-resource "aws_s3_bucket_lifecycle_configuration" "cloudtrail" {
-  bucket = aws_s3_bucket.cloudtrail.id
-
-  rule {
-    id     = "cleanup"
-    status = "Enabled"
-
-    filter {
-      prefix = "AWSLogs/"
-    }
-
-    expiration {
-      days = 90
-    }
-  }
-}
-
-# S3 Bucket Policy for CloudTrail
-data "aws_caller_identity" "current" {}
-
-resource "aws_s3_bucket_policy" "cloudtrail" {
-  bucket = aws_s3_bucket.cloudtrail.id
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Sid       = "AWSCloudTrailAclCheck",
-        Effect    = "Allow",
-        Principal = { Service = "cloudtrail.amazonaws.com" },
-        Action    = "s3:GetBucketAcl",
-        Resource  = aws_s3_bucket.cloudtrail.arn
-      },
-      {
-        Sid       = "AWSCloudTrailWrite",
-        Effect    = "Allow",
-        Principal = { Service = "cloudtrail.amazonaws.com" },
-        Action    = "s3:PutObject",
-        Resource  = "${aws_s3_bucket.cloudtrail.arn}/AWSLogs/${data.aws_caller_identity.current.account_id}/*",
-        Condition = { StringEquals = { "s3:x-amz-acl" = "bucket-owner-full-control" } }
-      }
-    ]
-  })
 }
 
 # IAM Role for CloudTrail

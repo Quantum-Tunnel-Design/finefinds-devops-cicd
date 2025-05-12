@@ -245,4 +245,22 @@ variable "enable_cloudtrail" {
   description = "Enable CloudTrail logging"
   type        = bool
   default     = true
-} 
+}
+
+variable "include_cloudtrail" {
+  description = "Whether to create an S3 bucket for CloudTrail"
+  type        = bool
+  default     = false
+}
+
+variable "cloudtrail_lifecycle" {
+  description = "Lifecycle rules for CloudTrail bucket"
+  type = object({
+    enabled = bool
+    expiration_days = number
+  })
+  default = {
+    enabled         = true
+    expiration_days = 90
+  }
+}

@@ -58,10 +58,15 @@ output "cloudtrail_arn" {
 
 output "cloudtrail_s3_bucket" {
   description = "ID of the S3 bucket used for CloudTrail"
-  value       = var.enable_cloudtrail ? aws_s3_bucket.cloudtrail.id : null
+  value       = var.enable_cloudtrail ? var.cloudtrail_bucket_name  : null
 }
 
 output "cloudtrail_role_arn" {
   description = "ARN of the IAM role used by CloudTrail"
   value       = var.enable_cloudtrail ? aws_iam_role.cloudtrail.arn : null
-} 
+}
+
+variable "cloudtrail_bucket_name" {
+  description = "S3 bucket name for CloudTrail logs"
+  type        = string
+}

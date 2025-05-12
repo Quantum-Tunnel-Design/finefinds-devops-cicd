@@ -130,6 +130,8 @@ module "storage" {
   private_subnet_ids    = module.networking.private_subnet_ids
   kms_key_id        = module.security.kms_key_id
   tags                  = module.common.common_tags
+
+  include_cloudtrail = true
 }
 
 # CICD Module
@@ -240,6 +242,8 @@ module "monitoring" {
   log_retention_days = 30
   alert_email        = var.alert_email
   aws_region         = var.aws_region
+
+  cloudtrail_bucket_name = module.storage.cloudtrail_bucket_name
 }
 
 # Variables
