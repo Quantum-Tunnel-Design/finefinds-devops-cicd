@@ -93,12 +93,9 @@ jobs:
         echo "Working directory: $(pwd)"
         echo "Terraform version: $(terraform version)"
         terraform init
+        ls -la
         echo "Terraform initialization completed"
         echo "================================"
-
-    - name: List current terraform state
-      id: state 
-      run: terraform state list
 
     - name: Terraform Validate
       id: validate
