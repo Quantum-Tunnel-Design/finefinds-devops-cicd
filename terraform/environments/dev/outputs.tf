@@ -50,7 +50,7 @@ output "ecs_service_name" {
 
 output "alb_dns_name" {
   description = "DNS name of the load balancer"
-  value       = module.compute.alb_dns_name
+  value       = module.alb.alb_dns_name
 }
 
 output "cognito_user_pool_id" {

@@ -21,21 +21,23 @@ fi
 
 ENVIRONMENT=$1
 REGION="us-east-1"
+PROJECT_NAME="finefindslk" # Added for consistency
+DB_USER_FOR_SECRET="ffadmin" # Align with generate-secrets.sh
 
 # Create S3 bucket for Terraform state
-print_message "Creating S3 bucket for Terraform state..." "$YELLOW"
+print_message "Creating S3 bucket for Terraform state (${PROJECT_NAME}-terraform-state-${ENVIRONMENT})..." "$YELLOW"
 aws s3api create-bucket \
-    --bucket "finefindslk-terraform-state-${ENVIRONMENT}" \
+    --bucket "${PROJECT_NAME}-terraform-state-${ENVIRONMENT}" \
     --region $REGION
 
 # Enable versioning
 aws s3api put-bucket-versioning \
-    --bucket "finefindslk-terraform-state-${ENVIRONMENT}" \
+    --bucket "${PROJECT_NAME}-terraform-state-${ENVIRONMENT}" \
     --versioning-configuration Status=Enabled
 
 # Enable encryption
 aws s3api put-bucket-encryption \
-    --bucket "finefindslk-terraform-state-${ENVIRONMENT}" \
+    --bucket "${PROJECT_NAME}-terraform-state-${ENVIRONMENT}" \
     --server-side-encryption-configuration '{
         "Rules": [
             {
@@ -47,41 +49,40 @@ aws s3api put-bucket-encryption \
     }'
 
 # Create DynamoDB table for state locking
-print_message "Creating DynamoDB table for state locking..." "$YELLOW"
+print_message "Creating DynamoDB table for state locking (${PROJECT_NAME}-terraform-locks-${ENVIRONMENT})..." "$YELLOW"
 aws dynamodb create-table \
-    --table-name "finefindslk-terraform-locks" \
+    --table-name "${PROJECT_NAME}-terraform-locks-${ENVIRONMENT}" \
     --attribute-definitions AttributeName=LockID,AttributeType=S \
     --key-schema AttributeName=LockID,KeyType=HASH \
     --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5
 
 # Create backend configuration
-print_message "Creating backend configuration..." "$YELLOW"
+print_message "Creating backend configuration (terraform/environments/${ENVIRONMENT}/backend.tf)..." "$YELLOW"
 cat > terraform/environments/${ENVIRONMENT}/backend.tf << EOL
 terraform {
   backend "s3" {
-    bucket         = "finefindslk-terraform-state-${ENVIRONMENT}"
+    bucket         = "${PROJECT_NAME}-terraform-state-${ENVIRONMENT}"
     key            = "terraform.tfstate"
     region         = "${REGION}"
-    dynamodb_table = "finefindslk-terraform-locks"
+    dynamodb_table = "${PROJECT_NAME}-terraform-locks-${ENVIRONMENT}"
     encrypt        = true
   }
 }
 EOL
 
 # Create terraform.tfvars
-print_message "Creating terraform.tfvars..." "$YELLOW"
+print_message "Creating terraform.tfvars (terraform/environments/${ENVIRONMENT}/terraform.tfvars)..." "$YELLOW"
 cat > terraform/environments/${ENVIRONMENT}/terraform.tfvars << EOL
-project     = "finefindslk"
+project     = "${PROJECT_NAME}"
 environment = "${ENVIRONMENT}"
 aws_region  = "${REGION}"
 
 # Database configuration
-db_username = "admin"
-db_password = "CHANGE_ME"  # Change this to a secure password
-
-# SonarQube configuration
-sonarqube_db_username = "sonarqube"
-sonarqube_db_password = "CHANGE_ME"  # Change this to a secure password
+# db_password is now managed by generate-secrets.sh and AWS Secrets Manager.
+# db_username set here should be the master username for RDS instance creation.
+# The username stored in the secret (by generate-secrets.sh) will be used by the application.
+# Ensure these are consistent or that the application uses the secret's username.
+db_username = "${DB_USER_FOR_SECRET}" # Aligning with what generate-secrets.sh uses for the secret
 
 # Container configuration
 container_name = "app"
@@ -92,13 +93,17 @@ image_tag      = "latest"
 alert_email = "amal.c.gamage@gmail.com"  # Change this to your email
 EOL
 
-print_message "Infrastructure setup completed!" "$GREEN"
+print_message "Infrastructure setup script completed for ${ENVIRONMENT}!" "$GREEN"
 print_message "Next steps:" "$YELLOW"
-echo "1. Update terraform.tfvars with secure passwords and your email"
-echo "2. Initialize Terraform:"
+echo "1. Review terraform/environments/${ENVIRONMENT}/terraform.tfvars and update placeholders if any (e.g., alert_email)."
+echo "2. Ensure your AWS credentials are configured correctly for Terraform."
+echo "3. Run scripts/generate-secrets.sh ${ENVIRONMENT} to create necessary secrets."
+echo "4. Initialize Terraform:"
 echo "   cd terraform/environments/${ENVIRONMENT}"
 echo "   terraform init"
-echo "3. Review the plan:"
+echo "5. Review the plan:"
 echo "   terraform plan"
-echo "4. Apply the configuration:"
+# Remind user about providing essential variables like repository URLs for plan/apply if not in tfvars
+echo "   (You might need to provide -var for client_repository, admin_repository, source_token if running plan/apply locally and they are not in tfvars or secrets)"
+echo "6. Apply the configuration:"
 echo "   terraform apply" 

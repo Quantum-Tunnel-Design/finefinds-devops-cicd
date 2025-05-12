@@ -9,9 +9,9 @@ resource "aws_s3_bucket" "buckets" {
 
 # S3 Bucket Versioning
 resource "aws_s3_bucket_versioning" "buckets" {
-  for_each = aws_s3_bucket.buckets
+  for_each = var.bucket_names
 
-  bucket = each.value.id
+  bucket = aws_s3_bucket.buckets[each.key].id
   versioning_configuration {
     status = "Enabled"
   }
@@ -19,9 +19,9 @@ resource "aws_s3_bucket_versioning" "buckets" {
 
 # S3 Bucket Server Side Encryption
 resource "aws_s3_bucket_server_side_encryption_configuration" "buckets" {
-  for_each = aws_s3_bucket.buckets
+  for_each = var.bucket_names
 
-  bucket = each.value.id
+  bucket = aws_s3_bucket.buckets[each.key].id
 
   rule {
     apply_server_side_encryption_by_default {
@@ -88,9 +88,9 @@ resource "aws_s3_bucket_cors_configuration" "buckets" {
 
 # S3 Bucket Public Access Block
 resource "aws_s3_bucket_public_access_block" "buckets" {
-  for_each = aws_s3_bucket.buckets
+  for_each = var.bucket_names
 
-  bucket = each.value.id
+  bucket = aws_s3_bucket.buckets[each.key].id
 
   block_public_acls       = true
   block_public_policy     = true
@@ -100,12 +100,12 @@ resource "aws_s3_bucket_public_access_block" "buckets" {
 
 # S3 Bucket Policy
 resource "aws_s3_bucket_policy" "buckets" {
-  for_each = {    
-    for k, v in aws_s3_bucket.buckets : k => v
+  for_each = { 
+    for k, v_unused_in_value in var.bucket_names : k => aws_s3_bucket.buckets[k]
     if (k == "uploads" || k == "static") && var.cloudfront_distribution_arn != null
   }
 
-  bucket = each.value.id
+  bucket = each.value.id # each.value is now the bucket object corresponding to the filtered key
 
   policy = jsonencode({
     Version = "2012-10-17"
