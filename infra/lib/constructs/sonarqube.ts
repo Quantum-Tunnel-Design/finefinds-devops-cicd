@@ -72,7 +72,7 @@ export class SonarQubeConstruct extends Construct {
 
       // Add container to task definition
       const container = taskDefinition.addContainer('SonarQubeContainer', {
-        image: ecs.ContainerImage.fromRegistry('sonarqube:latest'),
+        image: ecs.ContainerImage.fromRegistry('docker.io/sonarqube:latest'),
         logging: ecs.LogDrivers.awsLogs({
           streamPrefix: 'sonarqube',
         }),
