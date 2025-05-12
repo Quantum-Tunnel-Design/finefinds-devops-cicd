@@ -58,7 +58,7 @@ jobs:
         if: github.event_name == 'push'
         run: |
           cd infra
-          npm run cdk bootstrapb -- --qualifier finefinds-${{ env.CDK_ENV }} aws://${{ secrets.AWS_ACCOUNT_ID }}/${{ secrets.AWS_REGION }}
+          npm run cdk bootstrap -- --qualifier finefinds-${{ env.CDK_ENV }} aws://${{ secrets.AWS_ACCOUNT_ID }}/${{ secrets.AWS_REGION }}
       
       - name: CDK Diff
         if: github.event_name == 'pull_request'
