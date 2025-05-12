@@ -23,9 +23,6 @@ override.tf.json
 .terraformrc
 terraform.rc
 
-# Ignore lock files
-.terraform.lock.hcl
-
 # Ignore Mac system files
 .DS_Store
 
@@ -123,7 +120,6 @@ config.local.yml
 terraform/environments/*/terraform.tfvars
 terraform/environments/*/backend.tf
 terraform/environments/*/.terraform/
-terraform/environments/*/.terraform.lock.hcl
 
 # SonarQube specific
 .sonar/
