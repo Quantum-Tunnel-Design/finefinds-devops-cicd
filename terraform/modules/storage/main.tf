@@ -1,8 +1,13 @@
+# S3 Bucket Suffix
+resource "random_id" "bucket_suffix" {
+  byte_length = 4
+}
+
 # S3 Buckets
 resource "aws_s3_bucket" "buckets" {
   for_each = var.bucket_names
 
-  bucket = "${var.name_prefix}-${each.value}"
+  bucket = "${var.name_prefix}-${each.value}-${random_id.bucket_suffix.hex}"
 
   tags = var.tags
 }

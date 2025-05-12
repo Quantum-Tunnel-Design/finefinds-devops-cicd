@@ -16,4 +16,13 @@ output "bucket_domain_names" {
 output "bucket_regional_domain_names" {
   description = "Map of bucket names to their regional domain names"
   value       = { for k, v in aws_s3_bucket.buckets : k => v.bucket_regional_domain_name }
-} 
+}
+
+output "bucket_names" {
+  description = "Map of final bucket names"
+  value       = { for k, v in aws_s3_bucket.buckets : k => v.bucket }
+}
+
+output "bucket_suffix" {
+  value = random_id.bucket_suffix.hex
+}

@@ -222,7 +222,7 @@ output "cognito_client_id" {
 
 output "s3_bucket_name" {
   description = "Name of the S3 bucket"
-  value       = module.s3.bucket_name
+  value       = module.storage.bucket_names["uploads"]
 }
 
 output "mongodb_endpoint" {

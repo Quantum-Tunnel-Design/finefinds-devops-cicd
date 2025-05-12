@@ -267,7 +267,7 @@ output "cognito_client_id" {
 
 output "s3_bucket_name" {
   description = "Name of the S3 bucket (specifically the uploads bucket)"
-  value       = "${local.name_prefix}-uploads"
+  value       =  module.storage.bucket_names["uploads"]
 }
 
 module "networking" {
