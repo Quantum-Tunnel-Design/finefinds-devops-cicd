@@ -3,7 +3,6 @@ name: CDK Deploy
 on:
   push:
     branches: [main, qa, staging, dev]
-    paths: ['infra/**', '.github/workflows/cdk-deploy.yml']
 
 jobs:
   deploy:
