@@ -18,7 +18,7 @@ terraform import module.monitoring.aws_xray_group.main "${NAME_PREFIX}-xray"
 # Import CloudWatch Log Groups
 echo "Importing CloudWatch Log Groups..."
 terraform import module.networking.aws_cloudwatch_log_group.flow_log[0] "/aws/vpc/${NAME_PREFIX}-flow-log"
-terraform import module.compute.aws_cloudwatch_log_group.main "/ecs/${NAME_PREFIX}"
+terraform import module.backend.aws_cloudwatch_log_group.main "/ecs/${NAME_PREFIX}"
 
 # Import RDS Subnet Group
 echo "Importing RDS Subnet Group..."
@@ -32,8 +32,8 @@ terraform import module.security.aws_backup_plan.main[0] "${BACKUP_PLAN_ID}"
 # Import IAM Roles
 echo "Importing IAM Roles..."
 terraform import module.security.aws_iam_role.cloudwatch[0] "${NAME_PREFIX}-cloudwatch-role"
-terraform import module.compute.aws_iam_role.task_execution "${NAME_PREFIX}-task-execution-role"
-terraform import module.compute.aws_iam_role.task "${NAME_PREFIX}-task-role"
+terraform import module.backend.aws_iam_role.task_execution "${NAME_PREFIX}-task-execution-role"
+terraform import module.backend.aws_iam_role.task "${NAME_PREFIX}-task-role"
 
 # Import VPC Flow Log
 echo "Importing VPC Flow Log..."
@@ -47,16 +47,16 @@ CLUSTER_NAME="${NAME_PREFIX}-cluster"
 SERVICE_NAME="${NAME_PREFIX}-service"
 TASK_DEFINITION="${NAME_PREFIX}-task"
 
-terraform import module.compute.aws_ecs_cluster.main "${CLUSTER_NAME}"
-terraform import module.compute.aws_ecs_service.main "${CLUSTER_NAME}/${SERVICE_NAME}"
+terraform import module.backend.aws_ecs_cluster.main "${CLUSTER_NAME}"
+terraform import module.backend.aws_ecs_service.main "${CLUSTER_NAME}/${SERVICE_NAME}"
 
 # Get the latest task definition revision
 TASK_DEFINITION_ARN=$(aws ecs describe-task-definition --task-definition "${TASK_DEFINITION}" --query "taskDefinition.taskDefinitionArn" --output text)
-terraform import module.compute.aws_ecs_task_definition.main "${TASK_DEFINITION_ARN}"
+terraform import module.backend.aws_ecs_task_definition.main "${TASK_DEFINITION_ARN}"
 
 # Import Security Groups
 echo "Importing Security Groups..."
-terraform import module.compute.aws_security_group.tasks "${NAME_PREFIX}-tasks-sg"
+terraform import module.backend.aws_security_group.tasks "${NAME_PREFIX}-tasks-sg"
 terraform import module.alb.aws_security_group.main "${NAME_PREFIX}-alb-sg"
 terraform import module.rds.aws_security_group.main "${NAME_PREFIX}-rds-sg"
 

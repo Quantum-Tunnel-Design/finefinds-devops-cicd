@@ -208,7 +208,7 @@ module "storage" {
   environment           = var.environment
   vpc_id                = module.networking.vpc_id
   private_subnet_ids    = module.networking.private_subnet_ids
-  ecs_security_group_id = module.compute.ecs_security_group_id
+  ecs_security_group_id = module.backend.ecs_security_group_id
   db_instance_class     = local.env_config[var.environment].db_instance_class
   db_name               = var.db_name
   db_username           = var.db_username
@@ -219,7 +219,7 @@ module "storage" {
   tags                  = local.common_tags
 }
 
-module "compute" {
+module "backend" {
   source                   = "../../modules/compute"
   name_prefix              = local.name_prefix
   environment              = var.environment
@@ -227,12 +227,12 @@ module "compute" {
   vpc_id                   = module.networking.vpc_id
   public_subnet_ids        = module.networking.public_subnet_ids
   private_subnet_ids       = module.networking.private_subnet_ids
-  certificate_arn          = module.cicd.ecr_repository_url
+  certificate_arn          = module.amplify.ecr_repository_url
   task_cpu                 = 512
   task_memory              = 1024
   task_execution_role_arn  = module.security.ecs_task_execution_role_arn
   task_role_arn            = module.security.ecs_task_role_arn
-  container_image          = module.cicd.ecr_repository_url
+  container_image          = module.amplify.ecr_repository_url
   container_port           = var.container_port
   container_environment    = []
   service_desired_count    = 2
@@ -241,13 +241,13 @@ module "compute" {
   tags                     = local.common_tags
 }
 
-module "cicd" {
-  source            = "../../modules/cicd"
+module "amplify" {
+  source            = "../../modules/amplify"
   name_prefix       = local.name_prefix
   environment       = var.environment
   repository_url    = var.repository_url
   source_token      = var.source_token
-  api_url           = module.compute.alb_dns_name
+  api_url           = module.backend.alb_dns_name
   cognito_domain    = module.security.cognito_domain
   cognito_client_id = module.security.cognito_user_pool_client_id
   cognito_redirect_uri = "https://${var.environment}.finefinds.lk/callback"
@@ -261,9 +261,9 @@ module "monitoring" {
   environment       = var.environment
   aws_region        = var.aws_region
   alert_email       = var.alert_email
-  ecs_cluster_name  = module.compute.cluster_name
-  ecs_service_name  = module.compute.service_name
+  ecs_cluster_name  = module.backend.cluster_name
+  ecs_service_name  = module.backend.service_name
   rds_instance_id   = module.storage.rds_instance_id
-  alb_arn_suffix    = module.compute.alb_arn_suffix
+  alb_arn_suffix    = module.backend.alb_arn_suffix
   tags              = local.common_tags
 } 

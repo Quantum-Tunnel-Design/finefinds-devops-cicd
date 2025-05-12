@@ -112,4 +112,60 @@ variable "alb_target_group_arn" {
 variable "alb_security_group_id" {
   description = "ID of the ALB Security Group to allow traffic from"
   type        = string
-} 
+}
+
+variable "container_definitions" {
+  description = "JSON-encoded container definitions for ECS task"
+  type        = string
+}
+
+variable "cpu" {
+  description = "Fargate task CPU units"
+  type        = number
+  default     = 512
+}
+
+variable "memory" {
+  description = "Fargate task memory in MiB"
+  type        = number
+  default     = 1024
+}
+
+variable "desired_count" {
+  description = "Desired number of ECS tasks"
+  type        = number
+  default     = 2
+}
+
+variable "min_capacity" {
+  description = "Minimum autoscaling task count"
+  type        = number
+  default     = 2
+}
+
+variable "max_capacity" {
+  description = "Maximum autoscaling task count"
+  type        = number
+  default     = 5
+}
+
+variable "assign_public_ip" {
+  description = "Whether to assign a public IP to the ECS service"
+  type        = bool
+  default     = false
+}
+
+variable "ecs_task_execution_role_arn" {
+  description = "ARN of the ECS task execution role"
+  type        = string
+}
+
+variable "ecs_task_role_arn" {
+  description = "ARN of the ECS task role"
+  type        = string
+}
+
+variable "subnet_ids" {
+  description = "List of subnet IDs for ECS service"
+  type        = list(string)
+}

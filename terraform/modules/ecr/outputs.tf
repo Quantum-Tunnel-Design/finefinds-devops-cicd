@@ -1,14 +1,7 @@
-output "repository_url" {
-  description = "URL of the ECR repository"
-  value       = aws_ecr_repository.main.repository_url
+output "client_ecr_repository_arn" {
+  value = aws_ecr_repository.client.arn
 }
 
-output "repository_name" {
-  description = "Name of the ECR repository"
-  value       = aws_ecr_repository.main.name
+output "admin_ecr_repository_arn" {
+  value = aws_ecr_repository.admin.arn
 }
-
-output "repository_arn" {
-  description = "ARN of the ECR repository"
-  value       = aws_ecr_repository.main.arn
-} 

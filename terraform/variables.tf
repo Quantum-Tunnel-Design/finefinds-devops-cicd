@@ -52,11 +52,6 @@ variable "service_desired_count" {
   default     = 1
 }
 
-variable "container_image" {
-  description = "Container image to deploy"
-  type        = string
-}
-
 variable "container_port" {
   description = "Port exposed by the container"
   type        = number

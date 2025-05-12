@@ -39,7 +39,7 @@ validate_resources() {
     local file="terraform/environments/$env/main.tf"
     
     # Check for required modules
-    required_modules=("vpc" "secrets" "security" "storage" "compute" "cicd")
+    required_modules=("vpc" "secrets" "security" "storage" "backend" "amplify")
     for module in "${required_modules[@]}"; do
         if ! grep -q "module \"$module\"" "$file"; then
             echo -e "${RED}Error: Missing module $module in $env${NC}"
@@ -69,8 +69,8 @@ validate_dependencies() {
     required_deps=(
         "module.security.*depends_on.*module.secrets"
         "module.storage.*depends_on.*module.vpc.*module.security"
-        "module.compute.*depends_on.*module.vpc.*module.security.*module.storage"
-        "module.cicd.*depends_on.*module.compute"
+        "module.backend.*depends_on.*module.vpc.*module.security.*module.storage"
+        "module.amplify.*depends_on.*module.compute"
     )
     
     for dep in "${required_deps[@]}"; do

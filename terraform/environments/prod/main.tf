@@ -230,7 +230,7 @@ module "storage" {
   environment           = var.environment
   vpc_id                = module.vpc.vpc_id
   private_subnet_ids    = module.vpc.private_subnet_ids
-  ecs_security_group_id = module.compute.ecs_security_group_id
+  ecs_security_group_id = module.backend.ecs_security_group_id
   db_instance_class     = "db.t3.medium"
   db_name               = var.db_name
   db_username           = var.db_username
@@ -244,7 +244,7 @@ module "storage" {
   depends_on            = [module.vpc, module.security]
 }
 
-module "compute" {
+module "backend" {
   source                   = "../../modules/compute"
   name_prefix              = "${var.project}-${var.environment}"
   environment              = var.environment
@@ -257,7 +257,7 @@ module "compute" {
   task_memory              = 2048
   task_execution_role_arn  = module.security.ecs_task_execution_role_arn
   task_role_arn            = module.security.ecs_task_role_arn
-  container_image          = module.cicd.ecr_repository_url
+  container_image          = module.amplify.ecr_repository_url
   container_port           = var.container_port
   container_environment    = []
   service_desired_count    = 3
@@ -267,13 +267,13 @@ module "compute" {
   depends_on               = [module.vpc, module.security, module.storage]
 }
 
-module "cicd" {
-  source            = "../../modules/cicd"
+module "amplify" {
+  source            = "../../modules/amplify"
   name_prefix       = "${var.project}-${var.environment}"
   environment       = var.environment
   repository_url    = var.repository_url
   source_token      = var.source_token
-  api_url           = module.compute.alb_dns_name
+  api_url           = module.backend.alb_dns_name
   cognito_domain    = module.security.cognito_domain
   cognito_client_id = module.security.cognito_user_pool_client_id
   cognito_redirect_uri = "https://${var.environment}.finefinds.lk/callback"
@@ -286,10 +286,10 @@ module "monitoring" {
   source            = "../../modules/monitoring"
   name_prefix       = local.name_prefix
   aws_region        = var.aws_region
-  ecs_cluster_name  = module.compute.ecs_cluster_name
-  ecs_service_name  = module.compute.ecs_service_name
+  ecs_cluster_name  = module.backend.ecs_cluster_name
+  ecs_service_name  = module.backend.ecs_service_name
   rds_instance_id   = module.storage.rds_endpoint
-  alb_arn_suffix    = module.compute.alb_arn
+  alb_arn_suffix    = module.backend.alb_arn
   alert_email       = var.alert_email
   tags              = local.common_tags
 }

@@ -4,12 +4,9 @@ resource "aws_vpc" "main" {
   enable_dns_hostnames = true
   enable_dns_support   = true
 
-  tags = merge(
-    var.tags,
-    {
-      Name = "${var.name_prefix}-vpc"
-    }
-  )
+  tags = merge(var.tags, {
+    Name = "${var.name_prefix}-vpc"
+  })
 
   lifecycle {
     create_before_destroy = true
@@ -22,16 +19,12 @@ resource "aws_subnet" "public" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = var.vpc_config.public_subnets[count.index]
   availability_zone = var.vpc_config.availability_zones[count.index]
-
   map_public_ip_on_launch = true
 
-  tags = merge(
-    var.tags,
-    {
-      Name = "${var.name_prefix}-public-${count.index + 1}"
-      Tier = "Public"
-    }
-  )
+  tags = merge(var.tags, {
+    Name = "${var.name_prefix}-public-${count.index + 1}"
+    Tier = "Public"
+  })
 
   lifecycle {
     create_before_destroy = true
@@ -45,13 +38,10 @@ resource "aws_subnet" "private" {
   cidr_block        = var.vpc_config.private_subnets[count.index]
   availability_zone = var.vpc_config.availability_zones[count.index]
 
-  tags = merge(
-    var.tags,
-    {
-      Name = "${var.name_prefix}-private-${count.index + 1}"
-      Tier = "Private"
-    }
-  )
+  tags = merge(var.tags, {
+    Name = "${var.name_prefix}-private-${count.index + 1}"
+    Tier = "Private"
+  })
 
   lifecycle {
     create_before_destroy = true
@@ -65,13 +55,10 @@ resource "aws_subnet" "database" {
   cidr_block        = var.vpc_config.database_subnets[count.index]
   availability_zone = var.vpc_config.availability_zones[count.index]
 
-  tags = merge(
-    var.tags,
-    {
-      Name = "${var.name_prefix}-database-${count.index + 1}"
-      Tier = "Database"
-    }
-  )
+  tags = merge(var.tags, {
+    Name = "${var.name_prefix}-database-${count.index + 1}"
+    Tier = "Database"
+  })
 
   lifecycle {
     create_before_destroy = true
@@ -82,12 +69,9 @@ resource "aws_subnet" "database" {
 resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
 
-  tags = merge(
-    var.tags,
-    {
-      Name = "${var.name_prefix}-igw"
-    }
-  )
+  tags = merge(var.tags, {
+    Name = "${var.name_prefix}-igw"
+  })
 
   lifecycle {
     create_before_destroy = true
@@ -99,12 +83,9 @@ resource "aws_eip" "nat" {
   count  = var.vpc_config.single_nat_gateway ? 1 : length(var.vpc_config.private_subnets)
   domain = "vpc"
 
-  tags = merge(
-    var.tags,
-    {
-      Name = "${var.name_prefix}-nat-eip-${count.index + 1}"
-    }
-  )
+  tags = merge(var.tags, {
+    Name = "${var.name_prefix}-nat-eip-${count.index + 1}"
+  })
 
   lifecycle {
     create_before_destroy = true
@@ -117,12 +98,9 @@ resource "aws_nat_gateway" "main" {
   allocation_id = aws_eip.nat[count.index].id
   subnet_id     = aws_subnet.public[count.index].id
 
-  tags = merge(
-    var.tags,
-    {
-      Name = "${var.name_prefix}-nat-${count.index + 1}"
-    }
-  )
+  tags = merge(var.tags, {
+    Name = "${var.name_prefix}-nat-${count.index + 1}"
+  })
 
   depends_on = [aws_internet_gateway.main]
 
@@ -140,12 +118,9 @@ resource "aws_route_table" "public" {
     gateway_id = aws_internet_gateway.main.id
   }
 
-  tags = merge(
-    var.tags,
-    {
-      Name = "${var.name_prefix}-public-rt"
-    }
-  )
+  tags = merge(var.tags, {
+    Name = "${var.name_prefix}-public-rt"
+  })
 
   lifecycle {
     create_before_destroy = true
@@ -165,12 +140,9 @@ resource "aws_route_table" "private" {
     }
   }
 
-  tags = merge(
-    var.tags,
-    {
-      Name = "${var.name_prefix}-private-rt-${count.index + 1}"
-    }
-  )
+  tags = merge(var.tags, {
+    Name = "${var.name_prefix}-private-rt-${count.index + 1}"
+  })
 
   lifecycle {
     create_before_destroy = true
@@ -181,12 +153,9 @@ resource "aws_route_table" "private" {
 resource "aws_route_table" "database" {
   vpc_id = aws_vpc.main.id
 
-  tags = merge(
-    var.tags,
-    {
-      Name = "${var.name_prefix}-database-rt"
-    }
-  )
+  tags = merge(var.tags, {
+    Name = "${var.name_prefix}-database-rt"
+  })
 
   lifecycle {
     create_before_destroy = true
@@ -242,11 +211,11 @@ resource "aws_iam_role" "flow_log" {
   name = "${var.name_prefix}-flow-log-role"
 
   assume_role_policy = jsonencode({
-    Version = "2012-10-17"
+    Version = "2012-10-17",
     Statement = [
       {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
+        Action = "sts:AssumeRole",
+        Effect = "Allow",
         Principal = {
           Service = "vpc-flow-logs.amazonaws.com"
         }
@@ -265,7 +234,7 @@ resource "aws_iam_role_policy" "flow_log" {
   role = aws_iam_role.flow_log[0].id
 
   policy = jsonencode({
-    Version = "2012-10-17"
+    Version = "2012-10-17",
     Statement = [
       {
         Action = [
@@ -274,10 +243,10 @@ resource "aws_iam_role_policy" "flow_log" {
           "logs:PutLogEvents",
           "logs:DescribeLogGroups",
           "logs:DescribeLogStreams"
-        ]
-        Effect   = "Allow"
+        ],
+        Effect   = "Allow",
         Resource = "*"
       }
     ]
   })
-} 
+}

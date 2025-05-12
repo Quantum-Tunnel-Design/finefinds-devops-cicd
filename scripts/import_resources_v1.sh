@@ -7,10 +7,10 @@ terraform import module.alb.aws_lb_target_group.main arn:aws:elasticloadbalancin
 
 # ECR Repositories
 echo "Importing ECR Repository finefindslk-dev-client-repo"
-terraform import module.cicd.aws_ecr_repository.client finefindslk-dev-client-repo
+terraform import module.amplify.aws_ecr_repository.client finefindslk-dev-client-repo
 
 echo "Importing ECR Repository finefindslk-dev-admin-repo"
-terraform import module.cicd.aws_ecr_repository.admin finefindslk-dev-admin-repo
+terraform import module.amplify.aws_ecr_repository.admin finefindslk-dev-admin-repo
 
 echo "Importing ECR Repository finefindslk-dev"
 terraform import module.ecr.aws_ecr_repository.main finefindslk-dev

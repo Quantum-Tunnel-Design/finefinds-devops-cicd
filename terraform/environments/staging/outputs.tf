@@ -39,42 +39,42 @@ output "db_username" {
 # Compute Outputs
 output "cluster_name" {
   description = "Name of the ECS cluster"
-  value       = module.compute.cluster_name
+  value       = module.backend.cluster_name
 }
 
 output "cluster_arn" {
   description = "ARN of the ECS cluster"
-  value       = module.compute.cluster_arn
+  value       = module.backend.cluster_arn
 }
 
 output "service_name" {
   description = "Name of the ECS service"
-  value       = module.compute.service_name
+  value       = module.backend.service_name
 }
 
 output "service_arn" {
   description = "ARN of the ECS service"
-  value       = module.compute.service_arn
+  value       = module.backend.service_arn
 }
 
 output "task_definition_arn" {
   description = "ARN of the ECS task definition"
-  value       = module.compute.task_definition_arn
+  value       = module.backend.task_definition_arn
 }
 
 output "alb_dns_name" {
   description = "DNS name of the load balancer"
-  value       = module.compute.alb_dns_name
+  value       = module.backend.alb_dns_name
 }
 
 output "alb_arn" {
   description = "ARN of the load balancer"
-  value       = module.compute.alb_arn
+  value       = module.backend.alb_arn
 }
 
 output "alb_zone_id" {
   description = "Zone ID of the load balancer"
-  value       = module.compute.alb_zone_id
+  value       = module.backend.alb_zone_id
 }
 
 # Security Outputs
@@ -86,5 +86,5 @@ output "kms_key_id" {
 # Monitoring Outputs
 output "log_group_name" {
   description = "Name of the CloudWatch log group"
-  value       = module.compute.log_group_name
+  value       = module.backend.log_group_name
 } 

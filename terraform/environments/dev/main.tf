@@ -18,18 +18,65 @@ module "common" {
   tags        = var.tags
 }
 
-# VPC Module
-# module "vpc" {
-#   source = "../../modules/vpc"
-# 
-#   project     = var.project
-#   environment = var.environment
-#   vpc_cidr    = "10.1.0.0/16"
-#   availability_zones = ["${var.aws_region}a", "${var.aws_region}b"]
-#   public_subnet_cidrs  = ["10.1.101.0/24", "10.1.102.0/24"]
-#   private_subnet_cidrs = ["10.1.1.0/24", "10.1.2.0/24"]
-#   tags        = var.tags
-# }
+module "backend" {
+  source        = "../../modules/backend"
+  name_prefix   = "${var.project}-${var.environment}-api"
+  environment   = var.environment
+  project       = var.project
+  vpc_id        = module.networking.vpc_id
+  private_subnet_ids = module.networking.private_subnet_ids
+  subnet_ids = module.networking.private_subnet_ids
+  alb_target_group_arn = module.alb.target_group_arn
+
+  container_definitions = jsonencode([
+    {
+      name      = "api"
+      image     = "${var.ecr_repo_url}:latest"
+      essential = true
+      portMappings = [
+        {
+          containerPort = 4000
+          protocol      = "tcp"
+        }
+      ]
+      environment = [
+        { name = "NODE_ENV", value = var.environment },
+        { name = "PORT", value = "4000" }
+      ]
+      secrets = [
+        {
+          name      = "DB_PASSWORD"
+          valueFrom = module.secrets.database_arn
+        }
+      ]
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = "/ecs/${var.project}-${var.environment}-api"
+          awslogs-region        = var.aws_region
+          awslogs-stream-prefix = "api"
+        }
+      }
+    }
+  ])
+
+  cpu                        = 512
+  memory                     = 1024
+  desired_count              = 2
+  min_capacity               = 2
+  max_capacity               = 5
+  assign_public_ip           = false
+  ecs_task_execution_role_arn = module.security.ecs_task_execution_role_arn
+  ecs_task_role_arn           = module.security.ecs_task_role_arn
+
+  tags = var.tags
+
+  rds_secret_arn         = module.secrets.database_arn
+  certificate_arn        = var.certificate_arn != null ? var.certificate_arn : module.security.certificate_arn
+  container_image_arn    = module.secrets.container_image_arn
+  alb_security_group_id  = module.alb.security_group_id
+  public_subnet_ids      = module.networking.public_subnet_ids
+}
 
 # Secrets Module
 module "secrets" {
@@ -38,9 +85,6 @@ module "secrets" {
   project     = var.project
   environment              = var.environment
   tags                     = module.common.common_tags
-  
-  container_image = var.container_image
-  db_password = var.db_password
 }
 
 # Security Module
@@ -57,11 +101,7 @@ module "security" {
   client_domain = var.client_domain
   admin_domain  = var.admin_domain
 
-  db_username = var.db_username_arn != null ? var.db_username_arn : module.secrets.database_arn
   db_password_arn = var.db_password_arn != null ? var.db_password_arn : module.secrets.database_arn
-
-  sonar_token_arn = var.sonar_token_arn != null ? var.sonar_token_arn : module.secrets.sonar_token_arn
-
   certificate_arn = var.certificate_arn
 
   callback_urls = [
@@ -92,32 +132,9 @@ module "storage" {
   tags                  = module.common.common_tags
 }
 
-# Compute Module
-module "compute" {
-  source = "../../modules/compute"
-  
-  name_prefix = var.name_prefix
-  project     = var.project
-  environment = var.environment
-  tags        = var.tags
-  
-  vpc_id = module.networking.vpc_id
-  private_subnet_ids = module.networking.private_subnet_ids
-  public_subnet_ids  = module.networking.public_subnet_ids
-
-  task_cpu    = 512
-  task_memory = 1024
-  container_port = var.container_port
-  container_image_arn = module.secrets.container_image_arn
-  certificate_arn = var.certificate_arn != null ? var.certificate_arn : module.security.certificate_arn
-  rds_secret_arn = var.db_password_arn != null ? var.db_password_arn : module.secrets.database_arn
-  alb_target_group_arn = module.alb.target_group_arn
-  alb_security_group_id = module.alb.security_group_id
-}
-
 # CICD Module
-module "cicd" {
-  source = "../../modules/cicd"
+module "amplify" {
+  source = "../../modules/amplify"
   
   name_prefix = var.name_prefix
   environment = var.environment
@@ -160,6 +177,7 @@ module "alb" {
 # ECR Module
 module "ecr" {
   source = "../../modules/ecr"
+  name_prefix = local.name_prefix
 
   project     = var.project
   environment = var.environment
@@ -209,10 +227,10 @@ module "monitoring" {
   alb_arn            = module.alb.alb_arn
   alb_dns_name       = module.alb.alb_dns_name
   alb_arn_suffix     = module.alb.alb_arn_suffix
-  ecs_cluster_arn    = module.compute.cluster_arn
-  ecs_cluster_name   = module.compute.cluster_name
-  ecs_service_arn    = module.compute.service_arn
-  ecs_service_name   = module.compute.service_name
+  ecs_cluster_arn    = module.backend.cluster_arn
+  ecs_cluster_name   = module.backend.cluster_name
+  ecs_service_arn    = module.backend.service_arn
+  ecs_service_name   = module.backend.service_name
   rds_instance_id    = module.rds.db_instance_id
   rds_endpoint       = module.rds.db_instance_endpoint
 
@@ -232,11 +250,6 @@ variable "secret_suffix" {
 }
 
 # Outputs
-output "ecr_repository_url" {
-  description = "URL of the ECR repository"
-  value       = module.ecr.repository_url
-}
-
 output "rds_security_group_id" {
   description = "ID of the RDS security group"
   value       = module.rds.security_group_id
@@ -266,21 +279,3 @@ module "networking" {
   tags        = module.common.common_tags
   vpc_config  = local.current_vpc_config
 }
-
-# module "database" { # REMOVED - module "rds" will manage the primary PostgreSQL RDS
-#   source = "../../modules/database"
-# 
-#   project     = var.project
-#   environment = var.environment
-#   name_prefix = local.name_prefix
-#   tags        = module.common.common_tags
-# 
-#   vpc_id              = module.networking.vpc_id
-#   private_subnet_ids  = module.networking.database_subnet_ids
-#   ecs_security_group_id = module.compute.ecs_security_group_id
-#   kms_key_id          = module.security.kms_key_id
-# 
-#   instance_class    = local.current_env_config.db_instance_class
-#   allocated_storage = 20
-#   db_name          = "finefindslk"
-# }

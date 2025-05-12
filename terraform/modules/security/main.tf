@@ -18,6 +18,11 @@ resource "aws_iam_role" "ecs_task_execution" {
   tags = var.tags
 }
 
+resource "aws_iam_role_policy_attachment" "execution" {
+  role       = aws_iam_role.ecs_task_execution.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
+
 resource "aws_iam_role_policy_attachment" "ecs_task_execution" {
   role       = aws_iam_role.ecs_task_execution.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
@@ -43,71 +48,6 @@ resource "aws_iam_role" "ecs_task" {
   tags = var.tags
 }
 
-# Cognito User Pools
-resource "aws_cognito_user_pool" "client" {
-  name = "${var.name_prefix}-client-pool"
-
-  auto_verified_attributes = ["email"]
-  username_attributes     = ["email"]
-
-  password_policy {
-    minimum_length    = 8
-    require_lowercase = true
-    require_numbers   = true
-    require_symbols   = true
-    require_uppercase = true
-  }
-
-  tags = var.tags
-}
-
-resource "aws_cognito_user_pool_client" "client" {
-  name = "${var.name_prefix}-client"
-
-  user_pool_id = aws_cognito_user_pool.client.id
-
-  callback_urls = var.callback_urls
-  logout_urls   = var.logout_urls
-
-  allowed_oauth_flows = ["code"]
-  allowed_oauth_scopes = ["email", "openid", "profile"]
-  allowed_oauth_flows_user_pool_client = true
-
-  supported_identity_providers = ["COGNITO"]
-}
-
-resource "aws_cognito_user_pool" "admin" {
-  name = "${var.name_prefix}-admin-pool"
-
-  auto_verified_attributes = ["email"]
-  username_attributes     = ["email"]
-
-  password_policy {
-    minimum_length    = 8
-    require_lowercase = true
-    require_numbers   = true
-    require_symbols   = true
-    require_uppercase = true
-  }
-
-  tags = var.tags
-}
-
-resource "aws_cognito_user_pool_client" "admin" {
-  name = "${var.name_prefix}-admin"
-
-  user_pool_id = aws_cognito_user_pool.admin.id
-
-  callback_urls = var.callback_urls
-  logout_urls   = var.logout_urls
-
-  allowed_oauth_flows = ["code"]
-  allowed_oauth_scopes = ["email", "openid", "profile"]
-  allowed_oauth_flows_user_pool_client = true
-
-  supported_identity_providers = ["COGNITO"]
-}
-
 # Security Groups
 resource "aws_security_group" "db" {
   name        = "${var.name_prefix}-db-sg"
@@ -128,74 +68,15 @@ resource "aws_security_group" "db" {
 data "aws_region" "current" {}
 
 # Secrets Manager Data Sources
-# data "aws_secretsmanager_secret" "mongodb_password" { # Not needed, ARN is passed in
-# name = "${var.project}/${var.environment}/mongodb-password"
-# }
 
-data "aws_secretsmanager_secret" "sonar_token" { # This is correct if we want to discover by name
-  name = "${var.project}/${var.environment}/sonar-token"
-}
-
-# Get secret versions
 data "aws_secretsmanager_secret_version" "db_credentials" {
-  secret_id = var.db_password_arn # This ARN now points to the secret holding {username, password}
-}
-
-# data "aws_secretsmanager_secret_version" "mongodb_credentials" { # REMOVED
-#   secret_id = var.mongodb_password_arn # This ARN now points to the secret holding {username, password}
-# }
-
-data "aws_secretsmanager_secret_version" "sonar_token" {
-  # If var.sonar_token_arn is preferred (passed from dev environment):
-  # secret_id = var.sonar_token_arn 
-  # Else, if discovery by name via data.aws_secretsmanager_secret.sonar_token is preferred:
-  secret_id = data.aws_secretsmanager_secret.sonar_token.id 
+  secret_id = var.db_password_arn
 }
 
 # Local variables for secrets
 locals {
   db_secret_content = jsondecode(data.aws_secretsmanager_secret_version.db_credentials.secret_string)
   db_password       = local.db_secret_content.password
-  # db_username       = local.db_secret_content.username # If needed by the security module
-
-  # mongodb_secret_content = jsondecode(data.aws_secretsmanager_secret_version.mongodb_credentials.secret_string) # REMOVED
-  # mongodb_password       = local.mongodb_secret_content.password # REMOVED
-  # mongodb_username     = local.mongodb_secret_content.username # If needed # REMOVED
-
-  sonar_token_content = jsondecode(data.aws_secretsmanager_secret_version.sonar_token.secret_string)
-  sonar_token         = local.sonar_token_content.token
-}
-
-# Cognito User Pool Client
-resource "aws_cognito_user_pool_client" "main" {
-  name                         = "${var.name_prefix}-client"
-  user_pool_id                 = aws_cognito_user_pool.client.id
-  generate_secret              = true
-  refresh_token_validity       = 30
-  prevent_user_existence_errors = "ENABLED"
-  explicit_auth_flows = [
-    "ALLOW_USER_PASSWORD_AUTH",
-    "ALLOW_USER_SRP_AUTH",
-    "ALLOW_REFRESH_TOKEN_AUTH"
-  ]
-
-  # Use Amplify domains for callbacks
-  callback_urls = [
-    "https://${var.client_domain}/callback",
-    "https://${var.admin_domain}/callback"
-  ]
-
-  logout_urls = [
-    "https://${var.client_domain}",
-    "https://${var.admin_domain}"
-  ]
-}
-
-# Cognito User Pool Domain
-resource "aws_cognito_user_pool_domain" "main" {
-  domain       = "${var.name_prefix}-auth"
-  user_pool_id = aws_cognito_user_pool.client.id
-  certificate_arn = var.certificate_arn
 }
 
 # KMS Key
@@ -281,11 +162,11 @@ resource "aws_iam_role" "backup" {
   name  = "${var.name_prefix}-backup-role"
 
   assume_role_policy = jsonencode({
-    Version = "2012-10-17"
+    Version = "2012-10-17",
     Statement = [
       {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
+        Action = "sts:AssumeRole",
+        Effect = "Allow",
         Principal = {
           Service = "backup.amazonaws.com"
         }
@@ -313,11 +194,11 @@ resource "aws_iam_role" "cloudwatch" {
   name  = "${var.name_prefix}-cloudwatch-role"
 
   assume_role_policy = jsonencode({
-    Version = "2012-10-17"
+    Version = "2012-10-17",
     Statement = [
       {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
+        Action = "sts:AssumeRole",
+        Effect = "Allow",
         Principal = {
           Service = "monitoring.amazonaws.com"
         }
@@ -342,7 +223,7 @@ resource "aws_iam_role_policy_attachment" "cloudwatch" {
 # CloudWatch Dashboard
 resource "aws_cloudwatch_dashboard" "main" {
   count          = var.enable_monitoring ? 1 : 0
-  dashboard_name = "${var.name_prefix}-dashboard"
+  dashboard_name = "${var.name_prefix}-${var.environment}-dashboard"
 
   dashboard_body = jsonencode({
     widgets = [
@@ -354,8 +235,8 @@ resource "aws_cloudwatch_dashboard" "main" {
         height = 6
         properties = {
           metrics = [
-            ["AWS/ECS", "CPUUtilization", "ServiceName", "${var.name_prefix}-service", "ClusterName", "${var.name_prefix}-cluster"],
-            ["AWS/ECS", "MemoryUtilization", "ServiceName", "${var.name_prefix}-service", "ClusterName", "${var.name_prefix}-cluster"]
+            ["AWS/ECS", "CPUUtilization", "ServiceName", "${var.name_prefix}-service", "ClusterName", "${var.name_prefix}-${var.environment}-cluster"],
+            ["AWS/ECS", "MemoryUtilization", "ServiceName", "${var.name_prefix}-service", "ClusterName", "${var.name_prefix}-${var.environment}-cluster"]
           ]
           period = 300
           stat   = "Average"
@@ -382,4 +263,4 @@ resource "aws_cloudwatch_dashboard" "main" {
       }
     ]
   })
-} 
+}

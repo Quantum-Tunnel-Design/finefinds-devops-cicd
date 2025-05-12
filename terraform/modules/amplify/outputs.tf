@@ -1,13 +1,3 @@
-output "client_ecr_repository_arn" {
-  description = "ARN of the client ECR repository"
-  value       = aws_ecr_repository.client.arn
-}
-
-output "admin_ecr_repository_arn" {
-  description = "ARN of the admin ECR repository"
-  value       = aws_ecr_repository.admin.arn
-}
-
 output "client_amplify_app_id" {
   description = "ID of the client Amplify app"
   value       = aws_amplify_app.client.id

@@ -66,7 +66,7 @@ module "database" {
 }
 
 # Compute Module
-module "compute" {
+module "backend" {
   source = "../../modules/compute"
 
   project     = var.project
@@ -109,10 +109,10 @@ module "monitoring" {
   private_subnet_ids = module.networking.private_subnet_ids
   public_subnet_ids  = module.networking.public_subnet_ids
 
-  alb_arn            = module.compute.alb_arn
-  alb_dns_name       = module.compute.alb_dns_name
-  ecs_cluster_arn    = module.compute.cluster_arn
-  ecs_service_arn    = module.compute.service_arn
+  alb_arn            = module.backend.alb_arn
+  alb_dns_name       = module.backend.alb_dns_name
+  ecs_cluster_arn    = module.backend.cluster_arn
+  ecs_service_arn    = module.backend.service_arn
   rds_instance_id    = module.database.db_instance_id
   rds_endpoint       = module.database.db_endpoint
 
@@ -128,6 +128,6 @@ resource "aws_security_group_rule" "database_from_compute" {
   from_port                = 5432
   to_port                  = 5432
   protocol                 = "tcp"
-  source_security_group_id = module.compute.tasks_security_group_id
+  source_security_group_id = module.backend.tasks_security_group_id
   security_group_id        = module.database.db_security_group_id
 } 

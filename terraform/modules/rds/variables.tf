@@ -90,4 +90,28 @@ variable "tags" {
   description = "Tags to apply to all resources"
   type        = map(string)
   default     = {}
-} 
+}
+
+variable "db_engine" {
+  description = "Database engine (e.g., postgres, mysql)"
+  type        = string
+  default     = "postgres"
+}
+
+variable "engine_version" {
+  description = "Engine version to use for RDS"
+  type        = string
+  default     = "14.7"
+}
+
+variable "db_port" {
+  description = "Port on which the database accepts connections"
+  type        = number
+  default     = 5432
+}
+
+variable "kms_key_id" {
+  description = "KMS key ID to use for encryption at rest"
+  type        = string
+  default     = null
+}

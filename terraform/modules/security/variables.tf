@@ -1,11 +1,19 @@
 variable "project" {
   description = "Project name"
   type        = string
+  validation {
+    condition     = can(regex("^[a-z0-9-]+$", var.project))
+    error_message = "Project name must be lowercase and hyphenated."
+  }
 }
 
 variable "environment" {
   description = "Environment name"
   type        = string
+  validation {
+    condition     = contains(["dev", "qa", "staging", "prod"], var.environment)
+    error_message = "Environment must be one of: dev, qa, staging, prod."
+  }
 }
 
 variable "name_prefix" {
@@ -33,28 +41,8 @@ variable "admin_domain" {
   type        = string
 }
 
-variable "db_username" {
-  description = "Database username"
-  type        = string
-}
-
 variable "db_password_arn" {
   description = "ARN of the database password in Secrets Manager"
-  type        = string
-}
-
-# variable "mongodb_username" { # REMOVED
-#   description = "MongoDB username"
-#   type        = string
-# }
-# 
-# variable "mongodb_password_arn" { # REMOVED
-#   description = "ARN of the MongoDB password in Secrets Manager"
-#   type        = string
-# }
-
-variable "sonar_token_arn" {
-  description = "ARN of the SonarQube token in Secrets Manager"
   type        = string
 }
 
@@ -89,4 +77,4 @@ variable "enable_monitoring" {
   description = "Enable CloudWatch monitoring"
   type        = bool
   default     = true
-} 
+}

@@ -1,23 +1,3 @@
-# output "rds_endpoint" { # REMOVED
-#   description = "Endpoint of the RDS instance"
-#   value       = aws_db_instance.main.endpoint
-# }
-# 
-# output "rds_port" { # REMOVED
-#   description = "Port of the RDS instance"
-#   value       = aws_db_instance.main.port
-# }
-
-# output "mongodb_private_ip" { # REMOVED
-#   description = "Private IP of the MongoDB instance"
-#   value       = var.use_existing_cluster ? null : aws_instance.mongodb[0].private_ip
-# }
-# 
-# output "mongodb_ebs_volume_id" { # REMOVED
-#   description = "ID of the MongoDB EBS volume"
-#   value       = var.use_existing_cluster ? null : aws_ebs_volume.mongodb_data[0].id
-# }
-
 output "bucket_ids" {
   description = "Map of bucket names to their IDs"
   value       = { for k, v in aws_s3_bucket.buckets : k => v.id }

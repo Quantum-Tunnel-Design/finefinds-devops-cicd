@@ -6,7 +6,7 @@ data "aws_iam_role" "existing_grafana" {
 
 # CloudWatch Dashboard
 resource "aws_cloudwatch_dashboard" "main" {
-  dashboard_name = "${var.name_prefix}-dashboard"
+  dashboard_name = "${var.name_prefix}-${var.environment}-dashboard"
 
   dashboard_body = jsonencode({
     widgets = [
@@ -19,8 +19,8 @@ resource "aws_cloudwatch_dashboard" "main" {
 
         properties = {
           metrics = [
-            ["AWS/ECS", "CPUUtilization", "ClusterName", "${var.name_prefix}-cluster"],
-            ["AWS/ECS", "MemoryUtilization", "ClusterName", "${var.name_prefix}-cluster"]
+            ["AWS/ECS", "CPUUtilization", "ClusterName", "${var.name_prefix}-${var.environment}-cluster"],
+            ["AWS/ECS", "MemoryUtilization", "ClusterName", "${var.name_prefix}-${var.environment}-cluster"]
           ]
           period = 300
           stat   = "Average"
@@ -188,7 +188,7 @@ resource "aws_cloudwatch_metric_alarm" "ecs_cpu" {
   ok_actions         = [aws_sns_topic.alerts.arn]
 
   dimensions = {
-    ClusterName = "${var.name_prefix}-cluster"
+    ClusterName = "${var.name_prefix}-${var.environment}-cluster"
   }
 
   tags = var.tags
@@ -208,7 +208,7 @@ resource "aws_cloudwatch_metric_alarm" "ecs_memory" {
   ok_actions         = [aws_sns_topic.alerts.arn]
 
   dimensions = {
-    ClusterName = "${var.name_prefix}-cluster"
+    ClusterName = "${var.name_prefix}-${var.environment}-cluster"
   }
 
   tags = var.tags

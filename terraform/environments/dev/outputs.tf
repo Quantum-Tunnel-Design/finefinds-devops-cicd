@@ -40,12 +40,12 @@ output "db_secret_arn" {
 
 output "ecs_cluster_name" {
   description = "Name of the ECS cluster"
-  value       = module.compute.cluster_name
+  value       = module.backend.cluster_name
 }
 
 output "ecs_service_name" {
   description = "Name of the ECS service"
-  value       = module.compute.service_name
+  value       = module.backend.service_name
 }
 
 output "alb_dns_name" {

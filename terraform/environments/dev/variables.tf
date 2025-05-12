@@ -28,12 +28,6 @@ variable "container_port" {
   default     = 3000
 }
 
-variable "ecr_repository_url" {
-  description = "URL of the ECR repository"
-  type        = string
-  default     = "123456789012.dkr.ecr.us-east-1.amazonaws.com/finefindslk"
-}
-
 variable "image_tag" {
   description = "Tag of the container image to deploy"
   type        = string
@@ -43,13 +37,6 @@ variable "image_tag" {
 variable "db_username" {
   description = "Database username"
   type        = string
-  default     = null
-}
-
-variable "db_password" {
-  description = "Database password"
-  type        = string
-  sensitive   = true
   default     = null
 }
 
@@ -191,12 +178,6 @@ variable "db_name" {
   default     = "finefindslk"
 }
 
-variable "container_image" {
-  description = "Container image to deploy"
-  type        = string
-  default     = "amazon/aws-cli:latest"  # Placeholder image
-}
-
 variable "callback_urls" {
   description = "Cognito callback URLs"
   type        = list(string)
@@ -289,4 +270,9 @@ variable "name_prefix" {
   description = "Prefix for resource names"
   type        = string
   default     = "finefindslk-dev"  # This follows the pattern project-environment
+}
+
+variable "ecr_repo_url" {
+  description = "ECR repository URL for the backend container image"
+  type        = string
 }

@@ -40,7 +40,7 @@ output "cloudwatch_role_arn" {
 
 output "cloudwatch_dashboard_url" {
   description = "URL of the CloudWatch dashboard"
-  value       = var.enable_monitoring ? "https://${data.aws_region.current.name}.console.aws.amazon.com/cloudwatch/home?region=${data.aws_region.current.name}#dashboards:name=${var.name_prefix}-dashboard" : null
+  value       = var.enable_monitoring ? "https://${data.aws_region.current.name}.console.aws.amazon.com/cloudwatch/home?region=${data.aws_region.current.name}#dashboards:name=${var.name_prefix}-${var.environment}-dashboard" : null
 }
 
 output "certificate_arn" {

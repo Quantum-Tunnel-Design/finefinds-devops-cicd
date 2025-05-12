@@ -28,7 +28,6 @@ output "container_image_arn" {
   value       = data.aws_secretsmanager_secret.container_image.arn
 }
 
-# Add outputs for secret values if needed
 output "database_secret" {
   description = "Database credentials secret value"
   value       = data.aws_secretsmanager_secret_version.database.secret_string
@@ -63,4 +62,4 @@ output "container_image_secret" {
   description = "Container image URI secret value"
   value       = data.aws_secretsmanager_secret_version.container_image.secret_string
   sensitive   = true
-} 
+}
