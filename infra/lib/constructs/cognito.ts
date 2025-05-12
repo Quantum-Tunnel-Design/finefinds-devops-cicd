@@ -61,11 +61,15 @@ export class CognitoConstruct extends Construct {
           ? props.config.cognito.clientUsers.passwordPolicy.requireSymbols
           : false,
       },
-      // Simplified MFA for non-prod
-      mfa: props.environment === 'prod' ? cognito.Mfa.REQUIRED : cognito.Mfa.OPTIONAL,
-      mfaSecondFactor: props.environment === 'prod' 
-        ? { sms: true, otp: true } 
-        : { sms: false, otp: true },
+      // Disable MFA for non-prod, enable for prod
+      mfa: props.environment === 'prod' ? cognito.Mfa.REQUIRED : cognito.Mfa.OFF,
+      // Only specify mfaSecondFactor for production
+      ...(props.environment === 'prod' ? {
+        mfaSecondFactor: {
+          sms: true,
+          otp: true
+        }
+      } : {}),
       accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
       removalPolicy: props.environment === 'prod' 
         ? cdk.RemovalPolicy.RETAIN 
@@ -110,11 +114,15 @@ export class CognitoConstruct extends Construct {
           ? props.config.cognito.adminUsers.passwordPolicy.requireSymbols
           : false,
       },
-      // Simplified MFA for non-prod
-      mfa: props.environment === 'prod' ? cognito.Mfa.REQUIRED : cognito.Mfa.OPTIONAL,
-      mfaSecondFactor: props.environment === 'prod' 
-        ? { sms: true, otp: true } 
-        : { sms: false, otp: true },
+      // Disable MFA for non-prod, enable for prod
+      mfa: props.environment === 'prod' ? cognito.Mfa.REQUIRED : cognito.Mfa.OFF,
+      // Only specify mfaSecondFactor for production
+      ...(props.environment === 'prod' ? {
+        mfaSecondFactor: {
+          sms: true,
+          otp: true
+        }
+      } : {}),
       accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
       removalPolicy: props.environment === 'prod' 
         ? cdk.RemovalPolicy.RETAIN 
