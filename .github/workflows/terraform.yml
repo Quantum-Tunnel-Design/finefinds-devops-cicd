@@ -44,6 +44,12 @@ jobs:
         else
           echo "env=dev" >> $GITHUB_OUTPUT
         fi
+    - name: Setup Backend
+      run: bash scripts/setup-infrastructure.sh ${{ github.ref_name }}
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_DEFAULT_REGION: us-east-1
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v2
@@ -90,16 +96,13 @@ jobs:
 
     - name: List current terraform state
       run: terraform state list
-      working-directory: terraform/environments/${{ steps.setenv.outputs.env }}
 
     - name: Terraform Validate
       id: validate
       run: terraform validate
-      working-directory: terraform/environments/${{ steps.setenv.outputs.env }}
 
     - name: Terraform Plan
       id: plan
-      working-directory: terraform/environments/${{ steps.setenv.outputs.env }}
       run: |
         echo "=== Creating Terraform Plan ==="
         cd terraform/environments/${{ github.ref_name }}
@@ -115,7 +118,6 @@ jobs:
 
     - name: Terraform Apply
       id: apply
-      working-directory: terraform/environments/${{ steps.setenv.outputs.env }}
       run: |
         echo "=== Applying Terraform Changes ==="
         cd terraform/environments/${{ github.ref_name }}
