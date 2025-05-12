@@ -21,6 +21,7 @@ jobs:
       uses: actions/checkout@v3
       with:
         fetch-depth: 0  # Fetch all history for better logging
+    
     - name: Cache Terraform plugins
       uses: actions/cache@v3
       with:
@@ -44,6 +45,7 @@ jobs:
         else
           echo "env=dev" >> $GITHUB_OUTPUT
         fi
+    
     - name: Setup Backend
       run: bash scripts/setup-infrastructure.sh ${{ github.ref_name }}
       env:
@@ -95,7 +97,13 @@ jobs:
         echo "================================"
 
     - name: List current terraform state
-      run: terraform state list
+      run: |
+        echo "=== Initializing Terraform ==="
+        cd terraform/environments/${{ github.ref_name }}
+        echo "Working directory: $(pwd)"
+        echo "Terraform version: $(terraform version)"
+        terraform state list
+        echo "================================"
 
     - name: Terraform Validate
       id: validate
@@ -196,6 +204,7 @@ jobs:
         
         # Clean up
         rm trust-policy.json
+    
     - name: Slack Notification (Success)
       if: success() && github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'qa' || github.ref_name == 'sandbox' || github.ref_name == 'staging')
       uses: rtCamp/action-slack-notify@v2
