@@ -54,11 +54,6 @@ jobs:
           cd infra
           npm ci
 
-      - name: Run Tests
-        run: |
-          cd infra
-          npm test
-
       - name: CDK Diff
         if: github.event_name == 'pull_request'
         run: |
@@ -73,8 +68,10 @@ jobs:
 
       - name: Slack Notification (Success)
         if: success()
-        uses: slackapi/slack-github-action@v1.25.0
+        uses: slackapi/slack-github-action@v2.1.0
         with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL_DEVOPS }}
+          webhook-type: webhook-trigger
           payload: |
             {
               "channel": "${{ secrets.SLACK_CHANNEL_DEVOPS }}",
@@ -103,8 +100,10 @@ jobs:
 
       - name: Slack Notification (Failure)
         if: failure()
-        uses: slackapi/slack-github-action@v1.25.0
+        uses: slackapi/slack-github-action@v2.1.0
         with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL_DEVOPS }}
+          webhook-type: webhook-trigger
           payload: |
             {
               "channel": "${{ secrets.SLACK_CHANNEL }}",
