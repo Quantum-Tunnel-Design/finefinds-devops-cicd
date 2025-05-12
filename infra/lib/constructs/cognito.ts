@@ -45,12 +45,27 @@ export class CognitoConstruct extends Construct {
         },
       },
       passwordPolicy: {
-        minLength: props.config.cognito.clientUsers.passwordPolicy.minLength,
-        requireLowercase: props.config.cognito.clientUsers.passwordPolicy.requireLowercase,
-        requireUppercase: props.config.cognito.clientUsers.passwordPolicy.requireUppercase,
-        requireDigits: props.config.cognito.clientUsers.passwordPolicy.requireNumbers,
-        requireSymbols: props.config.cognito.clientUsers.passwordPolicy.requireSymbols,
+        minLength: props.environment === 'prod' 
+          ? props.config.cognito.clientUsers.passwordPolicy.minLength
+          : Math.min(props.config.cognito.clientUsers.passwordPolicy.minLength, 6),
+        requireLowercase: props.environment === 'prod' 
+          ? props.config.cognito.clientUsers.passwordPolicy.requireLowercase
+          : false,
+        requireUppercase: props.environment === 'prod' 
+          ? props.config.cognito.clientUsers.passwordPolicy.requireUppercase
+          : false,
+        requireDigits: props.environment === 'prod' 
+          ? props.config.cognito.clientUsers.passwordPolicy.requireNumbers
+          : true,
+        requireSymbols: props.environment === 'prod' 
+          ? props.config.cognito.clientUsers.passwordPolicy.requireSymbols
+          : false,
       },
+      // Simplified MFA for non-prod
+      mfa: props.environment === 'prod' ? cognito.Mfa.REQUIRED : cognito.Mfa.OPTIONAL,
+      mfaSecondFactor: props.environment === 'prod' 
+        ? { sms: true, otp: true } 
+        : { sms: false, otp: true },
       accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
       removalPolicy: props.environment === 'prod' 
         ? cdk.RemovalPolicy.RETAIN 
@@ -79,12 +94,27 @@ export class CognitoConstruct extends Construct {
         },
       },
       passwordPolicy: {
-        minLength: props.config.cognito.adminUsers.passwordPolicy.minLength,
-        requireLowercase: props.config.cognito.adminUsers.passwordPolicy.requireLowercase,
-        requireUppercase: props.config.cognito.adminUsers.passwordPolicy.requireUppercase,
-        requireDigits: props.config.cognito.adminUsers.passwordPolicy.requireNumbers,
-        requireSymbols: props.config.cognito.adminUsers.passwordPolicy.requireSymbols,
+        minLength: props.environment === 'prod' 
+          ? props.config.cognito.adminUsers.passwordPolicy.minLength
+          : 8,
+        requireLowercase: props.environment === 'prod' 
+          ? props.config.cognito.adminUsers.passwordPolicy.requireLowercase
+          : true,
+        requireUppercase: props.environment === 'prod' 
+          ? props.config.cognito.adminUsers.passwordPolicy.requireUppercase
+          : true,
+        requireDigits: props.environment === 'prod' 
+          ? props.config.cognito.adminUsers.passwordPolicy.requireNumbers
+          : true,
+        requireSymbols: props.environment === 'prod' 
+          ? props.config.cognito.adminUsers.passwordPolicy.requireSymbols
+          : false,
       },
+      // Simplified MFA for non-prod
+      mfa: props.environment === 'prod' ? cognito.Mfa.REQUIRED : cognito.Mfa.OPTIONAL,
+      mfaSecondFactor: props.environment === 'prod' 
+        ? { sms: true, otp: true } 
+        : { sms: false, otp: true },
       accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
       removalPolicy: props.environment === 'prod' 
         ? cdk.RemovalPolicy.RETAIN 
@@ -188,7 +218,7 @@ export class CognitoConstruct extends Construct {
     return new cognito.UserPoolClient(this, id, {
       userPool,
       userPoolClientName: `${props.environment}-${id}`,
-      generateSecret: true,
+      generateSecret: props.environment === 'prod',
       oAuth: {
         flows: {
           authorizationCodeGrant: true,
@@ -197,9 +227,13 @@ export class CognitoConstruct extends Construct {
         callbackUrls: [
           `https://${props.config.dns.domainName}/callback`,
           `https://${props.config.dns.domainName}/signin`,
+          // Add localhost for non-prod environments
+          ...(props.environment !== 'prod' ? ['http://localhost:3000/callback', 'http://localhost:3000/signin'] : []),
         ],
         logoutUrls: [
           `https://${props.config.dns.domainName}/signout`,
+          // Add localhost for non-prod environments
+          ...(props.environment !== 'prod' ? ['http://localhost:3000/signout'] : []),
         ],
         scopes: [
           cognito.OAuthScope.EMAIL,
@@ -207,10 +241,10 @@ export class CognitoConstruct extends Construct {
           cognito.OAuthScope.PROFILE,
         ],
       },
-      preventUserExistenceErrors: true,
-      accessTokenValidity: cdk.Duration.hours(1),
-      idTokenValidity: cdk.Duration.hours(1),
-      refreshTokenValidity: cdk.Duration.days(30),
+      preventUserExistenceErrors: props.environment === 'prod',
+      accessTokenValidity: cdk.Duration.hours(props.environment === 'prod' ? 1 : 8),
+      idTokenValidity: cdk.Duration.hours(props.environment === 'prod' ? 1 : 8),
+      refreshTokenValidity: cdk.Duration.days(props.environment === 'prod' ? 30 : 90),
     });
   }
 

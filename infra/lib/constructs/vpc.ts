@@ -16,26 +16,40 @@ export class VpcConstruct extends Construct {
 
     // Create VPC with public and private subnets
     this.vpc = new ec2.Vpc(this, 'Vpc', {
-      maxAzs: props.config.vpc.maxAzs,
-      natGateways: props.config.vpc.natGateways,
+      maxAzs: props.environment === 'prod' ? props.config.vpc.maxAzs : 2,
+      natGateways: props.environment === 'prod' ? props.config.vpc.natGateways : 0,
       cidr: props.config.vpc.cidr,
-      subnetConfiguration: [
-        {
-          name: 'Public',
-          subnetType: ec2.SubnetType.PUBLIC,
-          cidrMask: 24,
-        },
-        {
-          name: 'Private',
-          subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
-          cidrMask: 24,
-        },
-        {
-          name: 'Isolated',
-          subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
-          cidrMask: 24,
-        },
-      ],
+      subnetConfiguration: props.environment === 'prod' 
+        ? [
+            {
+              name: 'Public',
+              subnetType: ec2.SubnetType.PUBLIC,
+              cidrMask: 24,
+            },
+            {
+              name: 'Private',
+              subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+              cidrMask: 24,
+            },
+            {
+              name: 'Isolated',
+              subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
+              cidrMask: 24,
+            },
+          ] 
+        : [
+            // Simplified subnet configuration for non-prod
+            {
+              name: 'Public',
+              subnetType: ec2.SubnetType.PUBLIC,
+              cidrMask: 24,
+            },
+            {
+              name: 'Private',
+              subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
+              cidrMask: 24,
+            },
+          ],
       enableDnsHostnames: true,
       enableDnsSupport: true,
     });

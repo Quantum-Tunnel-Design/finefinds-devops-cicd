@@ -38,7 +38,7 @@ export class S3Construct extends Construct {
         ? cdk.RemovalPolicy.RETAIN 
         : cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: props.environment !== 'prod',
-      versioned: props.config.s3.versioned,
+      versioned: props.environment === 'prod' ? props.config.s3.versioned : false,
     };
 
     // Create Uploads Bucket

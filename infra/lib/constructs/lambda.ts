@@ -27,9 +27,9 @@ export class LambdaConstruct extends Construct {
       deployOptions: {
         stageName: props.environment,
         loggingLevel: apigateway.MethodLoggingLevel.INFO,
-        dataTraceEnabled: true,
-        metricsEnabled: true,
-        tracingEnabled: true,
+        dataTraceEnabled: props.environment === 'prod',
+        metricsEnabled: props.environment === 'prod',
+        tracingEnabled: props.environment === 'prod',
       },
       defaultCorsPreflightOptions: {
         allowOrigins: apigateway.Cors.ALL_ORIGINS,
@@ -55,7 +55,8 @@ export class LambdaConstruct extends Construct {
         USER_POOL_CLIENT_ID: props.config.cognito.clientUsers.userPoolName,
       },
       timeout: cdk.Duration.seconds(30),
-      memorySize: 256,
+      memorySize: props.environment === 'prod' ? 256 : 128,
+      tracing: props.environment === 'prod' ? lambda.Tracing.ACTIVE : lambda.Tracing.DISABLED,
       logRetention: props.environment === 'prod' 
         ? logs.RetentionDays.ONE_MONTH 
         : logs.RetentionDays.ONE_WEEK,
@@ -88,7 +89,8 @@ export class LambdaConstruct extends Construct {
         SMTP_USERNAME: props.config.smtp.username,
       },
       timeout: cdk.Duration.seconds(30),
-      memorySize: 256,
+      memorySize: props.environment === 'prod' ? 256 : 128,
+      tracing: props.environment === 'prod' ? lambda.Tracing.ACTIVE : lambda.Tracing.DISABLED,
       logRetention: props.environment === 'prod' 
         ? logs.RetentionDays.ONE_MONTH 
         : logs.RetentionDays.ONE_WEEK,
@@ -114,10 +116,11 @@ export class LambdaConstruct extends Construct {
       code: lambda.Code.fromAsset('lambda/search'),
       environment: {
         ENVIRONMENT: props.environment,
-        OPENSEARCH_ENDPOINT: props.config.opensearch.endpoint,
+        OPENSEARCH_ENDPOINT: props.environment === 'prod' ? props.config.opensearch.endpoint : '',
       },
       timeout: cdk.Duration.seconds(30),
-      memorySize: 512,
+      memorySize: props.environment === 'prod' ? 512 : 256,
+      tracing: props.environment === 'prod' ? lambda.Tracing.ACTIVE : lambda.Tracing.DISABLED,
       logRetention: props.environment === 'prod' 
         ? logs.RetentionDays.ONE_MONTH 
         : logs.RetentionDays.ONE_WEEK,

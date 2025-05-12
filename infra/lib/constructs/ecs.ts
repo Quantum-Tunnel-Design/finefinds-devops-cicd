@@ -25,13 +25,17 @@ export class EcsConstruct extends Construct {
     this.cluster = new ecs.Cluster(this, 'Cluster', {
       vpc: props.vpc,
       clusterName: `finefinds-${props.environment}-cluster`,
-      containerInsights: true,
+      containerInsights: props.environment === 'prod',
     });
 
     // Create task definition
     const taskDefinition = new ecs.FargateTaskDefinition(this, 'TaskDef', {
-      memoryLimitMiB: props.config.ecs.memoryLimitMiB,
-      cpu: props.config.ecs.cpu,
+      memoryLimitMiB: props.environment === 'prod' 
+        ? props.config.ecs.memoryLimitMiB 
+        : Math.min(props.config.ecs.memoryLimitMiB, 512),
+      cpu: props.environment === 'prod' 
+        ? props.config.ecs.cpu 
+        : Math.min(props.config.ecs.cpu, 256),
     });
 
     // Add container to task definition
@@ -126,22 +130,36 @@ export class EcsConstruct extends Construct {
 
     // Create auto scaling
     const scaling = this.service.autoScaleTaskCount({
-      maxCapacity: props.config.ecs.maxCapacity,
-      minCapacity: props.config.ecs.desiredCount,
+      maxCapacity: props.environment === 'prod' 
+        ? props.config.ecs.maxCapacity 
+        : Math.min(props.config.ecs.maxCapacity, 2),
+      minCapacity: props.environment === 'prod'
+        ? props.config.ecs.minCapacity
+        : 1,
     });
 
-    // Add scaling policies
-    scaling.scaleOnCpuUtilization('CpuScaling', {
-      targetUtilizationPercent: 70,
-      scaleInCooldown: cdk.Duration.seconds(60),
-      scaleOutCooldown: cdk.Duration.seconds(60),
-    });
+    // Add scaling policies - simplified for non-prod
+    if (props.environment === 'prod') {
+      // More aggressive scaling for production
+      scaling.scaleOnCpuUtilization('CpuScaling', {
+        targetUtilizationPercent: 70,
+        scaleInCooldown: cdk.Duration.seconds(60),
+        scaleOutCooldown: cdk.Duration.seconds(60),
+      });
 
-    scaling.scaleOnMemoryUtilization('MemoryScaling', {
-      targetUtilizationPercent: 70,
-      scaleInCooldown: cdk.Duration.seconds(60),
-      scaleOutCooldown: cdk.Duration.seconds(60),
-    });
+      scaling.scaleOnMemoryUtilization('MemoryScaling', {
+        targetUtilizationPercent: 70,
+        scaleInCooldown: cdk.Duration.seconds(60),
+        scaleOutCooldown: cdk.Duration.seconds(60),
+      });
+    } else {
+      // Simpler, less aggressive scaling for non-prod
+      scaling.scaleOnCpuUtilization('CpuScaling', {
+        targetUtilizationPercent: 80,
+        scaleInCooldown: cdk.Duration.seconds(300),
+        scaleOutCooldown: cdk.Duration.seconds(300),
+      });
+    }
 
     // Output load balancer DNS
     new cdk.CfnOutput(this, 'LoadBalancerDns', {

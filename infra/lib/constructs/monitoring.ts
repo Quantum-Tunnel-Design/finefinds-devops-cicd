@@ -28,103 +28,43 @@ export class MonitoringConstruct extends Construct {
     this.region = stack.region;
     this.environment = props.environment;
 
-    // Create CloudWatch Dashboard
-    this.dashboard = new cloudwatch.Dashboard(this, 'Dashboard', {
-      dashboardName: `finefinds-${props.environment}-dashboard`,
-    });
-
-    // Create ECS Alarms
-    this.createEcsAlarms(props);
-
-    // Create X-Ray Configuration
-    this.setupXRay(props);
-
-    // Create Log Groups with Retention
+    // Setup log groups
     this.setupLogGroups(props);
 
-    // Create Metric Filters
-    this.createMetricFilters(props);
+    // Create dashboard (only in production)
+    if (props.environment === 'prod') {
+      this.dashboard = new cloudwatch.Dashboard(this, 'Dashboard', {
+        dashboardName: `finefinds-${props.environment}-dashboard`,
+      });
 
-    // Create Dashboard Widgets
-    this.createDashboardWidgets(props);
-  }
+      // Add widgets to dashboard
+      this.setupDashboardWidgets(props);
 
-  private createEcsAlarms(props: MonitoringConstructProps): void {
-    // CPU Utilization Alarm
-    const cpuAlarm = new cloudwatch.Alarm(this, 'CpuUtilizationAlarm', {
-      metric: new cloudwatch.Metric({
-        namespace: 'AWS/ECS',
-        metricName: 'CPUUtilization',
-        dimensionsMap: {
-          ClusterName: props.ecsCluster.clusterName,
-        },
-        statistic: 'Average',
-        period: cdk.Duration.minutes(1),
-      }),
-      threshold: 80,
-      evaluationPeriods: 3,
-      datapointsToAlarm: 2,
-      alarmDescription: 'Alarm if CPU utilization exceeds 80%',
-      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.BREACHING,
-    });
+      // Setup alarms
+      this.setupAlarms(props);
+    } else {
+      // For non-production, create a simplified dashboard with basic metrics
+      this.dashboard = new cloudwatch.Dashboard(this, 'Dashboard', {
+        dashboardName: `finefinds-${props.environment}-dashboard`,
+      });
 
-    // Memory Utilization Alarm
-    const memoryAlarm = new cloudwatch.Alarm(this, 'MemoryUtilizationAlarm', {
-      metric: new cloudwatch.Metric({
-        namespace: 'AWS/ECS',
-        metricName: 'MemoryUtilization',
-        dimensionsMap: {
-          ClusterName: props.ecsCluster.clusterName,
-        },
-        statistic: 'Average',
-        period: cdk.Duration.minutes(1),
-      }),
-      threshold: 80,
-      evaluationPeriods: 3,
-      datapointsToAlarm: 2,
-      alarmDescription: 'Alarm if memory utilization exceeds 80%',
-      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.BREACHING,
-    });
-
-    // Add alarms to SNS topic
-    cpuAlarm.addAlarmAction(new cloudwatch_actions.SnsAction(props.alarmTopic));
-    memoryAlarm.addAlarmAction(new cloudwatch_actions.SnsAction(props.alarmTopic));
-
-    // Create OK actions
-    cpuAlarm.addOkAction(new cloudwatch_actions.SnsAction(props.alarmTopic));
-    memoryAlarm.addOkAction(new cloudwatch_actions.SnsAction(props.alarmTopic));
-  }
-
-  private setupXRay(props: MonitoringConstructProps): void {
-    // Create X-Ray IAM policy
-    const xrayPolicy = new iam.PolicyStatement({
-      effect: iam.Effect.ALLOW,
-      actions: [
-        'xray:PutTraceSegments',
-        'xray:PutTelemetryRecords',
-        'xray:GetSamplingRules',
-        'xray:GetSamplingTargets',
-        'xray:GetSamplingStatisticSummaries',
-      ],
-      resources: ['*'],
-    });
-
-    // Add X-Ray policy to ECS task role
-    if (props.ecsCluster.node.tryFindChild('TaskRole')) {
-      const taskRole = props.ecsCluster.node.findChild('TaskRole') as iam.Role;
-      taskRole.addToPolicy(xrayPolicy);
+      // Setup a simplified set of widgets
+      this.setupSimplifiedDashboardWidgets(props);
+      
+      // Setup only critical alarms for non-production
+      this.setupCriticalAlarms(props);
     }
   }
 
   private setupLogGroups(props: MonitoringConstructProps): void {
     // Create log groups with appropriate retention
-    const retentionDays = props.environment === 'prod' ? 90 : 30;
+    const retentionDays = props.environment === 'prod' ? 90 : 7;
 
     new logs.LogGroup(this, 'EcsLogGroup', {
       logGroupName: `/ecs/finefinds-${props.environment}`,
-      retention: logs.RetentionDays.ONE_MONTH,
+      retention: props.environment === 'prod' 
+        ? logs.RetentionDays.THREE_MONTHS 
+        : logs.RetentionDays.ONE_WEEK,
       removalPolicy: props.environment === 'prod' 
         ? cdk.RemovalPolicy.RETAIN 
         : cdk.RemovalPolicy.DESTROY,
@@ -132,42 +72,16 @@ export class MonitoringConstruct extends Construct {
 
     new logs.LogGroup(this, 'ApplicationLogGroup', {
       logGroupName: `/finefinds/${props.environment}/application`,
-      retention: logs.RetentionDays.ONE_MONTH,
+      retention: props.environment === 'prod' 
+        ? logs.RetentionDays.THREE_MONTHS 
+        : logs.RetentionDays.ONE_WEEK,
       removalPolicy: props.environment === 'prod' 
         ? cdk.RemovalPolicy.RETAIN 
         : cdk.RemovalPolicy.DESTROY,
     });
   }
 
-  private createMetricFilters(props: MonitoringConstructProps): void {
-    // Create metric filter for error logs
-    new logs.MetricFilter(this, 'ErrorMetricFilter', {
-      logGroup: logs.LogGroup.fromLogGroupName(
-        this,
-        'ErrorLogGroupRef',
-        `/finefinds/${props.environment}/application`
-      ),
-      metricNamespace: `FineFinds/${props.environment}`,
-      metricName: 'ErrorCount',
-      filterPattern: logs.FilterPattern.literal('ERROR'),
-      metricValue: '1',
-    });
-
-    // Create metric filter for warning logs
-    new logs.MetricFilter(this, 'WarningMetricFilter', {
-      logGroup: logs.LogGroup.fromLogGroupName(
-        this,
-        'WarningLogGroupRef',
-        `/finefinds/${props.environment}/application`
-      ),
-      metricNamespace: `FineFinds/${props.environment}`,
-      metricName: 'WarningCount',
-      filterPattern: logs.FilterPattern.literal('WARN'),
-      metricValue: '1',
-    });
-  }
-
-  private createDashboardWidgets(props: MonitoringConstructProps): void {
+  private setupDashboardWidgets(props: MonitoringConstructProps): void {
     // Add ECS CPU Utilization widget
     this.dashboard.addWidgets(
       new cloudwatch.GraphWidget({
@@ -268,6 +182,146 @@ export class MonitoringConstruct extends Construct {
         width: 12,
       })
     );
+  }
+
+  private setupSimplifiedDashboardWidgets(props: MonitoringConstructProps): void {
+    // Basic compute metrics for non-production
+    this.dashboard.addWidgets(
+      new cloudwatch.GraphWidget({
+        title: 'ECS CPU & Memory',
+        left: [
+          new cloudwatch.Metric({
+            namespace: 'AWS/ECS',
+            metricName: 'CPUUtilization',
+            dimensionsMap: {
+              ClusterName: `finefinds-${props.environment}-cluster`,
+            },
+            statistic: 'Average',
+          }),
+          new cloudwatch.Metric({
+            namespace: 'AWS/ECS',
+            metricName: 'MemoryUtilization',
+            dimensionsMap: {
+              ClusterName: `finefinds-${props.environment}-cluster`,
+            },
+            statistic: 'Average',
+          }),
+        ],
+      })
+    );
+
+    // Basic database metrics
+    this.dashboard.addWidgets(
+      new cloudwatch.GraphWidget({
+        title: 'Database',
+        left: [
+          new cloudwatch.Metric({
+            namespace: 'AWS/RDS',
+            metricName: 'CPUUtilization',
+            dimensionsMap: {
+              DBClusterIdentifier: `finefinds-${props.environment}-cluster`,
+            },
+            statistic: 'Average',
+          }),
+          new cloudwatch.Metric({
+            namespace: 'AWS/RDS',
+            metricName: 'FreeableMemory',
+            dimensionsMap: {
+              DBClusterIdentifier: `finefinds-${props.environment}-cluster`,
+            },
+            statistic: 'Average',
+          }),
+        ],
+      })
+    );
+  }
+
+  private setupAlarms(props: MonitoringConstructProps): void {
+    // CPU Utilization Alarm
+    const cpuAlarm = new cloudwatch.Alarm(this, 'CpuUtilizationAlarm', {
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/ECS',
+        metricName: 'CPUUtilization',
+        dimensionsMap: {
+          ClusterName: props.ecsCluster.clusterName,
+        },
+        statistic: 'Average',
+        period: cdk.Duration.minutes(1),
+      }),
+      threshold: 80,
+      evaluationPeriods: 3,
+      datapointsToAlarm: 2,
+      alarmDescription: 'Alarm if CPU utilization exceeds 80%',
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.BREACHING,
+    });
+
+    // Memory Utilization Alarm
+    const memoryAlarm = new cloudwatch.Alarm(this, 'MemoryUtilizationAlarm', {
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/ECS',
+        metricName: 'MemoryUtilization',
+        dimensionsMap: {
+          ClusterName: props.ecsCluster.clusterName,
+        },
+        statistic: 'Average',
+        period: cdk.Duration.minutes(1),
+      }),
+      threshold: 80,
+      evaluationPeriods: 3,
+      datapointsToAlarm: 2,
+      alarmDescription: 'Alarm if memory utilization exceeds 80%',
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.BREACHING,
+    });
+
+    // Add alarms to SNS topic
+    cpuAlarm.addAlarmAction(new cloudwatch_actions.SnsAction(props.alarmTopic));
+    memoryAlarm.addAlarmAction(new cloudwatch_actions.SnsAction(props.alarmTopic));
+
+    // Create OK actions
+    cpuAlarm.addOkAction(new cloudwatch_actions.SnsAction(props.alarmTopic));
+    memoryAlarm.addOkAction(new cloudwatch_actions.SnsAction(props.alarmTopic));
+  }
+
+  private setupCriticalAlarms(props: MonitoringConstructProps): void {
+    // Only critical alarms for non-production
+    
+    // ECS high CPU alarm (only alert if very high for extended period)
+    new cloudwatch.Alarm(this, 'EcsCPUCritical', {
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/ECS',
+        metricName: 'CPUUtilization',
+        dimensionsMap: {
+          ClusterName: `finefinds-${props.environment}-cluster`,
+        },
+        statistic: 'Average',
+      }),
+      threshold: 90,
+      evaluationPeriods: 5,
+      datapointsToAlarm: 5,
+      alarmDescription: `Critical: ECS CPU above 90% for 5 minutes in ${props.environment}`,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+    });
+    
+    // Database critical alarm
+    new cloudwatch.Alarm(this, 'DatabaseCPUCritical', {
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/RDS',
+        metricName: 'CPUUtilization',
+        dimensionsMap: {
+          DBClusterIdentifier: `finefinds-${props.environment}-cluster`,
+        },
+        statistic: 'Average',
+      }),
+      threshold: 90,
+      evaluationPeriods: 5,
+      datapointsToAlarm: 5,
+      alarmDescription: `Critical: Database CPU above 90% for 5 minutes in ${props.environment}`,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+    });
   }
 
   public get dashboardUrl(): string {

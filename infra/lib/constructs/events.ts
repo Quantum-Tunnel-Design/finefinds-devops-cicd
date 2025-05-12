@@ -34,7 +34,8 @@ export class EventsConstruct extends Construct {
         ENVIRONMENT: props.environment,
       },
       timeout: cdk.Duration.minutes(5),
-      memorySize: 256,
+      memorySize: props.environment === 'prod' ? 256 : 128,
+      tracing: props.environment === 'prod' ? lambda.Tracing.ACTIVE : lambda.Tracing.DISABLED,
     });
 
     // Add backup permissions to Lambda function
@@ -65,7 +66,8 @@ export class EventsConstruct extends Construct {
         ENVIRONMENT: props.environment,
       },
       timeout: cdk.Duration.minutes(5),
-      memorySize: 256,
+      memorySize: props.environment === 'prod' ? 256 : 128,
+      tracing: props.environment === 'prod' ? lambda.Tracing.ACTIVE : lambda.Tracing.DISABLED,
     });
 
     // Add cleanup permissions to Lambda function
@@ -91,7 +93,8 @@ export class EventsConstruct extends Construct {
         ENVIRONMENT: props.environment,
       },
       timeout: cdk.Duration.minutes(5),
-      memorySize: 256,
+      memorySize: props.environment === 'prod' ? 256 : 128,
+      tracing: props.environment === 'prod' ? lambda.Tracing.ACTIVE : lambda.Tracing.DISABLED,
     });
 
     // Add metrics permissions to Lambda function
@@ -107,39 +110,27 @@ export class EventsConstruct extends Construct {
       })
     );
 
-    // Create backup rule
+    // Create backup rule - less frequent in non-prod
     this.backupRule = new events.Rule(this, 'BackupRule', {
-      schedule: events.Schedule.cron({
-        minute: '0',
-        hour: '0',
-        day: '*',
-        month: '*',
-        year: '*',
-      }),
+      schedule: props.environment === 'prod' 
+        ? events.Schedule.cron({ minute: '0', hour: '0', day: '*', month: '*', year: '*' })
+        : events.Schedule.cron({ minute: '0', hour: '0', day: '*/2', month: '*', year: '*' }),
       targets: [new targets.LambdaFunction(backupFunction)],
     });
 
-    // Create cleanup rule
+    // Create cleanup rule - less frequent in non-prod
     this.cleanupRule = new events.Rule(this, 'CleanupRule', {
-      schedule: events.Schedule.cron({
-        minute: '0',
-        hour: '1',
-        day: '*',
-        month: '*',
-        year: '*',
-      }),
+      schedule: props.environment === 'prod' 
+        ? events.Schedule.cron({ minute: '0', hour: '1', day: '*', month: '*', year: '*' })
+        : events.Schedule.cron({ minute: '0', hour: '1', day: '*/3', month: '*', year: '*' }),
       targets: [new targets.LambdaFunction(cleanupFunction)],
     });
 
-    // Create metrics rule
+    // Create metrics rule - less frequent in non-prod
     this.metricsRule = new events.Rule(this, 'MetricsRule', {
-      schedule: events.Schedule.cron({
-        minute: '*/5',
-        hour: '*',
-        day: '*',
-        month: '*',
-        year: '*',
-      }),
+      schedule: props.environment === 'prod' 
+        ? events.Schedule.cron({ minute: '*/5', hour: '*', day: '*', month: '*', year: '*' })
+        : events.Schedule.cron({ minute: '*/15', hour: '*', day: '*', month: '*', year: '*' }),
       targets: [new targets.LambdaFunction(metricsFunction)],
     });
 

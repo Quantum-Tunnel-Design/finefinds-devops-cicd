@@ -55,38 +55,41 @@ export class RdsConstruct extends Construct {
         version: rds.AuroraPostgresEngineVersion.VER_13_4,
       }),
       instanceProps: {
-        instanceType: ec2.InstanceType.of(
-          ec2.InstanceClass[props.config.rds.instanceClass],
-          ec2.InstanceSize[props.config.rds.instanceSize]
-        ),
+        instanceType: props.environment === 'prod' 
+          ? ec2.InstanceType.of(
+              ec2.InstanceClass[props.config.rds.instanceClass as keyof typeof ec2.InstanceClass],
+              ec2.InstanceSize[props.config.rds.instanceSize as keyof typeof ec2.InstanceSize]
+            )
+          : ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.SMALL),
         vpc: props.vpc,
         vpcSubnets: {
           subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
         },
         securityGroups: [securityGroup],
         parameterGroup,
-        performanceInsightRetention: props.config.rds.performanceInsights
+        performanceInsightRetention: props.environment === 'prod' && props.config.rds.performanceInsights
           ? rds.PerformanceInsightRetention.DEFAULT
           : undefined,
-        enablePerformanceInsights: props.config.rds.performanceInsights,
+        enablePerformanceInsights: props.environment === 'prod' && props.config.rds.performanceInsights,
       },
       instances: props.environment === 'prod' ? 2 : 1,
       defaultDatabaseName: 'finefinds',
       storageEncrypted: true,
       storageEncryptionKey: props.kmsKey,
       backup: {
-        retention: cdk.Duration.days(props.config.rds.backupRetentionDays),
+        retention: cdk.Duration.days(props.environment === 'prod' ? props.config.rds.backupRetentionDays : 1),
         preferredWindow: '03:00-04:00',
       },
-      monitoringInterval: cdk.Duration.seconds(60),
-      monitoringRole: new cdk.aws_iam.Role(this, 'MonitoringRole', {
-        assumedBy: new cdk.aws_iam.ServicePrincipal('monitoring.rds.amazonaws.com'),
-        managedPolicies: [
-          cdk.aws_iam.ManagedPolicy.fromAwsManagedPolicyName(
-            'service-role/AmazonRDSEnhancedMonitoringRole'
-          ),
-        ],
-      }),
+      monitoringInterval: props.environment === 'prod' ? cdk.Duration.seconds(60) : cdk.Duration.seconds(0),
+      monitoringRole: props.environment === 'prod' ? 
+        new cdk.aws_iam.Role(this, 'MonitoringRole', {
+          assumedBy: new cdk.aws_iam.ServicePrincipal('monitoring.rds.amazonaws.com'),
+          managedPolicies: [
+            cdk.aws_iam.ManagedPolicy.fromAwsManagedPolicyName(
+              'service-role/AmazonRDSEnhancedMonitoringRole'
+            ),
+          ],
+        }) : undefined,
       cloudwatchLogsExports: ['postgresql'],
       cloudwatchLogsRetention: props.environment === 'prod' 
         ? logs.RetentionDays.ONE_MONTH 
