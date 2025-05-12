@@ -23,12 +23,13 @@ set_environment_secrets() {
     # Set AWS Account ID and Region (common for all environments)
     gh secret set AWS_ACCOUNT_ID -b"$AWS_ACCOUNT_ID" --env "$env"
     gh secret set AWS_REGION -b"$AWS_REGION" --env "$env"
-    gh secret set CLIENT_REPOSITORY -b"$TF_VAR_client_repository" --env "$env"
-    gh secret set ADMIN_REPOSITORY -b"$TF_VAR_admin_repository" --env "$env"
-    gh secret set SOURCE_TOKEN -b"$TF_VAR_github_token" --env "$env"
-    gh secret set ALERT_EMAIL -b"$TF_VAR_alert_email" --env "$env"
+    gh secret set CLIENT_REPOSITORY -b"$CLIENT_REPOSITORY" --env "$env"
+    gh secret set ADMIN_REPOSITORY -b"$ADMIN_REPOSITORY" --env "$env"
+    gh secret set SOURCE_TOKEN -b"$SOURCE_TOKEN" --env "$env"
+    gh secret set ALERT_EMAIL -b"$ALERT_EMAIL" --env "$env"
     gh secret set SLACK_WEBHOOK_URL_DEVOPS -b"$SLACK_WEBHOOK_URL_DEVOPS" --env "$env"
     gh secret set SLACK_CHANNEL_DEVOPS -b"$SLACK_CHANNEL_DEVOPS" --env "$env"
+    gh secret set SLACK_BOT_DEVOPS_TOKEN -b"$SLACK_BOT_DEVOPS_TOKEN" --env "$env"
     
     # Set environment-specific AWS credentials
     case "$env" in
@@ -92,23 +93,18 @@ set_repo_secrets() {
     echo "Setting secrets for repository: $repo"
     
     # Set GitHub token
-    gh secret set SOURCE_TOKEN --body "$TF_VAR_github_token" --repo "$repo"
-    
-    # Set environment-specific variables
-    gh secret set VITE_GRAPHQL_ENDPOINT --body "https://api.${TF_VAR_environment}.finefinds.lk/graphql" --repo "$repo"
-    gh secret set VITE_ENVIRONMENT --body "$TF_VAR_environment" --repo "$repo"
+    gh secret set SOURCE_TOKEN --body "$SOURCE_TOKEN" --repo "$repo"
     
     # Only set SonarQube secrets for non-devops repositories
     if [[ "$repo" != *"finefindslk-devops-cicd"* ]]; then
-        gh secret set SONAR_TOKEN --body "$TF_VAR_sonar_token" --repo "$repo"
-        gh secret set VITE_SONARQUBE_URL --body "https://sonarqube.${TF_VAR_environment}.finefinds.lk" --repo "$repo"
+        gh secret set SONAR_TOKEN --body "$SONAR_TOKEN" --repo "$repo"
     fi
 }
 
 # Set secrets for client web app
-set_repo_secrets "Quantum-Tunnel-Design/finefindslk-client-web-app"
+set_repo_secrets "Quantum-Tunnel-Design/finefinds-client-web-app"
 
 # Set secrets for admin dashboard
-set_repo_secrets "Quantum-Tunnel-Design/finefindslk-admin"
+set_repo_secrets "Quantum-Tunnel-Design/finefinds-admin"
 
 echo "GitHub secrets have been set successfully!" 

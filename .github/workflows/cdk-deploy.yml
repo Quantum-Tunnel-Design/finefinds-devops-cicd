@@ -4,9 +4,6 @@ on:
   push:
     branches: [main, qa, staging, dev]
     paths: ['infra/**', '.github/workflows/cdk-deploy.yml']
-  pull_request:
-    branches: [main, qa, staging, dev]
-    paths: ['infra/**', '.github/workflows/cdk-deploy.yml']
 
 jobs:
   deploy:
@@ -51,7 +48,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+          aws-region: us-east-1
 
       - name: Install Dependencies
         run: |
@@ -81,7 +78,7 @@ jobs:
         with:
           payload: |
             {
-              "channel": "${{ secrets.SLACK_CHANNEL }}",
+              "channel": "${{ secrets.SLACK_CHANNEL_DEVOPS }}",
               "attachments": [
                 {
                   "color": "#36a64f",
@@ -103,7 +100,7 @@ jobs:
               ]
             }
         env:
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_DEVOPS_TOKEN }}
 
       - name: Slack Notification (Failure)
         if: failure()
