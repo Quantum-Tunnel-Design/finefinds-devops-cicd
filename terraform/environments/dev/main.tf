@@ -31,7 +31,7 @@ module "backend" {
   container_definitions = jsonencode([
     {
       name      = "api"
-      image     = "${var.ecr_repo_url}:latest"
+      image     = "${module.secrets.container_image_arn}"
       essential = true
       portMappings = [
         {

@@ -271,8 +271,3 @@ variable "name_prefix" {
   type        = string
   default     = "finefindslk-dev"  # This follows the pattern project-environment
 }
-
-variable "ecr_repo_url" {
-  description = "ECR repository URL for the backend container image"
-  type        = string
-}
