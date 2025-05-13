@@ -21,18 +21,28 @@ export class IamConstruct extends Construct {
     this.ecsTaskRole = new iam.Role(this, 'EcsTaskRole', {
       roleName: `finefinds-${props.environment}-ecs-task-role`,
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
-      managedPolicies: [
-        iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonS3ReadOnlyAccess'),
-        iam.ManagedPolicy.fromAwsManagedPolicyName('CloudWatchLogsFullAccess'),
-        iam.ManagedPolicy.fromAwsManagedPolicyName('AWSXRayDaemonWriteAccess'),
-      ],
     });
 
-    // Add custom policies for ECS Task Role
+    // Add permissions for ECS Task Role using inline policy instead of managed policies
     this.ecsTaskRole.addToPolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
         actions: [
+          // S3 Read Access
+          's3:Get*',
+          's3:List*',
+          // CloudWatch Logs Access
+          'logs:CreateLogGroup',
+          'logs:CreateLogStream',
+          'logs:PutLogEvents',
+          'logs:DescribeLogStreams',
+          // X-Ray Access
+          'xray:PutTraceSegments',
+          'xray:PutTelemetryRecords',
+          'xray:GetSamplingRules',
+          'xray:GetSamplingTargets',
+          'xray:GetSamplingStatisticSummaries',
+          // ECR Access
           'ecr:GetAuthorizationToken',
           'ecr:BatchCheckLayerAvailability',
           'ecr:GetDownloadUrlForLayer',
@@ -136,12 +146,9 @@ export class IamConstruct extends Construct {
     this.monitoringRole = new iam.Role(this, 'MonitoringRole', {
       roleName: `finefinds-${props.environment}-monitoring-role`,
       assumedBy: new iam.ServicePrincipal('monitoring.rds.amazonaws.com'),
-      managedPolicies: [
-        iam.ManagedPolicy.fromAwsManagedPolicyName('CloudWatchAgentServerPolicy'),
-      ],
     });
 
-    // Add custom policies for Monitoring Role
+    // Add permissions for the Monitoring Role instead of using CloudWatchAgentServerPolicy
     this.monitoringRole.addToPolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
@@ -154,6 +161,9 @@ export class IamConstruct extends Construct {
           'logs:DescribeLogGroups',
           'logs:CreateLogStream',
           'logs:CreateLogGroup',
+          'ssm:GetParameter',
+          'ssm:PutParameter',
+          'ssm:ListTagsForResource'
         ],
         resources: ['*'],
       })
@@ -164,15 +174,48 @@ export class IamConstruct extends Construct {
       groupName: `finefinds-${props.environment}-developers`,
     });
 
-    // Add policies to Developer Group
-    developerGroup.addManagedPolicy(
-      iam.ManagedPolicy.fromAwsManagedPolicyName('AWSCloudFormationReadOnlyAccess')
+    // Add CloudFormation readonly permissions to Developer Group
+    developerGroup.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'cloudformation:DescribeStacks',
+          'cloudformation:DescribeStackEvents',
+          'cloudformation:DescribeStackResource',
+          'cloudformation:DescribeStackResources',
+          'cloudformation:GetTemplate',
+          'cloudformation:List*',
+        ],
+        resources: ['*'],
+      })
     );
-    developerGroup.addManagedPolicy(
-      iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonECR-FullAccess')
+
+    // Add ECR permissions
+    developerGroup.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'ecr:*',
+        ],
+        resources: ['*'],
+      })
     );
-    developerGroup.addManagedPolicy(
-      iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonECS-FullAccess')
+
+    // Add back ECS permissions
+    developerGroup.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'ecs:*',
+          'elasticloadbalancing:*',
+          'ec2:*',
+          'cloudwatch:*',
+          'application-autoscaling:*',
+          'logs:*',
+          'iam:PassRole'
+        ],
+        resources: ['*'],
+      })
     );
 
     // Create IAM Group for DevOps

@@ -86,11 +86,29 @@ export class RdsConstruct extends Construct {
       monitoringRole: props.environment === 'prod' ? 
         new cdk.aws_iam.Role(this, 'MonitoringRole', {
           assumedBy: new cdk.aws_iam.ServicePrincipal('monitoring.rds.amazonaws.com'),
-          managedPolicies: [
-            cdk.aws_iam.ManagedPolicy.fromAwsManagedPolicyName(
-              'service-role/AmazonRDSEnhancedMonitoringRole'
-            ),
-          ],
+          inlinePolicies: {
+            'RDSMonitoringPermissions': new cdk.aws_iam.PolicyDocument({
+              statements: [
+                new cdk.aws_iam.PolicyStatement({
+                  actions: [
+                    'cloudwatch:PutMetricData',
+                    'logs:CreateLogGroup',
+                    'logs:CreateLogStream',
+                    'logs:PutLogEvents',
+                    'logs:DescribeLogStreams',
+                    'rds:DescribeDBInstances',
+                    'rds:DescribeDBClusters',
+                    'rds:DescribeDBLogFiles',
+                    'rds:DescribeDBParameters',
+                    'rds:DescribeDBSnapshotAttributes',
+                    'rds:DescribeDBSnapshots',
+                    'rds:DescribeDBEngineVersions'
+                  ],
+                  resources: ['*'],
+                })
+              ],
+            })
+          }
         }) : undefined,
       cloudwatchLogsExports: ['postgresql'],
       cloudwatchLogsRetention: props.environment === 'prod' 
