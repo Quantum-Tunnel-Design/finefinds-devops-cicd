@@ -35,7 +35,7 @@ jobs:
   deploy-sonarqube:
     runs-on: ubuntu-latest
     environment: prod
-    if: github.event.inputs.choice == 'yes'
+    if: github.event.inputs.choice == 'true'
     needs: debug-inputs
     permissions:
       id-token: write
