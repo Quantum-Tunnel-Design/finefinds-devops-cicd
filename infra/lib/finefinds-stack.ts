@@ -113,13 +113,17 @@ export class FineFindsStack extends cdk.Stack {
           action: 'updateSecret',
           parameters: {
             SecretId: dbConnectionStringSecret.secretArn,
-            SecretString: JSON.stringify({
-              dbName: 'finefinds',
-              engine: 'postgres',
-              host: rds.cluster.clusterEndpoint.hostname,
-              port: 5432,
-              username: 'postgres', // This should match RDS credentials
-              password: dbConnectionStringSecret.secretValueFromJson('password').toString(),
+            SecretString: cdk.Lazy.string({
+              produce: () => {
+                return JSON.stringify({
+                  dbName: 'finefinds',
+                  engine: 'postgres',
+                  host: rds.cluster?.clusterEndpoint.hostname,
+                  port: 5432,
+                  username: 'postgres', // This should match RDS credentials
+                  password: '{{resolve:secretsmanager:' + dbConnectionStringSecret.secretArn + ':SecretString:password}}',
+                });
+              }
             }),
           },
           physicalResourceId: cdk.custom_resources.PhysicalResourceId.of('DbSecretUpdate-' + Date.now().toString()),
@@ -129,13 +133,17 @@ export class FineFindsStack extends cdk.Stack {
           action: 'updateSecret',
           parameters: {
             SecretId: dbConnectionStringSecret.secretArn,
-            SecretString: JSON.stringify({
-              dbName: 'finefinds',
-              engine: 'postgres',
-              host: rds.cluster.clusterEndpoint.hostname,
-              port: 5432,
-              username: 'postgres',
-              password: dbConnectionStringSecret.secretValueFromJson('password').toString(),
+            SecretString: cdk.Lazy.string({
+              produce: () => {
+                return JSON.stringify({
+                  dbName: 'finefinds',
+                  engine: 'postgres',
+                  host: rds.cluster?.clusterEndpoint.hostname,
+                  port: 5432,
+                  username: 'postgres',
+                  password: '{{resolve:secretsmanager:' + dbConnectionStringSecret.secretArn + ':SecretString:password}}',
+                });
+              }
             }),
           },
           physicalResourceId: cdk.custom_resources.PhysicalResourceId.of('DbSecretUpdate-' + Date.now().toString()),
@@ -156,13 +164,17 @@ export class FineFindsStack extends cdk.Stack {
           action: 'updateSecret',
           parameters: {
             SecretId: dbConnectionStringSecret.secretArn,
-            SecretString: JSON.stringify({
-              dbName: 'finefinds',
-              engine: 'postgres',
-              host: rds.instance.instanceEndpoint.hostname,
-              port: 5432,
-              username: 'postgres', // This should match RDS credentials
-              password: dbConnectionStringSecret.secretValueFromJson('password').toString(),
+            SecretString: cdk.Lazy.string({
+              produce: () => {
+                return JSON.stringify({
+                  dbName: 'finefinds',
+                  engine: 'postgres',
+                  host: rds.instance.instanceEndpoint.hostname,
+                  port: 5432,
+                  username: 'postgres', // This should match RDS credentials
+                  password: '{{resolve:secretsmanager:' + dbConnectionStringSecret.secretArn + ':SecretString:password}}',
+                });
+              }
             }),
           },
           physicalResourceId: cdk.custom_resources.PhysicalResourceId.of('DbSecretUpdate-' + Date.now().toString()),
@@ -172,13 +184,17 @@ export class FineFindsStack extends cdk.Stack {
           action: 'updateSecret',
           parameters: {
             SecretId: dbConnectionStringSecret.secretArn,
-            SecretString: JSON.stringify({
-              dbName: 'finefinds',
-              engine: 'postgres',
-              host: rds.instance.instanceEndpoint.hostname,
-              port: 5432,
-              username: 'postgres',
-              password: dbConnectionStringSecret.secretValueFromJson('password').toString(),
+            SecretString: cdk.Lazy.string({
+              produce: () => {
+                return JSON.stringify({
+                  dbName: 'finefinds',
+                  engine: 'postgres',
+                  host: rds.instance.instanceEndpoint.hostname,
+                  port: 5432,
+                  username: 'postgres',
+                  password: '{{resolve:secretsmanager:' + dbConnectionStringSecret.secretArn + ':SecretString:password}}',
+                });
+              }
             }),
           },
           physicalResourceId: cdk.custom_resources.PhysicalResourceId.of('DbSecretUpdate-' + Date.now().toString()),
