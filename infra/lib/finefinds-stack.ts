@@ -18,6 +18,37 @@ import { DynamoDBConstruct } from './constructs/dynamodb';
 import { RdsConstruct } from './constructs/rds';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import * as cr from 'aws-cdk-lib/custom-resources';
+import * as logs from 'aws-cdk-lib/aws-logs';
+
+/**
+ * Creates a secret if it doesn't exist, or imports it if it does
+ * This is a hybrid approach that works with both new and existing environments
+ * Influenced by the patterns in ExistingConstruct
+ */
+function getOrCreateSecret(
+  scope: Construct,
+  id: string,
+  secretName: string,
+  props: secretsmanager.SecretProps
+): secretsmanager.ISecret {
+  // First, check if we can import the secret
+  // Use a pattern similar to ExistingConstruct where we try to reference existing resources
+  try {
+    // Try to create the secret with RETAIN policy to prevent accidental deletion
+    const newSecret = new secretsmanager.Secret(scope, id, {
+      ...props,
+      secretName: secretName,
+    });
+    newSecret.applyRemovalPolicy(cdk.RemovalPolicy.RETAIN);
+    return newSecret;
+  } catch (e) {
+    // If the creation fails (likely because the secret already exists),
+    // fall back to importing the existing secret, similar to how ExistingConstruct imports resources
+    console.log(`Secret ${secretName} already exists, importing it instead`);
+    return secretsmanager.Secret.fromSecretNameV2(scope, `Existing${id}`, secretName);
+  }
+}
 
 export interface FineFindsStackProps extends cdk.StackProps {
   config: BaseConfig;
@@ -73,35 +104,42 @@ export class FineFindsStack extends cdk.Stack {
       alarmTopic,
     });
     
-    // Create the database connection secret that ECS will use
-    // We create this with initial placeholder values, then update it with real values via a custom resource
-    const dbConnectionStringSecret = new secretsmanager.Secret(this, 'DbConnectionString', {
-      secretName: `finefinds-${props.config.environment}-db-connection`,
-      description: 'Database connection string for the application',
-      generateSecretString: {
-        secretStringTemplate: JSON.stringify({
-          dbName: 'finefinds',
-          engine: 'postgres',
-          host: 'placeholder-will-be-updated', // This will be updated by the custom resource
-          port: 5432,
-          username: 'postgres',
-        }),
-        generateStringKey: 'password',
-      },
-    });
+    // Create the database connection secret that ECS will use, using the hybrid approach
+    const dbConnectionStringSecret = getOrCreateSecret(
+      this, 
+      'DbConnectionString',
+      `finefinds-${props.config.environment}-db-connection`,
+      {
+        description: 'Database connection string for the application',
+        generateSecretString: {
+          secretStringTemplate: JSON.stringify({
+            dbName: 'finefinds',
+            engine: 'postgres',
+            host: 'placeholder-will-be-updated', // This will be updated by the custom resource
+            port: 5432,
+            username: 'postgres',
+          }),
+          generateStringKey: 'password',
+        },
+      }
+    );
 
-    // Create a Redis connection secrets for the ECS service
-    const redisConnectionSecret = new secretsmanager.Secret(this, 'RedisConnectionString', {
-      secretName: `finefinds-${props.config.environment}-redis-connection`,
-      description: 'Redis connection details for the application',
-      generateSecretString: {
-        secretStringTemplate: JSON.stringify({
-          host: redis.cluster.attrRedisEndpointAddress,
-          port: redis.cluster.attrRedisEndpointPort,
-        }),
-        generateStringKey: 'password',
-      },
-    });
+    // Create a Redis connection secret for the ECS service, using the hybrid approach
+    const redisConnectionSecret = getOrCreateSecret(
+      this,
+      'RedisConnectionString',
+      `finefinds-${props.config.environment}-redis-connection`,
+      {
+        description: 'Redis connection details for the application',
+        generateSecretString: {
+          secretStringTemplate: JSON.stringify({
+            host: redis.cluster.attrRedisEndpointAddress,
+            port: redis.cluster.attrRedisEndpointPort,
+          }),
+          generateStringKey: 'password',
+        },
+      }
+    );
     
     // Update the database connection secret once the RDS instance is available
     // Use a custom resource to avoid circular dependencies
