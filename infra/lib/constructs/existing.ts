@@ -61,7 +61,7 @@ export class ExistingConstruct extends Construct {
     new cdk.CfnOutput(this, 'DatabaseEndpoint', {
       value: this.database.instanceEndpoint.hostname,
       description: 'Imported Database Endpoint',
-      exportName: `finefinds-${props.environment}-db-endpoint`,
+      exportName: `finefinds-${props.environment}-imported-db-endpoint`,
     });
 
     new cdk.CfnOutput(this, 'MediaBucketName', {
