@@ -15,7 +15,12 @@ on:
         description: 'Branch to checkout for deployment'
         required: true
         default: 'main'
-        type: string
+        type: choice
+        options:
+          - main
+          - dev
+          - qa
+          - staging
 
 jobs:
   debug-inputs:
