@@ -74,6 +74,14 @@ export class CognitoConstruct extends Construct {
       removalPolicy: props.environment === 'prod' 
         ? cdk.RemovalPolicy.RETAIN 
         : cdk.RemovalPolicy.DESTROY,
+      // Replace deprecated advancedSecurityMode with new threat protection modes
+      // Only enable in production to save costs (~$0.05/MAU)
+      standardThreatProtectionMode: props.environment === 'prod'
+        ? cognito.StandardThreatProtectionMode.ENFORCED
+        : cognito.StandardThreatProtectionMode.NO_ENFORCEMENT,
+      customThreatProtectionMode: props.environment === 'prod'
+        ? cognito.CustomThreatProtectionMode.ENFORCED
+        : cognito.CustomThreatProtectionMode.NO_ENFORCEMENT,
     });
 
     // Create admin user pool
@@ -127,6 +135,14 @@ export class CognitoConstruct extends Construct {
       removalPolicy: props.environment === 'prod' 
         ? cdk.RemovalPolicy.RETAIN 
         : cdk.RemovalPolicy.DESTROY,
+      // Replace deprecated advancedSecurityMode with new threat protection modes
+      // Only enable in production to save costs
+      standardThreatProtectionMode: props.environment === 'prod'
+        ? cognito.StandardThreatProtectionMode.ENFORCED
+        : cognito.StandardThreatProtectionMode.NO_ENFORCEMENT,
+      customThreatProtectionMode: props.environment === 'prod'
+        ? cognito.CustomThreatProtectionMode.ENFORCED
+        : cognito.CustomThreatProtectionMode.NO_ENFORCEMENT,
     });
 
     // Create user groups for client pool

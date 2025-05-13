@@ -158,16 +158,19 @@ export class RdsConstruct extends Construct {
         databaseName: 'finefinds',
         storageEncrypted: true,
         storageEncryptionKey: props.kmsKey,
-        allocatedStorage: 20,
-        maxAllocatedStorage: 100, // Allow autoscaling up to 100GB
+        allocatedStorage: 10, // Reduced storage for dev environments
+        maxAllocatedStorage: 50, // Lower autoscaling limit for cost savings
+        storageType: rds.StorageType.GP2, // Standard storage for cost savings
         backupRetention: cdk.Duration.days(1),
         cloudwatchLogsExports: ['postgresql'],
-        cloudwatchLogsRetention: logs.RetentionDays.ONE_WEEK,
+        cloudwatchLogsRetention: logs.RetentionDays.ONE_DAY, // Reduced to 1 day for cost savings
         removalPolicy: cdk.RemovalPolicy.DESTROY, // For dev environments, allow deletion
         deletionProtection: false,
         copyTagsToSnapshot: true,
         preferredMaintenanceWindow: 'sun:04:00-sun:05:00',
         credentials: rds.Credentials.fromGeneratedSecret('postgres'), // Auto-generate credentials
+        monitoringInterval: cdk.Duration.seconds(0), // Disable enhanced monitoring
+        autoMinorVersionUpgrade: true, // Allow auto minor version upgrades
       });
 
       // Output single instance endpoint and secret

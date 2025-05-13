@@ -1,5 +1,6 @@
 export interface BaseConfig {
   environment: string;
+  enableDynamoDB?: boolean;
   vpc: {
     maxAzs: number;
     natGateways: number;

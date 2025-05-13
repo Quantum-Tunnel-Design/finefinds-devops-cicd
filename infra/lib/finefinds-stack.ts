@@ -14,6 +14,7 @@ import { CloudFrontConstruct } from './constructs/cloudfront';
 import { KmsConstruct } from './constructs/kms';
 import { RedisConstruct } from './constructs/redis';
 import { AutoShutdownConstruct } from './constructs/auto-shutdown';
+import { DynamoDBConstruct } from './constructs/dynamodb';
 
 export interface FineFindsStackProps extends cdk.StackProps {
   config: BaseConfig;
@@ -124,6 +125,17 @@ export class FineFindsStack extends cdk.Stack {
           : cdk.RemovalPolicy.DESTROY,
       }),
     });
+    
+    // Create DynamoDB tables if needed
+    // Note: Only include this if your application requires DynamoDB
+    // This is optimized for cost in non-production environments
+    if (props.config.enableDynamoDB ?? false) {
+      const dynamodb = new DynamoDBConstruct(this, 'DynamoDB', {
+        environment: props.config.environment,
+        config: props.config,
+        kmsKey: kms.key,
+      });
+    }
 
     // Add tags to all resources
     cdk.Tags.of(this).add('Environment', props.config.environment);

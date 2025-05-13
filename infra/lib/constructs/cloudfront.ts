@@ -44,11 +44,25 @@ export class CloudFrontConstruct extends Construct {
         },
       },
       priceClass: props.environment === 'prod' 
-        ? cloudfront.PriceClass.PRICE_CLASS_100 
-        : cloudfront.PriceClass.PRICE_CLASS_200,
+        ? cloudfront.PriceClass.PRICE_CLASS_ALL
+        : cloudfront.PriceClass.PRICE_CLASS_100,
       enabled: true,
       comment: `FineFinds ${props.environment} Distribution`,
       defaultRootObject: 'index.html',
+      enableLogging: props.environment === 'prod',
+      logBucket: props.environment === 'prod' ? new s3.Bucket(this, 'LogBucket', {
+        encryption: s3.BucketEncryption.S3_MANAGED,
+        blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+        lifecycleRules: [
+          {
+            expiration: cdk.Duration.days(30),
+            enabled: true,
+          }
+        ],
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+        autoDeleteObjects: true,
+      }) : undefined,
+      logFilePrefix: props.environment === 'prod' ? 'cloudfront-logs/' : undefined,
       errorResponses: [
         {
           httpStatus: 403,
@@ -61,9 +75,9 @@ export class CloudFrontConstruct extends Construct {
           responsePagePath: '/index.html',
         },
       ],
-      geoRestriction: cloudfront.GeoRestriction.allowlist(
-        ...props.config.cloudfront.allowedCountries
-      ),
+      geoRestriction: props.environment === 'prod' 
+        ? cloudfront.GeoRestriction.allowlist(...props.config.cloudfront.allowedCountries)
+        : undefined,
       minimumProtocolVersion: cloudfront.SecurityPolicyProtocol.TLS_V1_2_2021,
       sslSupportMethod: cloudfront.SSLMethod.SNI,
     });

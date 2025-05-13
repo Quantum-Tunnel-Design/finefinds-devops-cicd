@@ -58,66 +58,112 @@ export class S3Construct extends Construct {
           maxAge: 3000,
         },
       ],
-      lifecycleRules: props.config.s3.lifecycleRules ? [
-        {
-          abortIncompleteMultipartUploadAfter: cdk.Duration.days(7),
-          enabled: true,
-        },
-        {
-          noncurrentVersionExpiration: cdk.Duration.days(90),
-          enabled: true,
-        },
-      ] : undefined,
+      lifecycleRules: props.environment === 'prod' 
+        ? (props.config.s3.lifecycleRules ? [
+            {
+              abortIncompleteMultipartUploadAfter: cdk.Duration.days(7),
+              enabled: true,
+            },
+            {
+              noncurrentVersionExpiration: cdk.Duration.days(90),
+              enabled: true,
+            },
+          ] : undefined)
+        : [
+            // More aggressive lifecycle rules for non-production
+            {
+              abortIncompleteMultipartUploadAfter: cdk.Duration.days(1),
+              enabled: true,
+            },
+            {
+              expiration: cdk.Duration.days(30), // Auto-delete after 30 days in non-prod
+              enabled: true,
+            },
+            {
+              transitions: [
+                {
+                  storageClass: s3.StorageClass.INFREQUENT_ACCESS,
+                  transitionAfter: cdk.Duration.days(7), // Move to IA after 7 days
+                }
+              ],
+              enabled: true,
+            }
+          ],
     });
 
     // Create Backups Bucket
     this.backupsBucket = new s3.Bucket(this, 'BackupsBucket', {
       ...commonBucketProps,
       bucketName: `finefinds-${props.environment}-backups-${this.account}`,
-      lifecycleRules: props.config.s3.lifecycleRules ? [
-        {
-          expiration: cdk.Duration.days(365),
-          enabled: true,
-        },
-        {
-          noncurrentVersionExpiration: cdk.Duration.days(90),
-          enabled: true,
-        },
-        {
-          transitions: [
+      lifecycleRules: props.environment === 'prod'
+        ? (props.config.s3.lifecycleRules ? [
             {
-              storageClass: s3.StorageClass.INFREQUENT_ACCESS,
-              transitionAfter: cdk.Duration.days(30),
+              expiration: cdk.Duration.days(365),
+              enabled: true,
             },
             {
-              storageClass: s3.StorageClass.GLACIER,
-              transitionAfter: cdk.Duration.days(90),
+              noncurrentVersionExpiration: cdk.Duration.days(90),
+              enabled: true,
             },
+            {
+              transitions: [
+                {
+                  storageClass: s3.StorageClass.INFREQUENT_ACCESS,
+                  transitionAfter: cdk.Duration.days(30),
+                },
+                {
+                  storageClass: s3.StorageClass.GLACIER,
+                  transitionAfter: cdk.Duration.days(90),
+                },
+              ],
+              enabled: true,
+            }
+          ] : undefined)
+        : [
+            // Shorter retention for non-production backups
+            {
+              expiration: cdk.Duration.days(30), // Only keep backups for 30 days
+              enabled: true,
+            },
+            {
+              transitions: [
+                {
+                  storageClass: s3.StorageClass.INFREQUENT_ACCESS,
+                  transitionAfter: cdk.Duration.days(7), // Move to IA after 7 days
+                }
+              ],
+              enabled: true,
+            }
           ],
-          enabled: true,
-        },
-      ] : undefined,
     });
 
     // Create Logs Bucket
     this.logsBucket = new s3.Bucket(this, 'LogsBucket', {
       ...commonBucketProps,
       bucketName: `finefinds-${props.environment}-logs-${this.account}`,
-      lifecycleRules: props.config.s3.lifecycleRules ? [
-        {
-          expiration: cdk.Duration.days(90),
-          enabled: true,
-        },
-        {
-          transitions: [
+      lifecycleRules: props.environment === 'prod'
+        ? (props.config.s3.lifecycleRules ? [
             {
-              storageClass: s3.StorageClass.INFREQUENT_ACCESS,
-              transitionAfter: cdk.Duration.days(30),
+              expiration: cdk.Duration.days(90),
+              enabled: true,
             },
+            {
+              transitions: [
+                {
+                  storageClass: s3.StorageClass.INFREQUENT_ACCESS,
+                  transitionAfter: cdk.Duration.days(30),
+                },
+              ],
+              enabled: true,
+            }
+          ] : undefined)
+        : [
+            // Minimal retention for non-production logs
+            {
+              expiration: cdk.Duration.days(7), // Only keep logs for 7 days in non-prod
+              enabled: true,
+            }
           ],
-          enabled: true,
-        },
-      ] : undefined,
     });
 
     // Create media bucket
