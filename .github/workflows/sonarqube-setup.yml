@@ -45,6 +45,7 @@ jobs:
       AWS_REGION: us-east-1
       CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
       CDK_DEFAULT_REGION: us-east-1
+      CDK_ENV: prod
 
     steps:
       - name: Checkout
@@ -60,10 +61,11 @@ jobs:
           cache-dependency-path: infra/package-lock.json
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-prod
+          aws-region: us-east-1
+          role-duration-seconds: 3600  # Increase session duration to 1 hour
 
       - name: Verify AWS Credentials
         run: |
