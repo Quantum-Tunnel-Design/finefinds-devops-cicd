@@ -49,7 +49,8 @@ export class EcsConstruct extends Construct {
         ecr.Repository.fromRepositoryAttributes(this, 'ECRRepo', {
           repositoryArn: 'arn:aws:ecr:us-east-1:891076991993:repository/finefinds-base/node-20-alpha',
           repositoryName: 'finefinds-base/node-20-alpha',
-        })
+        }),
+        'latest'
       ),
       logging: ecs.LogDrivers.awsLogs({
         streamPrefix: 'finefinds',
