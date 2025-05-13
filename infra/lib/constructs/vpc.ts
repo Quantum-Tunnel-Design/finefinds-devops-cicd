@@ -110,41 +110,32 @@ export class VpcConstruct extends Construct {
       securityGroups: [endpointSecurityGroup],
     });
     
+    // CloudWatch Logs endpoint - for container logging (required for all environments)
+    new ec2.InterfaceVpcEndpoint(this, 'LogsEndpoint', {
+      vpc: this.vpc,
+      service: ec2.InterfaceVpcEndpointAwsService.CLOUDWATCH_LOGS,
+      subnets: { subnets: privateSubnets.subnets },
+      privateDnsEnabled: true,
+      securityGroups: [endpointSecurityGroup],
+    });
+    
+    // Secrets Manager endpoint - for retrieving secrets (required for all environments)
+    new ec2.InterfaceVpcEndpoint(this, 'SecretsManagerEndpoint', {
+      vpc: this.vpc,
+      service: ec2.InterfaceVpcEndpointAwsService.SECRETS_MANAGER,
+      subnets: { subnets: privateSubnets.subnets },
+      privateDnsEnabled: true,
+      securityGroups: [endpointSecurityGroup],
+    });
+    
     // Add additional required endpoints based on environment type to avoid quota issues
     if (props.environment === 'prod') {
-      // Full set of endpoints for production
-      
-      // CloudWatch Logs endpoint - for container logging
-      new ec2.InterfaceVpcEndpoint(this, 'LogsEndpoint', {
-        vpc: this.vpc,
-        service: ec2.InterfaceVpcEndpointAwsService.CLOUDWATCH_LOGS,
-        subnets: { subnets: privateSubnets.subnets },
-        privateDnsEnabled: true,
-        securityGroups: [endpointSecurityGroup],
-      });
-      
-      // Secrets Manager endpoint - for retrieving secrets
-      new ec2.InterfaceVpcEndpoint(this, 'SecretsManagerEndpoint', {
-        vpc: this.vpc,
-        service: ec2.InterfaceVpcEndpointAwsService.SECRETS_MANAGER,
-        subnets: { subnets: privateSubnets.subnets },
-        privateDnsEnabled: true,
-        securityGroups: [endpointSecurityGroup],
-      });
+      // Additional endpoints for production
       
       // SSM endpoint - for parameter store if needed
       new ec2.InterfaceVpcEndpoint(this, 'SsmEndpoint', {
         vpc: this.vpc,
         service: ec2.InterfaceVpcEndpointAwsService.SSM,
-        subnets: { subnets: privateSubnets.subnets },
-        privateDnsEnabled: true,
-        securityGroups: [endpointSecurityGroup],
-      });
-    } else {
-      // Minimum set for non-production environments - just add CloudWatch Logs
-      new ec2.InterfaceVpcEndpoint(this, 'LogsEndpoint', {
-        vpc: this.vpc,
-        service: ec2.InterfaceVpcEndpointAwsService.CLOUDWATCH_LOGS,
         subnets: { subnets: privateSubnets.subnets },
         privateDnsEnabled: true,
         securityGroups: [endpointSecurityGroup],
