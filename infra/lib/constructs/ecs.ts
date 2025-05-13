@@ -68,6 +68,23 @@ export class EcsConstruct extends Construct {
         NODE_ENV: props.environment,
         PORT: props.config.ecs.containerPort.toString(),
       },
+      secrets: {
+        // Add secrets for database and Redis connection
+        DATABASE_URL: ecs.Secret.fromSecretsManager(
+          cdk.aws_secretsmanager.Secret.fromSecretNameV2(
+            this,
+            'DbConnectionSecret',
+            `finefinds-${props.environment}-db-connection`
+          )
+        ),
+        REDIS_URL: ecs.Secret.fromSecretsManager(
+          cdk.aws_secretsmanager.Secret.fromSecretNameV2(
+            this,
+            'RedisConnectionSecret',
+            `finefinds-${props.environment}-redis-connection`
+          )
+        ),
+      },
       portMappings: [
         {
           containerPort: props.config.ecs.containerPort,

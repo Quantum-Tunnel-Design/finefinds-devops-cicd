@@ -15,6 +15,8 @@ import { KmsConstruct } from './constructs/kms';
 import { RedisConstruct } from './constructs/redis';
 import { AutoShutdownConstruct } from './constructs/auto-shutdown';
 import { DynamoDBConstruct } from './constructs/dynamodb';
+import { RdsConstruct } from './constructs/rds';
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
 
 export interface FineFindsStackProps extends cdk.StackProps {
   config: BaseConfig;
@@ -49,6 +51,14 @@ export class FineFindsStack extends cdk.Stack {
       kmsKey: kms.key,
     });
 
+    // Create RDS Database
+    const rds = new RdsConstruct(this, 'Rds', {
+      environment: props.config.environment,
+      config: props.config,
+      vpc: vpc.vpc,
+      kmsKey: kms.key,
+    });
+
     // Create alarm topic
     const alarmTopic = new cdk.aws_sns.Topic(this, 'AlarmTopic', {
       topicName: `finefinds-${props.config.environment}-alarms`,
@@ -69,6 +79,107 @@ export class FineFindsStack extends cdk.Stack {
       vpc: vpc.vpc,
       taskRole: iam.ecsTaskRole,
       executionRole: iam.ecsExecutionRole,
+    });
+
+    // Configure database security groups to allow access from ECS services
+    if (props.config.environment === 'prod' && rds.cluster) {
+      // For production with Aurora cluster
+      rds.cluster.connections.allowDefaultPortFrom(
+        ecs.service, 
+        'Allow access from ECS service'
+      );
+    } else if (rds.instance) {
+      // For non-production with single instance
+      rds.instance.connections.allowDefaultPortFrom(
+        ecs.service,
+        'Allow access from ECS service'
+      );
+    }
+
+    // Add database connection environment variables to ECS task definition
+    const dbConnectionStringSecret = new cdk.aws_secretsmanager.Secret(this, 'DbConnectionString', {
+      secretName: `finefinds-${props.config.environment}-db-connection`,
+      description: 'Database connection string for the application',
+      generateSecretString: {
+        secretStringTemplate: JSON.stringify({
+          dbName: 'finefinds',
+          engine: 'postgres',
+          host: props.config.environment === 'prod' && rds.cluster 
+            ? rds.cluster.clusterEndpoint.hostname
+            : rds.instance?.instanceEndpoint.hostname,
+          port: 5432,
+          username: 'postgres', // This should match what's set in your RDS construct
+        }),
+        generateStringKey: 'password',
+      },
+    });
+
+    // Add Redis connection details to ECS task
+    const redisConnectionSecret = new cdk.aws_secretsmanager.Secret(this, 'RedisConnectionString', {
+      secretName: `finefinds-${props.config.environment}-redis-connection`,
+      description: 'Redis connection details for the application',
+      generateSecretString: {
+        secretStringTemplate: JSON.stringify({
+          host: redis.cluster.attrRedisEndpointAddress,
+          port: redis.cluster.attrRedisEndpointPort,
+        }),
+        generateStringKey: 'password',
+      },
+    });
+    
+    // Set up initial database migration task
+    const migrationTask = new cdk.aws_ecs.FargateTaskDefinition(this, 'MigrationTaskDef', {
+      memoryLimitMiB: 512,
+      cpu: 256,
+      taskRole: iam.ecsTaskRole,
+      executionRole: iam.ecsExecutionRole,
+    });
+    
+    migrationTask.addContainer('MigrationContainer', {
+      image: cdk.aws_ecs.ContainerImage.fromRegistry('891076991993.dkr.ecr.us-east-1.amazonaws.com/finefinds-base/node-20-alpha:latest'),
+      command: ['npm', 'run', 'migration:run'],
+      logging: cdk.aws_ecs.LogDrivers.awsLogs({
+        streamPrefix: 'db-migration',
+        logGroup: new cdk.aws_logs.LogGroup(this, 'MigrationLogGroup', {
+          logGroupName: `/finefinds/${props.config.environment}/db-migration`,
+          retention: props.config.environment === 'prod' 
+            ? cdk.aws_logs.RetentionDays.ONE_MONTH 
+            : cdk.aws_logs.RetentionDays.ONE_DAY,
+          removalPolicy: props.config.environment === 'prod' 
+            ? cdk.RemovalPolicy.RETAIN 
+            : cdk.RemovalPolicy.DESTROY,
+        }),
+      }),
+      environment: {
+        NODE_ENV: props.config.environment,
+      },
+      secrets: {
+        DATABASE_URL: cdk.aws_ecs.Secret.fromSecretsManager(dbConnectionStringSecret),
+        REDIS_URL: cdk.aws_ecs.Secret.fromSecretsManager(redisConnectionSecret),
+      },
+    });
+    
+    // Output important resource information
+    new cdk.CfnOutput(this, 'DatabaseEndpoint', {
+      value: props.config.environment === 'prod' && rds.cluster 
+        ? rds.cluster.clusterEndpoint.hostname
+        : rds.instance?.instanceEndpoint.hostname || 'No database endpoint available',
+      description: 'Database endpoint',
+      exportName: `finefinds-${props.config.environment}-db-endpoint`,
+    });
+    
+    new cdk.CfnOutput(this, 'DatabaseSecretArn', {
+      value: props.config.environment === 'prod' && rds.cluster 
+        ? rds.cluster.secret?.secretArn || 'No secret available'
+        : rds.instance?.secret?.secretArn || 'No secret available',
+      description: 'Database credentials secret ARN',
+      exportName: `finefinds-${props.config.environment}-db-secret-arn`,
+    });
+    
+    new cdk.CfnOutput(this, 'RedisEndpoint', {
+      value: redis.cluster.attrRedisEndpointAddress,
+      description: 'Redis endpoint',
+      exportName: `finefinds-${props.config.environment}-redis-endpoint`,
     });
 
     // Create Cognito User Pools
