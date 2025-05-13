@@ -11,12 +11,11 @@ on:
         options:
           - yes
           - no
-  push:
-    branches:
-      - sonarqube
-    paths:
-      - 'infra/lib/constructs/sonarqube.ts'
-      - '.github/workflows/sonarqube-setup.yml'
+      branch:
+        description: 'Branch to checkout for deployment'
+        required: true
+        default: 'main'
+        type: string
 
 jobs:
   deploy-sonarqube:
@@ -35,6 +34,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.branch }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
