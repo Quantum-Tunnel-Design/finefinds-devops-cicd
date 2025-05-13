@@ -97,9 +97,11 @@ jobs:
             
             echo "Stack operation completed. Proceeding with deployment."
           elif [[ $STACK_STATUS == "STACK_NOT_FOUND" ]]; then
-            echo "Stack does not exist yet. Will create a new stack."
+            echo "Stack does not exist yet. This might be a new environment."
+            echo "IS_NEW_ENVIRONMENT=true" >> $GITHUB_ENV
           else
             echo "Stack is not in an IN_PROGRESS state. Proceeding with deployment."
+            echo "IS_NEW_ENVIRONMENT=false" >> $GITHUB_ENV
           fi
 
       - name: CDK Bootstrap
@@ -107,6 +109,13 @@ jobs:
         run: |
           cd infra
           npm run cdk bootstrap -- --qualifier finefinds-${{ env.CDK_ENV }} aws://${{ secrets.AWS_ACCOUNT_ID }}/${{ secrets.AWS_REGION }}
+      
+      - name: Bootstrap Secrets
+        if: github.event_name == 'push' && env.IS_NEW_ENVIRONMENT == 'true'
+        run: |
+          cd infra
+          echo "This appears to be a new environment. Bootstrapping secrets first..."
+          npm run bootstrap-secrets -- -c environment=${{ env.CDK_ENV }}
       
       - name: CDK Diff
         if: github.event_name == 'pull_request'
