@@ -5,7 +5,6 @@ import { VpcConstruct } from './constructs/vpc';
 import { SonarQubeConstruct } from './constructs/sonarqube';
 import { KmsConstruct } from './constructs/kms';
 import { IamConstruct } from './constructs/iam';
-import { SecretsConstruct } from './constructs/secrets';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 
 export interface FineFindsSonarQubeStackProps extends cdk.StackProps {
@@ -18,32 +17,25 @@ export class FineFindsSonarQubeStack extends cdk.Stack {
 
     // Create KMS key for encryption
     const kms = new KmsConstruct(this, 'Kms', {
-      environment: props.config.environment,
+      environment: "shared",
       config: props.config,
     });
 
     // Create VPC
     const vpc = new VpcConstruct(this, 'Vpc', {
-      environment: props.config.environment,
+      environment: "shared",
       config: props.config,
     });
 
     // Create IAM roles
     const iam = new IamConstruct(this, 'Iam', {
-      environment: props.config.environment,
+      environment: "shared",
       config: props.config,
-    });
-
-    // Create Secrets
-    const secrets = new SecretsConstruct(this, 'Secrets', {
-      environment: props.config.environment,
-      config: props.config,
-      kmsKey: kms.key,
     });
 
     // Create SonarQube
     const sonarqube = new SonarQubeConstruct(this, 'SonarQube', {
-      environment: props.config.environment,
+      environment: "shared",
       config: props.config,
       vpc: vpc.vpc,
       kmsKey: kms.key,
@@ -53,8 +45,8 @@ export class FineFindsSonarQubeStack extends cdk.Stack {
 
     // Create SonarQube admin token secret
     const adminTokenSecret = new secretsmanager.Secret(this, 'SonarQubeAdminTokenSecret', {
-      secretName: `finefinds/${props.config.environment}/sonarqube/admin-token`,
-      description: 'SonarQube Admin Token',
+      secretName: `finefinds/shared/sonarqube/admin-token`,
+      description: 'SonarQube Admin Token for Shared Instance',
       encryptionKey: kms.key,
       generateSecretString: {
         excludePunctuation: true,
@@ -67,11 +59,11 @@ export class FineFindsSonarQubeStack extends cdk.Stack {
     const adminTokenOutput = new cdk.CfnOutput(this, 'SonarQubeAdminToken', {
       value: adminTokenSecret.secretArn,
       description: 'SonarQube Admin Token Secret ARN',
-      exportName: `finefinds-${props.config.environment}-sonarqube-admin-token-arn`,
+      exportName: `finefinds-shared-sonarqube-admin-token-arn`,
     });
 
     // Add tags to all resources
-    cdk.Tags.of(this).add('Environment', props.config.environment);
+    cdk.Tags.of(this).add('Environment', 'shared');
     cdk.Tags.of(this).add('Project', 'FineFinds');
     cdk.Tags.of(this).add('ManagedBy', 'CDK');
     cdk.Tags.of(this).add('Component', 'SonarQube');
