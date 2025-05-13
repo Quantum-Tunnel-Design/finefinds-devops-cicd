@@ -71,5 +71,6 @@ This documentation should be updated:
 - When configurations change
 - When costs change significantly
 - When operating procedures are modified
+- When AWS service properties are updated (e.g., when Cognito StandardThreatProtectionMode was changed to advancedSecurityMode)
 
 The team should perform a quarterly review of all documentation to ensure accuracy. 

@@ -29,7 +29,7 @@ Production is our customer-facing environment with the highest reliability and s
 
 ### Security
 - **WAF**: Enabled with managed rules
-- **Cognito Threat Protection**: Enforced
+- **Cognito Advanced Security**: Enforced
 - **Backup**: Full AWS Backup enabled with retention periods:
   - Daily: 7 days
   - Weekly: 4 weeks
@@ -67,7 +67,7 @@ Development is used for ongoing feature development with cost-optimized settings
 
 ### Security
 - **WAF**: Disabled
-- **Cognito Threat Protection**: No enforcement
+- **Cognito Advanced Security**: Disabled
 - **Backup**: AWS Backup disabled
 
 ### Monitoring
