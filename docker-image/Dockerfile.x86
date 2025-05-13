@@ -1,0 +1,21 @@
+FROM --platform=linux/amd64 node:20-alpine
+
+# Create a basic entrypoint script (not using the external file to keep it simple)
+RUN echo '#!/bin/sh' > /usr/local/bin/docker-entrypoint.sh && \
+    echo 'set -e' >> /usr/local/bin/docker-entrypoint.sh && \
+    echo 'echo "Node.js $(node -v)"' >> /usr/local/bin/docker-entrypoint.sh && \
+    echo 'echo "Architecture: $(uname -m)"' >> /usr/local/bin/docker-entrypoint.sh && \
+    echo 'if [ "${1#-}" != "${1}" ] || [ -z "$(command -v "${1}")" ]; then' >> /usr/local/bin/docker-entrypoint.sh && \
+    echo '  set -- node "$@"' >> /usr/local/bin/docker-entrypoint.sh && \
+    echo 'fi' >> /usr/local/bin/docker-entrypoint.sh && \
+    echo 'exec "$@"' >> /usr/local/bin/docker-entrypoint.sh && \
+    chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Set working directory
+WORKDIR /app
+
+# Define entrypoint
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+
+# Default command
+CMD ["node"] 

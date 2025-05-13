@@ -1,0 +1,119 @@
+name: SonarQube Setup
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy SonarQube to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - qa
+          - staging
+          - prod
+  push:
+    branches:
+      - sonarqube
+    paths:
+      - 'infra/lib/constructs/sonarqube.ts'
+      - '.github/workflows/sonarqube-setup.yml'
+
+jobs:
+  deploy-sonarqube:
+    runs-on: ubuntu-latest
+    environment: >-
+      ${{ 
+        github.event.inputs.environment == 'prod' && 'prod' || 
+        github.event.inputs.environment == 'staging' && 'staging' || 
+        github.event.inputs.environment == 'qa' && 'qa' || 
+        'dev' 
+      }}
+    permissions:
+      id-token: write
+      contents: read
+
+    env:
+      AWS_REGION: us-east-1
+      CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+      CDK_DEFAULT_REGION: us-east-1
+      CDK_ENV: ${{ github.event.inputs.environment || 'dev' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: infra/package-lock.json
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install Dependencies
+        run: |
+          cd infra
+          npm ci
+
+      - name: Deploy SonarQube
+        run: |
+          cd infra
+          # Deploy only the SonarQube stack
+          npm run cdk deploy FineFindsSonarQubeStack-${CDK_ENV} --context includeSonarQube=true --require-approval never
+
+      - name: Get SonarQube Outputs
+        id: sonarqube-outputs
+        run: |
+          cd infra
+          # Get the SonarQube URL and admin token (from your CDK output)
+          SONAR_URL=$(aws cloudformation describe-stacks --stack-name FineFindsSonarQubeStack-${CDK_ENV} --query "Stacks[0].Outputs[?OutputKey=='SonarQubeUrl'].OutputValue" --output text)
+          SONAR_TOKEN=$(aws cloudformation describe-stacks --stack-name FineFindsSonarQubeStack-${CDK_ENV} --query "Stacks[0].Outputs[?OutputKey=='SonarQubeAdminToken'].OutputValue" --output text)
+          
+          # Store them as outputs
+          echo "SONAR_URL=${SONAR_URL}" >> $GITHUB_OUTPUT
+          echo "SONAR_TOKEN=${SONAR_TOKEN}" >> $GITHUB_OUTPUT
+
+      - name: Update GitHub Secrets
+        run: |
+          # Verify GitHub CLI is installed
+          if ! command -v gh &> /dev/null; then
+            echo "Installing GitHub CLI..."
+            curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+            sudo apt update
+            sudo apt install gh
+          fi
+          
+          # Set the secrets using GitHub CLI
+          echo "${{ steps.sonarqube-outputs.outputs.SONAR_TOKEN }}" | gh secret set SONAR_TOKEN --env ${{ env.CDK_ENV }}
+          echo "${{ steps.sonarqube-outputs.outputs.SONAR_URL }}" | gh secret set SONAR_HOST_URL --env ${{ env.CDK_ENV }}
+          
+          echo "✅ SonarQube credentials have been stored as GitHub secrets"
+
+      - name: Slack Notification
+        uses: slackapi/slack-github-action@v1.25.0
+        with:
+          payload: |
+            {
+              "channel": "${{ secrets.SLACK_CHANNEL }}",
+              "attachments": [
+                {
+                  "color": "#36a64f",
+                  "pretext": ":rocket: *SonarQube Setup Complete*",
+                  "fields": [
+                    { "title": "Environment", "value": "${{ env.CDK_ENV }}", "short": true },
+                    { "title": "SonarQube URL", "value": "${{ steps.sonarqube-outputs.outputs.SONAR_URL }}", "short": false }
+                  ],
+                  "text": "SonarQube has been successfully deployed and credentials are stored in GitHub secrets."
+                }
+              ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }} 
