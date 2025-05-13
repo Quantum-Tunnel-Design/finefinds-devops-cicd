@@ -42,13 +42,35 @@ export class IamConstruct extends Construct {
           'xray:GetSamplingRules',
           'xray:GetSamplingTargets',
           'xray:GetSamplingStatisticSummaries',
-          // ECR Access
+        ],
+        resources: ['*'],
+      })
+    );
+
+    // Add specific ECR permissions with explicit cross-account access
+    this.ecsTaskRole.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
           'ecr:GetAuthorizationToken',
+        ],
+        resources: ['*'], // Authorization token requires permissions on *
+      })
+    );
+
+    // Add permissions for specific repositories
+    this.ecsTaskRole.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
           'ecr:BatchCheckLayerAvailability',
           'ecr:GetDownloadUrlForLayer',
           'ecr:BatchGetImage',
         ],
-        resources: ['*'],
+        resources: [
+          'arn:aws:ecr:us-east-1:891076991993:repository/finefinds-base/node-20-alpha',
+          'arn:aws:ecr:us-east-1:891076991993:repository/finefinds-base/sonarqube'
+        ],
       })
     );
 
@@ -58,15 +80,11 @@ export class IamConstruct extends Construct {
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
     });
 
-    // Add ECS execution policy
+    // Add ECS execution policy with basic permissions
     this.ecsExecutionRole.addToPolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
         actions: [
-          'ecr:GetAuthorizationToken',
-          'ecr:BatchCheckLayerAvailability',
-          'ecr:GetDownloadUrlForLayer',
-          'ecr:BatchGetImage',
           'logs:CreateLogStream',
           'logs:PutLogEvents',
           'secretsmanager:GetSecretValue',
@@ -77,12 +95,22 @@ export class IamConstruct extends Construct {
       })
     );
 
-    // Add specific ECR repository permissions for ECS Execution Role
+    // Add global ECR auth permission (needs to be on * resource)
     this.ecsExecutionRole.addToPolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
         actions: [
           'ecr:GetAuthorizationToken',
+        ],
+        resources: ['*'],
+      })
+    );
+
+    // Add specific ECR repository permissions for ECS Execution Role
+    this.ecsExecutionRole.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
           'ecr:BatchCheckLayerAvailability',
           'ecr:GetDownloadUrlForLayer',
           'ecr:BatchGetImage',
