@@ -52,7 +52,7 @@ export class SonarQubeConstruct extends Construct {
       ),
       vpc: props.vpc,
       vpcSubnets: {
-        subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS
+        subnetType: ec2.SubnetType.PRIVATE_ISOLATED
       },
       securityGroups: [securityGroup],
       // Increase storage for the shared instance
@@ -121,9 +121,9 @@ export class SonarQubeConstruct extends Construct {
       desiredCount: 1,
       securityGroups: [securityGroup],
       vpcSubnets: {
-        subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS
+        subnetType: ec2.SubnetType.PRIVATE_ISOLATED
       },
-      assignPublicIp: false,
+      assignPublicIp: true, // This is required for isolated subnets without NAT gateway
       // Enable ECS service auto scaling based on CPU and memory
       capacityProviderStrategies: [
         {

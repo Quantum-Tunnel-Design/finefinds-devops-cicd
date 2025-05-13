@@ -35,7 +35,7 @@ jobs:
   deploy-sonarqube:
     runs-on: ubuntu-latest
     environment: prod
-    if: github.event.inputs.choice == 'true'
+    if: github.event.inputs.choice == 'yes'
     needs: debug-inputs
     permissions:
       id-token: write
@@ -84,8 +84,11 @@ jobs:
         run: |
           cd infra
           echo "Starting SonarQube deployment..."
+          echo "Current context variables:"
+          npm run cdk context
+          
           echo "Using context includeSonarQube=true"
-          CDK_DEBUG=true npm run cdk deploy FineFindsSonarQubeStack -- --context includeSonarQube=true -- --require-approval never || {
+          CDK_DEBUG=true AWS_ACCOUNT_ID=${{ secrets.AWS_ACCOUNT_ID }} AWS_REGION=us-east-1 npm run cdk deploy -- FineFindsSonarQubeStack --context includeSonarQube=true --require-approval never || {
             echo "Deployment failed. Check the error message above."
             exit 1
           }
