@@ -6,7 +6,7 @@ on:
       choice:
         description: 'Should we deploy SonarQube?'
         required: true
-        default: 'no'
+        default: 'yes'
         type: choice
         options:
           - yes
@@ -18,10 +18,20 @@ on:
         type: string
 
 jobs:
+  debug-inputs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Debug Workflow Inputs
+        run: |
+          echo "Choice input: ${{ github.event.inputs.choice }}"
+          echo "Branch input: ${{ github.event.inputs.branch }}"
+          echo "This job is for debugging and will always run"
+
   deploy-sonarqube:
     runs-on: ubuntu-latest
-    environment: staging
-    if: inputs.choice == 'yes'
+    environment: prod
+    if: github.event.inputs.choice == 'yes'
+    needs: debug-inputs
     permissions:
       id-token: write
       contents: read
@@ -50,28 +60,54 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Verify AWS Credentials
+        run: |
+          echo "Checking AWS credentials..."
+          aws sts get-caller-identity
+          echo "AWS credentials verified."
+
       - name: Install Dependencies
         run: |
           cd infra
+          echo "Installing dependencies..."
           npm ci
+          echo "Dependencies installed."
 
       - name: Deploy SonarQube
         run: |
           cd infra
-          # Deploy a single SonarQube stack for all environments to use
-          npm run cdk deploy FineFindsSonarQubeStack --context includeSonarQube=true --require-approval never
+          echo "Starting SonarQube deployment..."
+          echo "Using context includeSonarQube=true"
+          npm run cdk deploy FineFindsSonarQubeStack --context includeSonarQube=true --require-approval never || {
+            echo "Deployment failed. Check the error message above."
+            exit 1
+          }
+          echo "SonarQube deployment completed."
 
       - name: Get SonarQube Outputs
         id: sonarqube-outputs
         run: |
           cd infra
+          echo "Retrieving SonarQube outputs..."
           # Get the SonarQube URL and admin token
           SONAR_URL=$(aws cloudformation describe-stacks --stack-name FineFindsSonarQubeStack --query "Stacks[0].Outputs[?OutputKey=='SonarQubeUrl'].OutputValue" --output text)
           SONAR_ADMIN_TOKEN=$(aws cloudformation describe-stacks --stack-name FineFindsSonarQubeStack --query "Stacks[0].Outputs[?OutputKey=='SonarQubeAdminToken'].OutputValue" --output text)
           
+          # Check if outputs were retrieved successfully
+          if [ -z "$SONAR_URL" ]; then
+            echo "Failed to retrieve SonarQube URL output. Check if deployment was successful."
+            exit 1
+          fi
+          
+          if [ -z "$SONAR_ADMIN_TOKEN" ]; then
+            echo "Failed to retrieve SonarQube Admin Token output. Check if deployment was successful."
+            exit 1
+          fi
+          
           # Store them as outputs
           echo "SONAR_URL=${SONAR_URL}" >> $GITHUB_OUTPUT
           echo "SONAR_ADMIN_TOKEN=${SONAR_ADMIN_TOKEN}" >> $GITHUB_OUTPUT
+          echo "SonarQube outputs retrieved successfully."
 
       - name: Update GitHub Secrets
         run: |
