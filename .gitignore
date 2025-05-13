@@ -1,0 +1,59 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.env
+.env.*
+
+# CDK
+cdk.out/
+cdk.context.json
+*.cdk.staging.json
+*.cdk.staging.*
+
+# AWS
+.aws-sam/
+.idea/
+*.iml
+
+# Build outputs
+/dist/
+/build/
+/.next/
+coverage/
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# VSCode
+.vscode/
+
+# Test
+coverage/
+
+# Amplify
+amplify/
+
+# SonarQube
+.sonar/
+
+# Misc
+*.local
+*.swp
+
+# Ignore backend and frontend .env files
+backend/.env
+frontend/client-portal/.env
+frontend/admin-portal/.env
+
+# Ignore infra environment files if any
+infra/.env
+infra/.env.*
+
+dist/

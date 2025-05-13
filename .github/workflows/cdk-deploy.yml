@@ -1,0 +1,197 @@
+name: CDK Deploy
+
+on:
+  push:
+    branches: [main, qa, staging, dev]
+
+jobs:
+  check_skip:
+    runs-on: ubuntu-latest
+    outputs:
+      should_skip: ${{ steps.skip_check.outputs.should_skip }}
+    steps:
+      - name: Check for skip deployment indicator
+        id: skip_check
+        run: |
+          # Check if commit message contains [skip deploy] or [no deploy]
+          if [[ "${{ github.event.head_commit.message }}" == *"[skip deploy]"* ]] || 
+             [[ "${{ github.event.head_commit.message }}" == *"[no deploy]"* ]]; then
+            echo "should_skip=true" >> $GITHUB_OUTPUT
+            echo "Deployment will be skipped due to [skip deploy] or [no deploy] in commit message"
+          else
+            echo "should_skip=false" >> $GITHUB_OUTPUT
+            echo "No skip indicator found in commit message, proceeding with deployment"
+          fi
+
+  deploy:
+    needs: check_skip
+    if: needs.check_skip.outputs.should_skip != 'true'
+    runs-on: ubuntu-latest
+    # Map branches to environments for GitHub Actions
+    environment: >-
+      ${{ 
+        github.ref == 'refs/heads/main' && 'prod' || 
+        github.ref == 'refs/heads/staging' && 'staging' || 
+        github.ref == 'refs/heads/qa' && 'qa' || 
+        'dev' 
+      }}
+    permissions:
+      id-token: write
+      contents: read
+
+    env:
+      AWS_REGION: us-east-1
+      CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+      CDK_DEFAULT_REGION: us-east-1
+      # Define environment for CDK deployment
+      CDK_ENV: >-
+        ${{ 
+          github.ref == 'refs/heads/main' && 'prod' || 
+          github.ref == 'refs/heads/staging' && 'staging' || 
+          github.ref == 'refs/heads/qa' && 'qa' || 
+          'dev' 
+        }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-${{ github.ref_name == 'main' && 'prod' || github.ref_name }}
+          aws-region: us-east-1
+          role-duration-seconds: 3600  # Increase session duration to 1 hour
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: infra/package-lock.json
+
+      - name: Install Dependencies
+        run: |
+          cd infra
+          npm ci
+
+      - name: Check for ongoing stack operations
+        run: |
+          STACK_NAME="FineFinds-${{ env.CDK_ENV }}"
+          echo "Checking status of $STACK_NAME stack..."
+          
+          # Check if the stack exists and get its status
+          STACK_STATUS=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query "Stacks[0].StackStatus" --output text 2>/dev/null || echo "STACK_NOT_FOUND")
+          
+          echo "Current stack status: $STACK_STATUS"
+          
+          # If stack is in progress, wait or exit
+          if [[ $STACK_STATUS == *"_IN_PROGRESS" ]]; then
+            echo "Stack operation is already in progress. Waiting for it to complete..."
+            
+            # Try to wait for the stack operation to complete (timeout after 30 minutes)
+            aws cloudformation wait stack-$([[ $STACK_STATUS == "CREATE_IN_PROGRESS" ]] && echo "create-complete" || echo "update-complete") --stack-name $STACK_NAME --timeout-in-minutes 30 || {
+              echo "::error::Stack operation timed out after 30 minutes. Please check the CloudFormation console."
+              exit 1
+            }
+            
+            echo "Stack operation completed. Proceeding with deployment."
+          elif [[ $STACK_STATUS == "STACK_NOT_FOUND" ]]; then
+            echo "Stack does not exist yet. This might be a new environment."
+            echo "IS_NEW_ENVIRONMENT=true" >> $GITHUB_ENV
+          else
+            echo "Stack is not in an IN_PROGRESS state. Proceeding with deployment."
+            echo "IS_NEW_ENVIRONMENT=false" >> $GITHUB_ENV
+          fi
+
+      - name: CDK Bootstrap
+        if: github.event_name == 'push'
+        run: |
+          cd infra
+          npm run cdk bootstrap -- --qualifier finefinds-${{ env.CDK_ENV }} aws://${{ secrets.AWS_ACCOUNT_ID }}/${{ secrets.AWS_REGION }}
+      
+      - name: Bootstrap Secrets
+        if: github.event_name == 'push' && env.IS_NEW_ENVIRONMENT == 'true'
+        run: |
+          cd infra
+          echo "This appears to be a new environment. Bootstrapping secrets first..."
+          npm run bootstrap-secrets -- -c environment=${{ env.CDK_ENV }}
+      
+      - name: CDK Diff
+        if: github.event_name == 'pull_request'
+        run: |
+          cd infra
+          npm run cdk diff ${{ env.CDK_ENV }}
+
+      - name: CDK Deploy
+        if: github.event_name == 'push' 
+        run: |
+          cd infra
+          npm run cdk deploy -- --require-approval never
+        env:
+          CDK_DEPLOY_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+          CDK_DEPLOY_REGION: ${{ secrets.AWS_REGION }} 
+
+      - name: Slack Notification (Success)
+        if: success()
+        uses: slackapi/slack-github-action@v2.1.0
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL_DEVOPS }}
+          webhook-type: webhook-trigger
+          payload: |
+            {
+              "channel": "${{ secrets.SLACK_CHANNEL_DEVOPS }}",
+              "attachments": [
+                {
+                  "color": "#36a64f",
+                  "pretext": ":white_check_mark: *CDK Deploy Succeeded*",
+                  "fields": [
+                    { "title": "Environment", "value": "${{ env.CDK_ENV }}", "short": true },
+                    { "title": "Branch", "value": "${{ github.ref_name }}", "short": true },
+                    { "title": "Actor", "value": "${{ github.actor }}", "short": true },
+                    { "title": "Commit", "value": "${{ github.sha }}", "short": false }
+                  ],
+                  "actions": [
+                    {
+                      "type": "button",
+                      "text": "View Workflow",
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_DEVOPS_TOKEN }}
+
+      - name: Slack Notification (Failure)
+        if: failure()
+        uses: slackapi/slack-github-action@v2.1.0
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL_DEVOPS }}
+          webhook-type: webhook-trigger
+          payload: |
+            {
+              "channel": "${{ secrets.SLACK_CHANNEL }}",
+              "attachments": [
+                {
+                  "color": "#ff0000",
+                  "pretext": ":x: *CDK Deploy Failed*",
+                  "fields": [
+                    { "title": "Environment", "value": "${{ env.CDK_ENV }}", "short": true },
+                    { "title": "Branch", "value": "${{ github.ref_name }}", "short": true },
+                    { "title": "Actor", "value": "${{ github.actor }}", "short": true },
+                    { "title": "Commit", "value": "${{ github.sha }}", "short": false }
+                  ],
+                  "actions": [
+                    {
+                      "type": "button",
+                      "text": "View Workflow",
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }} 
