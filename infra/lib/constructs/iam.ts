@@ -46,10 +46,26 @@ export class IamConstruct extends Construct {
     this.ecsExecutionRole = new iam.Role(this, 'EcsExecutionRole', {
       roleName: `finefinds-${props.environment}-ecs-execution-role`,
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
-      managedPolicies: [
-        iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonECSTaskExecutionRolePolicy'),
-      ],
     });
+
+    // Add ECS execution policy
+    this.ecsExecutionRole.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'ecr:GetAuthorizationToken',
+          'ecr:BatchCheckLayerAvailability',
+          'ecr:GetDownloadUrlForLayer',
+          'ecr:BatchGetImage',
+          'logs:CreateLogStream',
+          'logs:PutLogEvents',
+          'secretsmanager:GetSecretValue',
+          'ssm:GetParameters',
+          'kms:Decrypt'
+        ],
+        resources: ['*'],
+      })
+    );
 
     // Add specific ECR repository permissions for ECS Execution Role
     this.ecsExecutionRole.addToPolicy(
@@ -72,11 +88,49 @@ export class IamConstruct extends Construct {
     this.backupRole = new iam.Role(this, 'BackupRole', {
       roleName: `finefinds-${props.environment}-backup-role`,
       assumedBy: new iam.ServicePrincipal('backup.amazonaws.com'),
-      managedPolicies: [
-        iam.ManagedPolicy.fromAwsManagedPolicyName('AWSBackupServiceRolePolicyForBackup'),
-        iam.ManagedPolicy.fromAwsManagedPolicyName('AWSBackupServiceRolePolicyForRestores'),
-      ],
     });
+    
+    // Add backup service policy
+    this.backupRole.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'backup:*',
+          'rds:DescribeDBInstances',
+          'rds:CreateDBSnapshot',
+          'rds:DeleteDBSnapshot',
+          'rds:DescribeDBSnapshots',
+          'rds:RestoreDBInstanceFromDBSnapshot',
+          'ec2:CreateTags',
+          'ec2:DeleteTags',
+          'tag:GetResources',
+          's3:CreateBucket',
+          's3:ListBucket',
+          's3:GetBucketAcl',
+          's3:PutBucketAcl',
+          's3:GetObject',
+          's3:PutObject',
+          's3:DeleteObject',
+          's3:GetObjectAcl',
+          's3:PutObjectAcl',
+          's3:GetObjectVersionAcl',
+          's3:PutObjectVersionAcl',
+          's3:DeleteObjectVersion',
+          'dynamodb:Scan',
+          'dynamodb:Query',
+          'dynamodb:ListTables',
+          'dynamodb:DescribeTable',
+          'dynamodb:GetItem',
+          'dynamodb:PutItem',
+          'dynamodb:UpdateItem',
+          'dynamodb:DeleteItem',
+          'dynamodb:BatchGetItem',
+          'dynamodb:BatchWriteItem',
+          'dynamodb:ListTagsOfResource'
+        ],
+        resources: ['*'],
+      })
+    );
 
     // Create Monitoring Role
     this.monitoringRole = new iam.Role(this, 'MonitoringRole', {
