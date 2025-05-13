@@ -17,6 +17,7 @@ import { AutoShutdownConstruct } from './constructs/auto-shutdown';
 import { DynamoDBConstruct } from './constructs/dynamodb';
 import { RdsConstruct } from './constructs/rds';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 
 export interface FineFindsStackProps extends cdk.StackProps {
   config: BaseConfig;
@@ -71,6 +72,125 @@ export class FineFindsStack extends cdk.Stack {
       vpc: vpc.vpc,
       alarmTopic,
     });
+    
+    // Create the database connection secret that ECS will use
+    // We create this with initial placeholder values, then update it with real values via a custom resource
+    const dbConnectionStringSecret = new secretsmanager.Secret(this, 'DbConnectionString', {
+      secretName: `finefinds-${props.config.environment}-db-connection`,
+      description: 'Database connection string for the application',
+      generateSecretString: {
+        secretStringTemplate: JSON.stringify({
+          dbName: 'finefinds',
+          engine: 'postgres',
+          host: 'placeholder-will-be-updated', // This will be updated by the custom resource
+          port: 5432,
+          username: 'postgres',
+        }),
+        generateStringKey: 'password',
+      },
+    });
+
+    // Create a Redis connection secrets for the ECS service
+    const redisConnectionSecret = new secretsmanager.Secret(this, 'RedisConnectionString', {
+      secretName: `finefinds-${props.config.environment}-redis-connection`,
+      description: 'Redis connection details for the application',
+      generateSecretString: {
+        secretStringTemplate: JSON.stringify({
+          host: redis.cluster.attrRedisEndpointAddress,
+          port: redis.cluster.attrRedisEndpointPort,
+        }),
+        generateStringKey: 'password',
+      },
+    });
+    
+    // Update the database connection secret once the RDS instance is available
+    // Use a custom resource to avoid circular dependencies
+    if (props.config.environment === 'prod' && rds.cluster) {
+      // For production, use the Aurora cluster
+      const updateDbSecret = new cdk.custom_resources.AwsCustomResource(this, 'UpdateDbConnectionSecret', {
+        onCreate: {
+          service: 'SecretsManager',
+          action: 'updateSecret',
+          parameters: {
+            SecretId: dbConnectionStringSecret.secretArn,
+            SecretString: JSON.stringify({
+              dbName: 'finefinds',
+              engine: 'postgres',
+              host: rds.cluster.clusterEndpoint.hostname,
+              port: 5432,
+              username: 'postgres', // This should match RDS credentials
+              password: dbConnectionStringSecret.secretValueFromJson('password').toString(),
+            }),
+          },
+          physicalResourceId: cdk.custom_resources.PhysicalResourceId.of('DbSecretUpdate-' + Date.now().toString()),
+        },
+        onUpdate: {
+          service: 'SecretsManager',
+          action: 'updateSecret',
+          parameters: {
+            SecretId: dbConnectionStringSecret.secretArn,
+            SecretString: JSON.stringify({
+              dbName: 'finefinds',
+              engine: 'postgres',
+              host: rds.cluster.clusterEndpoint.hostname,
+              port: 5432,
+              username: 'postgres',
+              password: dbConnectionStringSecret.secretValueFromJson('password').toString(),
+            }),
+          },
+          physicalResourceId: cdk.custom_resources.PhysicalResourceId.of('DbSecretUpdate-' + Date.now().toString()),
+        },
+        policy: cdk.custom_resources.AwsCustomResourcePolicy.fromSdkCalls({
+          resources: cdk.custom_resources.AwsCustomResourcePolicy.ANY_RESOURCE,
+        }),
+      });
+      
+      // Ensure the custom resource runs after RDS is created
+      updateDbSecret.node.addDependency(rds.cluster);
+      
+    } else if (rds.instance) {
+      // For non-production, use single instance
+      const updateDbSecret = new cdk.custom_resources.AwsCustomResource(this, 'UpdateDbConnectionSecret', {
+        onCreate: {
+          service: 'SecretsManager',
+          action: 'updateSecret',
+          parameters: {
+            SecretId: dbConnectionStringSecret.secretArn,
+            SecretString: JSON.stringify({
+              dbName: 'finefinds',
+              engine: 'postgres',
+              host: rds.instance.instanceEndpoint.hostname,
+              port: 5432,
+              username: 'postgres', // This should match RDS credentials
+              password: dbConnectionStringSecret.secretValueFromJson('password').toString(),
+            }),
+          },
+          physicalResourceId: cdk.custom_resources.PhysicalResourceId.of('DbSecretUpdate-' + Date.now().toString()),
+        },
+        onUpdate: {
+          service: 'SecretsManager',
+          action: 'updateSecret',
+          parameters: {
+            SecretId: dbConnectionStringSecret.secretArn,
+            SecretString: JSON.stringify({
+              dbName: 'finefinds',
+              engine: 'postgres',
+              host: rds.instance.instanceEndpoint.hostname,
+              port: 5432,
+              username: 'postgres',
+              password: dbConnectionStringSecret.secretValueFromJson('password').toString(),
+            }),
+          },
+          physicalResourceId: cdk.custom_resources.PhysicalResourceId.of('DbSecretUpdate-' + Date.now().toString()),
+        },
+        policy: cdk.custom_resources.AwsCustomResourcePolicy.fromSdkCalls({
+          resources: cdk.custom_resources.AwsCustomResourcePolicy.ANY_RESOURCE,
+        }),
+      });
+      
+      // Ensure the custom resource runs after RDS is created
+      updateDbSecret.node.addDependency(rds.instance);
+    }
 
     // Create ECS Cluster and Services
     const ecs = new EcsConstruct(this, 'Ecs', {
@@ -80,6 +200,15 @@ export class FineFindsStack extends cdk.Stack {
       taskRole: iam.ecsTaskRole,
       executionRole: iam.ecsExecutionRole,
     });
+    
+    // Add dependencies to ensure proper creation order
+    if (props.config.environment === 'prod' && rds.cluster) {
+      ecs.service.node.addDependency(rds.cluster);
+    } else if (rds.instance) {
+      ecs.service.node.addDependency(rds.instance);
+    }
+    ecs.service.node.addDependency(dbConnectionStringSecret);
+    ecs.service.node.addDependency(redisConnectionSecret);
 
     // Configure database security groups to allow access from ECS services
     if (props.config.environment === 'prod' && rds.cluster) {
@@ -96,37 +225,6 @@ export class FineFindsStack extends cdk.Stack {
       );
     }
 
-    // Add database connection environment variables to ECS task definition
-    const dbConnectionStringSecret = new cdk.aws_secretsmanager.Secret(this, 'DbConnectionString', {
-      secretName: `finefinds-${props.config.environment}-db-connection`,
-      description: 'Database connection string for the application',
-      generateSecretString: {
-        secretStringTemplate: JSON.stringify({
-          dbName: 'finefinds',
-          engine: 'postgres',
-          host: props.config.environment === 'prod' && rds.cluster 
-            ? rds.cluster.clusterEndpoint.hostname
-            : rds.instance?.instanceEndpoint.hostname,
-          port: 5432,
-          username: 'postgres', // This should match what's set in your RDS construct
-        }),
-        generateStringKey: 'password',
-      },
-    });
-
-    // Add Redis connection details to ECS task
-    const redisConnectionSecret = new cdk.aws_secretsmanager.Secret(this, 'RedisConnectionString', {
-      secretName: `finefinds-${props.config.environment}-redis-connection`,
-      description: 'Redis connection details for the application',
-      generateSecretString: {
-        secretStringTemplate: JSON.stringify({
-          host: redis.cluster.attrRedisEndpointAddress,
-          port: redis.cluster.attrRedisEndpointPort,
-        }),
-        generateStringKey: 'password',
-      },
-    });
-    
     // Set up initial database migration task
     const migrationTask = new cdk.aws_ecs.FargateTaskDefinition(this, 'MigrationTaskDef', {
       memoryLimitMiB: 512,
@@ -158,6 +256,15 @@ export class FineFindsStack extends cdk.Stack {
         REDIS_URL: cdk.aws_ecs.Secret.fromSecretsManager(redisConnectionSecret),
       },
     });
+    
+    // Add dependencies for the migration task
+    if (props.config.environment === 'prod' && rds.cluster) {
+      migrationTask.node.addDependency(rds.cluster);
+    } else if (rds.instance) {
+      migrationTask.node.addDependency(rds.instance);
+    }
+    migrationTask.node.addDependency(dbConnectionStringSecret);
+    migrationTask.node.addDependency(redisConnectionSecret);
     
     // Output important resource information
     new cdk.CfnOutput(this, 'DatabaseEndpoint', {
