@@ -85,7 +85,7 @@ jobs:
           cd infra
           echo "Starting SonarQube deployment..."
           echo "Using context includeSonarQube=true"
-          npm run cdk deploy FineFindsSonarQubeStack --context includeSonarQube=true --require-approval never || {
+          CDK_DEBUG=true npm run cdk deploy FineFindsSonarQubeStack -- --context includeSonarQube=true -- --require-approval never || {
             echo "Deployment failed. Check the error message above."
             exit 1
           }

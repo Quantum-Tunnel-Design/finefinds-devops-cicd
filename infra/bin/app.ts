@@ -15,6 +15,8 @@ const includeSonarQube = app.node.tryGetContext('includeSonarQube') === 'true';
 
 // If SonarQube is explicitly requested, create only the shared SonarQube stack
 if (includeSonarQube) {
+  console.log('Creating SonarQube stack as requested via includeSonarQube context variable');
+  
   // Use dev config for SonarQube shared instance
   new FineFindsSonarQubeStack(app, 'FineFindsSonarQubeStack', {
     env: {
@@ -23,6 +25,8 @@ if (includeSonarQube) {
     },
     config: devConfig,
   });
+  
+  console.log('SonarQube stack created. No other stacks will be deployed in this run.');
 } else {
   // Otherwise, create the normal environment stacks
 
