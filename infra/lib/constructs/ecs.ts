@@ -41,10 +41,6 @@ export class EcsConstruct extends Construct {
         : 256,
       taskRole: props.taskRole,
       executionRole: props.executionRole,
-      runtimePlatform: {
-        cpuArchitecture: ecs.CpuArchitecture.X86_64,
-        operatingSystemFamily: ecs.OperatingSystemFamily.LINUX,
-      },
     });
 
     // Add container to task definition
