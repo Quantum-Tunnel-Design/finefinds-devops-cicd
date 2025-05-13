@@ -13,6 +13,7 @@ import { WafConstruct } from './constructs/waf';
 import { CloudFrontConstruct } from './constructs/cloudfront';
 import { KmsConstruct } from './constructs/kms';
 import { RedisConstruct } from './constructs/redis';
+import { AutoShutdownConstruct } from './constructs/auto-shutdown';
 
 export interface FineFindsStackProps extends cdk.StackProps {
   config: BaseConfig;
@@ -91,18 +92,22 @@ export class FineFindsStack extends cdk.Stack {
       domainName: props.config.dns.domainName,
     });
 
-    // Create Backup Resources
-    const backup = new BackupConstruct(this, 'Backup', {
-      environment: props.config.environment,
-      config: props.config,
-    });
+    // Create Backup Resources (only for production)
+    if (props.config.environment === 'prod') {
+      const backup = new BackupConstruct(this, 'Backup', {
+        environment: props.config.environment,
+        config: props.config,
+      });
+    }
 
-    // Create WAF Resources
-    const waf = new WafConstruct(this, 'Waf', {
-      environment: props.config.environment,
-      config: props.config,
-      loadBalancer: ecs.loadBalancer,
-    });
+    // Create WAF Resources (only for production)
+    if (props.config.environment === 'prod') {
+      const waf = new WafConstruct(this, 'Waf', {
+        environment: props.config.environment,
+        config: props.config,
+        loadBalancer: ecs.loadBalancer,
+      });
+    }
 
     // Create CloudFront Resources
     const cloudfront = new CloudFrontConstruct(this, 'CloudFront', {
@@ -124,5 +129,15 @@ export class FineFindsStack extends cdk.Stack {
     cdk.Tags.of(this).add('Environment', props.config.environment);
     cdk.Tags.of(this).add('Project', 'FineFinds');
     cdk.Tags.of(this).add('ManagedBy', 'CDK');
+    
+    // Add auto-shutdown for non-production environments
+    if (['dev', 'sandbox', 'qa'].includes(props.config.environment)) {
+      const autoShutdown = new AutoShutdownConstruct(this, 'AutoShutdown', {
+        environment: props.config.environment,
+        config: props.config,
+        cluster: ecs.cluster,
+        service: ecs.service,
+      });
+    }
   }
 } 

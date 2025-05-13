@@ -35,10 +35,10 @@ export class EcsConstruct extends Construct {
     const taskDefinition = new ecs.FargateTaskDefinition(this, 'TaskDef', {
       memoryLimitMiB: props.environment === 'prod' 
         ? props.config.ecs.memoryLimitMiB 
-        : Math.min(props.config.ecs.memoryLimitMiB, 512),
+        : 512,
       cpu: props.environment === 'prod' 
         ? props.config.ecs.cpu 
-        : Math.min(props.config.ecs.cpu, 256),
+        : 256,
       taskRole: props.taskRole,
       executionRole: props.executionRole,
     });
@@ -57,7 +57,7 @@ export class EcsConstruct extends Construct {
           logGroupName: `/finefinds/${props.environment}/app`,
           retention: props.environment === 'prod' 
             ? logs.RetentionDays.ONE_MONTH 
-            : logs.RetentionDays.ONE_WEEK,
+            : logs.RetentionDays.ONE_DAY,
           removalPolicy: props.environment === 'prod' 
             ? cdk.RemovalPolicy.RETAIN 
             : cdk.RemovalPolicy.DESTROY,

@@ -66,7 +66,7 @@ export class ElastiCacheConstruct extends Construct {
       cacheParameterGroupName: parameterGroup.ref,
       securityGroupIds: [securityGroup.securityGroupId],
       port: 6379,
-      logDeliveryConfigurations: [
+      logDeliveryConfigurations: props.environment === 'prod' ? [
         {
           destinationType: 'cloudwatch-logs',
           logFormat: 'json',
@@ -75,12 +75,8 @@ export class ElastiCacheConstruct extends Construct {
             cloudWatchLogsDetails: {
               logGroup: new logs.LogGroup(this, 'RedisSlowLogs', {
                 logGroupName: `/aws/elasticache/${props.environment}/redis-slow-logs`,
-                retention: props.environment === 'prod' 
-                  ? logs.RetentionDays.ONE_MONTH 
-                  : logs.RetentionDays.ONE_WEEK,
-                removalPolicy: props.environment === 'prod' 
-                  ? cdk.RemovalPolicy.RETAIN 
-                  : cdk.RemovalPolicy.DESTROY,
+                retention: logs.RetentionDays.ONE_MONTH,
+                removalPolicy: cdk.RemovalPolicy.RETAIN,
               }).logGroupName,
             },
           },
@@ -93,17 +89,13 @@ export class ElastiCacheConstruct extends Construct {
             cloudWatchLogsDetails: {
               logGroup: new logs.LogGroup(this, 'RedisEngineLogs', {
                 logGroupName: `/aws/elasticache/${props.environment}/redis-engine-logs`,
-                retention: props.environment === 'prod' 
-                  ? logs.RetentionDays.ONE_MONTH 
-                  : logs.RetentionDays.ONE_WEEK,
-                removalPolicy: props.environment === 'prod' 
-                  ? cdk.RemovalPolicy.RETAIN 
-                  : cdk.RemovalPolicy.DESTROY,
+                retention: logs.RetentionDays.ONE_MONTH,
+                removalPolicy: cdk.RemovalPolicy.RETAIN,
               }).logGroupName,
             },
           },
         },
-      ],
+      ] : undefined,
       tags: [
         {
           key: 'Environment',

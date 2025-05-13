@@ -25,7 +25,7 @@ export class LogsConstruct extends Construct {
       logGroupName: `/finefinds/${props.environment}/application`,
       retention: props.environment === 'prod' 
         ? logs.RetentionDays.ONE_MONTH 
-        : logs.RetentionDays.ONE_WEEK,
+        : logs.RetentionDays.ONE_DAY,
       encryptionKey: props.kmsKey,
       removalPolicy: props.environment === 'prod' 
         ? cdk.RemovalPolicy.RETAIN 
@@ -37,7 +37,7 @@ export class LogsConstruct extends Construct {
       logGroupName: `/finefinds/${props.environment}/access`,
       retention: props.environment === 'prod' 
         ? logs.RetentionDays.ONE_MONTH 
-        : logs.RetentionDays.ONE_WEEK,
+        : logs.RetentionDays.ONE_DAY,
       encryptionKey: props.kmsKey,
       removalPolicy: props.environment === 'prod' 
         ? cdk.RemovalPolicy.RETAIN 
@@ -49,7 +49,7 @@ export class LogsConstruct extends Construct {
       logGroupName: `/finefinds/${props.environment}/error`,
       retention: props.environment === 'prod' 
         ? logs.RetentionDays.ONE_MONTH 
-        : logs.RetentionDays.ONE_WEEK,
+        : logs.RetentionDays.ONE_DAY,
       encryptionKey: props.kmsKey,
       removalPolicy: props.environment === 'prod' 
         ? cdk.RemovalPolicy.RETAIN 
@@ -61,7 +61,7 @@ export class LogsConstruct extends Construct {
       logGroupName: `/finefinds/${props.environment}/audit`,
       retention: props.environment === 'prod' 
         ? logs.RetentionDays.ONE_MONTH 
-        : logs.RetentionDays.ONE_WEEK,
+        : logs.RetentionDays.ONE_DAY,
       encryptionKey: props.kmsKey,
       removalPolicy: props.environment === 'prod' 
         ? cdk.RemovalPolicy.RETAIN 
