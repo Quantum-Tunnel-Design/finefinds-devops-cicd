@@ -6,11 +6,11 @@ on:
       choice:
         description: 'Should we deploy SonarQube?'
         required: true
-        default: 'yes'
+        default: 'true'
         type: choice
         options:
-          - yes
-          - no
+          - true
+          - false
       branch:
         description: 'Branch to checkout for deployment'
         required: true
@@ -35,7 +35,7 @@ jobs:
   deploy-sonarqube:
     runs-on: ubuntu-latest
     environment: prod
-    if: github.event.inputs.choice == 'yes'
+    if: github.event.inputs.choice == 'true'
     needs: debug-inputs
     permissions:
       id-token: write
