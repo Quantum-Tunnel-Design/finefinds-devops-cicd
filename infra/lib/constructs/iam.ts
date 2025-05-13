@@ -51,6 +51,23 @@ export class IamConstruct extends Construct {
       ],
     });
 
+    // Add specific ECR repository permissions for ECS Execution Role
+    this.ecsExecutionRole.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'ecr:GetAuthorizationToken',
+          'ecr:BatchCheckLayerAvailability',
+          'ecr:GetDownloadUrlForLayer',
+          'ecr:BatchGetImage',
+        ],
+        resources: [
+          'arn:aws:ecr:us-east-1:891076991993:repository/finefinds-base/node-20-alpha',
+          'arn:aws:ecr:us-east-1:891076991993:repository/finefinds-base/sonarqube'
+        ],
+      })
+    );
+
     // Create Backup Role
     this.backupRole = new iam.Role(this, 'BackupRole', {
       roleName: `finefinds-${props.environment}-backup-role`,

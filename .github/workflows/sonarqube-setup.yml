@@ -66,7 +66,7 @@ jobs:
         run: |
           cd infra
           # Deploy only the SonarQube stack
-          npm run cdk deploy FineFindsSonarQubeStack-${CDK_ENV} --require-approval never
+          npm run cdk deploy FineFindsSonarQubeStack-${CDK_ENV} --context includeSonarQube=true --require-approval never
 
       - name: Get SonarQube Outputs
         id: sonarqube-outputs

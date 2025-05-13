@@ -5,6 +5,7 @@ import * as rds from 'aws-cdk-lib/aws-rds';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
+import * as ecr from 'aws-cdk-lib/aws-ecr';
 import { Construct } from 'constructs';
 import { BaseConfig } from '../../env/base-config';
 
@@ -13,6 +14,8 @@ export interface SonarQubeConstructProps {
   config: BaseConfig;
   vpc: ec2.Vpc;
   kmsKey: cdk.aws_kms.Key;
+  taskRole?: iam.IRole;
+  executionRole?: iam.IRole;
 }
 
 export class SonarQubeConstruct extends Construct {
@@ -68,11 +71,18 @@ export class SonarQubeConstruct extends Construct {
       const taskDefinition = new ecs.FargateTaskDefinition(this, 'TaskDef', {
         memoryLimitMiB: 4096,
         cpu: 1024,
+        taskRole: props.taskRole,
+        executionRole: props.executionRole,
       });
 
       // Add container to task definition
       const container = taskDefinition.addContainer('SonarQubeContainer', {
-        image: ecs.ContainerImage.fromRegistry('sonarqube:community'),
+        image: ecs.ContainerImage.fromEcrRepository(
+          ecr.Repository.fromRepositoryAttributes(this, 'ECRRepo', {
+            repositoryArn: 'arn:aws:ecr:us-east-1:891076991993:repository/finefinds-base/sonarqube',
+            repositoryName: 'finefinds-base/sonarqube',
+          })
+        ),
         logging: ecs.LogDrivers.awsLogs({
           streamPrefix: 'sonarqube',
         }),

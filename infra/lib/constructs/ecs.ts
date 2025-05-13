@@ -4,6 +4,7 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as ecr from 'aws-cdk-lib/aws-ecr';
 import { Construct } from 'constructs';
 import { BaseConfig } from '../../env/base-config';
 
@@ -11,6 +12,8 @@ export interface EcsConstructProps {
   environment: string;
   config: BaseConfig;
   vpc: ec2.Vpc;
+  taskRole?: iam.IRole;
+  executionRole?: iam.IRole;
 }
 
 export class EcsConstruct extends Construct {
@@ -36,12 +39,18 @@ export class EcsConstruct extends Construct {
       cpu: props.environment === 'prod' 
         ? props.config.ecs.cpu 
         : Math.min(props.config.ecs.cpu, 256),
+      taskRole: props.taskRole,
+      executionRole: props.executionRole,
     });
 
     // Add container to task definition
     const container = taskDefinition.addContainer('AppContainer', {
-      image: ecs.ContainerImage.fromRegistry('node:20-alpine'),
-      command: ['node', '-e', 'require("http").createServer((_, res) => res.end("OK")).listen(3000)'],
+      image: ecs.ContainerImage.fromEcrRepository(
+        ecr.Repository.fromRepositoryAttributes(this, 'ECRRepo', {
+          repositoryArn: 'arn:aws:ecr:us-east-1:891076991993:repository/finefinds-base/node-20-alpha',
+          repositoryName: 'finefinds-base/node-20-alpha',
+        })
+      ),
       logging: ecs.LogDrivers.awsLogs({
         streamPrefix: 'finefinds',
         logGroup: new logs.LogGroup(this, 'AppLogGroup', {

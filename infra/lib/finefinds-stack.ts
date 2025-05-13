@@ -4,6 +4,7 @@ import { BaseConfig } from '../env/base-config';
 import { VpcConstruct } from './constructs/vpc';
 import { SecretsConstruct } from './constructs/secrets';
 import { EcsConstruct } from './constructs/ecs';
+import { IamConstruct } from './constructs/iam';
 import { CognitoConstruct } from './constructs/cognito';
 import { MonitoringConstruct } from './constructs/monitoring';
 import { DnsConstruct } from './constructs/dns';
@@ -33,6 +34,12 @@ export class FineFindsStack extends cdk.Stack {
       config: props.config,
     });
 
+    // Create IAM roles
+    const iam = new IamConstruct(this, 'Iam', {
+      environment: props.config.environment,
+      config: props.config,
+    });
+
     // Create Secrets
     const secrets = new SecretsConstruct(this, 'Secrets', {
       environment: props.config.environment,
@@ -58,6 +65,8 @@ export class FineFindsStack extends cdk.Stack {
       environment: props.config.environment,
       config: props.config,
       vpc: vpc.vpc,
+      taskRole: iam.ecsTaskRole,
+      executionRole: iam.ecsExecutionRole,
     });
 
     // Create Cognito User Pools

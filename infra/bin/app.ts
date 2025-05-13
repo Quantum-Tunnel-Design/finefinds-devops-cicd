@@ -2,6 +2,7 @@
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
 import { FineFindsStack } from '../lib/finefinds-stack';
+import { FineFindsSonarQubeStack } from '../lib/sonarqube-stack';
 import { devConfig } from '../env/dev';
 import { prodConfig } from '../env/prod';
 import { stagingConfig } from '../env/staging';
@@ -28,7 +29,7 @@ switch (env) {
     config = devConfig;
 }
 
-// Create the stack
+// Create the main infrastructure stack
 new FineFindsStack(app, `FineFinds-${env}`, {
   env: {
     account: process.env.CDK_DEPLOY_ACCOUNT || app.node.tryGetContext(env)?.account || process.env.CDK_DEFAULT_ACCOUNT || '123456789012',
@@ -36,4 +37,17 @@ new FineFindsStack(app, `FineFinds-${env}`, {
   },
   config,
   description: `FineFinds Infrastructure Stack for ${env} environment`,
-}); 
+});
+
+// Create the SonarQube stack if requested
+// This is only created explicitly through the SonarQube workflow
+if (app.node.tryGetContext('includeSonarQube') === 'true') {
+  new FineFindsSonarQubeStack(app, `FineFindsSonarQubeStack-${env}`, {
+    env: {
+      account: process.env.CDK_DEPLOY_ACCOUNT || app.node.tryGetContext(env)?.account || process.env.CDK_DEFAULT_ACCOUNT || '123456789012',
+      region: process.env.CDK_DEPLOY_REGION || app.node.tryGetContext(env)?.region || process.env.CDK_DEFAULT_REGION || 'us-east-1',
+    },
+    config,
+    description: `FineFinds SonarQube Stack for ${env} environment`,
+  });
+} 
