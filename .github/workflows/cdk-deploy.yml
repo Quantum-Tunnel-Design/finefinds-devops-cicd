@@ -108,29 +108,29 @@ jobs:
         if: github.event_name == 'push'
         run: |
           cd infra
-          npm run cdk bootstrap -- --qualifier finefinds-${{ env.CDK_ENV }} aws://${{ secrets.AWS_ACCOUNT_ID }}/${{ secrets.AWS_REGION }}
+          npm run cdk bootstrap -- --qualifier finefinds-${{ env.CDK_ENV }} --context env=${{ env.CDK_ENV }} aws://${{ secrets.AWS_ACCOUNT_ID }}/${{ secrets.AWS_REGION }}
       
       - name: Bootstrap Secrets
         if: github.event_name == 'push' && env.IS_NEW_ENVIRONMENT == 'true'
         run: |
           cd infra
           echo "This appears to be a new environment. Bootstrapping secrets first..."
-          npm run bootstrap-secrets -- -c environment=${{ env.CDK_ENV }}
+          npm run bootstrap-secrets -- --context env=${{ env.CDK_ENV }}
       
       - name: CDK Diff
         if: github.event_name == 'pull_request'
         run: |
           cd infra
-          npm run cdk diff ${{ env.CDK_ENV }}
+          npm run cdk diff -- FineFinds-${{ env.CDK_ENV }} --context env=${{ env.CDK_ENV }}
 
       - name: CDK Deploy
         if: github.event_name == 'push' 
         run: |
           cd infra
-          npm run cdk deploy -- --require-approval never
+          npm run cdk deploy -- FineFinds-${{ env.CDK_ENV }} --context env=${{ env.CDK_ENV }} --require-approval never
         env:
           CDK_DEPLOY_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
-          CDK_DEPLOY_REGION: ${{ secrets.AWS_REGION }} 
+          CDK_DEPLOY_REGION: ${{ secrets.AWS_REGION }}
 
       - name: Slack Notification (Success)
         if: success()

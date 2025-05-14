@@ -132,10 +132,15 @@ export class EcsConstruct extends Construct {
 
     // Add HTTPS listener if in production
     if (props.environment === 'prod') {
+      // Create a self-signed certificate if no domain is available
+      const certificate = new cdk.aws_certificatemanager.Certificate(this, 'SelfSignedCert', {
+        domainName: this.loadBalancer.loadBalancerDnsName,
+      });
+      
       this.loadBalancer.addListener('HttpsListener', {
         port: 443,
         defaultTargetGroups: [targetGroup],
-        certificates: [], // Add ACM certificate here
+        certificates: [certificate],
       });
     }
 

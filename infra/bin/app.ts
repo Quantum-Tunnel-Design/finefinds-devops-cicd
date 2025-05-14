@@ -13,6 +13,9 @@ const app = new cdk.App();
 // Check if SonarQube should be included
 const includeSonarQube = app.node.tryGetContext('includeSonarQube') === 'true';
 
+// Get environment from context or default to dev
+const environment = app.node.tryGetContext('env') || 'dev';
+
 // If SonarQube is explicitly requested, create only the shared SonarQube stack
 if (includeSonarQube) {
   console.log('Creating SonarQube stack as requested via includeSonarQube context variable');
@@ -28,41 +31,33 @@ if (includeSonarQube) {
   
   console.log('SonarQube stack created. No other stacks will be deployed in this run.');
 } else {
-  // Otherwise, create the normal environment stacks
-
-  // Development Stack
-  new FineFindsStack(app, 'FineFinds-dev', {
+  // Otherwise, create only the stack for the specified environment
+  console.log(`Creating stack for ${environment} environment`);
+  
+  // Select configuration based on environment
+  let config;
+  switch (environment) {
+    case 'prod':
+      config = prodConfig;
+      break;
+    case 'staging':
+      config = stagingConfig;
+      break;
+    case 'qa':
+      config = qaConfig;
+      break;
+    default:
+      config = devConfig;
+  }
+  
+  // Create the stack for the specified environment
+  new FineFindsStack(app, `FineFinds-${environment}`, {
     env: {
       account: process.env.CDK_DEFAULT_ACCOUNT,
       region: process.env.CDK_DEFAULT_REGION || 'us-east-1',
     },
-    config: devConfig,
+    config,
   });
-
-  // QA Stack
-  new FineFindsStack(app, 'FineFinds-qa', {
-    env: {
-      account: process.env.CDK_DEFAULT_ACCOUNT,
-      region: process.env.CDK_DEFAULT_REGION || 'us-east-1',
-    },
-    config: qaConfig,
-  });
-
-  // Staging Stack
-  new FineFindsStack(app, 'FineFinds-staging', {
-    env: {
-      account: process.env.CDK_DEFAULT_ACCOUNT,
-      region: process.env.CDK_DEFAULT_REGION || 'us-east-1',
-    },
-    config: stagingConfig,
-  });
-
-  // Production Stack
-  new FineFindsStack(app, 'FineFinds-prod', {
-    env: {
-      account: process.env.CDK_DEFAULT_ACCOUNT,
-      region: process.env.CDK_DEFAULT_REGION || 'us-east-1',
-    },
-    config: prodConfig,
-  });
+  
+  console.log(`Stack FineFinds-${environment} created.`);
 } 
