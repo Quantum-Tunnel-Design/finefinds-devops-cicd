@@ -74,7 +74,6 @@ export class FineFindsSonarQubeStack extends cdk.Stack {
       new cdk.CfnOutput(this, 'SonarQubeUrl', {
         value: `http://${sonarqube.loadBalancer.loadBalancerDnsName}`,
         description: 'SonarQube URL',
-        exportName: `finefinds-shared-sonarqube-url`,
       });
     }
 
