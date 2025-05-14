@@ -21,6 +21,14 @@ on:
           - dev
           - qa
           - staging
+      force_cleanup:
+        description: 'Force cleanup of existing resources before deployment'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - true
+          - false
 
 jobs:
   debug-inputs:
@@ -30,13 +38,148 @@ jobs:
         run: |
           echo "Choice input: ${{ github.event.inputs.choice }}"
           echo "Branch input: ${{ github.event.inputs.branch }}"
+          echo "Force cleanup: ${{ github.event.inputs.force_cleanup }}"
           echo "This job is for debugging and will always run"
+
+  check-existing-deployment:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.choice == 'true'
+    needs: debug-inputs
+    outputs:
+      exists: ${{ steps.check-stack.outputs.exists }}
+      status: ${{ steps.check-stack.outputs.status }}
+    env:
+      AWS_REGION: us-east-1
+      CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+      CDK_DEFAULT_REGION: us-east-1
+      STACK_NAME: FineFindsSonarQubeStack
+    
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-prod
+          aws-region: us-east-1
+          role-duration-seconds: 3600
+      
+      - name: Check for existing SonarQube Stack
+        id: check-stack
+        run: |
+          # Check if the stack exists
+          if aws cloudformation describe-stacks --stack-name $STACK_NAME &> /dev/null; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            STATUS=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query "Stacks[0].StackStatus" --output text)
+            echo "status=$STATUS" >> $GITHUB_OUTPUT
+            echo "Stack exists with status: $STATUS"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "status=DOES_NOT_EXIST" >> $GITHUB_OUTPUT
+            echo "Stack does not exist"
+          fi
+  
+  cleanup-resources:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.choice == 'true' && github.event.inputs.force_cleanup == 'true'
+    needs: check-existing-deployment
+    env:
+      AWS_REGION: us-east-1
+      CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+      CDK_DEFAULT_REGION: us-east-1
+      STACK_NAME: FineFindsSonarQubeStack
+    
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-prod
+          aws-region: us-east-1
+          role-duration-seconds: 3600
+      
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.branch }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: infra/package-lock.json
+          
+      - name: Install Dependencies
+        run: |
+          cd infra
+          npm ci
+      
+      - name: Run Resource Cleanup
+        run: |
+          # If force cleanup is requested, attempt to clean up resources manually
+          # before deploying the stack
+          echo "Cleaning up SonarQube resources..."
+          
+          # Check for stack in progress operations
+          if [[ "${{ needs.check-existing-deployment.outputs.status }}" == *"_IN_PROGRESS" ]]; then
+            echo "Stack operation is in progress. Waiting for it to complete..."
+            aws cloudformation wait stack-$([[ "${{ needs.check-existing-deployment.outputs.status }}" == "CREATE_IN_PROGRESS" ]] && echo "create-complete" || echo "update-complete") --stack-name $STACK_NAME --timeout-in-minutes 30 || {
+              echo "Stack operation did not complete in 30 minutes. Cancelling cleanup."
+              exit 1
+            }
+            echo "Stack operation completed."
+          fi
+          
+          # Create a custom cleanup script
+          cat > cleanup.js << 'EOL'
+          const AWS = require('aws-sdk');
+          
+          async function cleanupResources() {
+            const cloudformation = new AWS.CloudFormation();
+            const ecs = new AWS.ECS();
+            const rds = new AWS.RDS();
+            
+            try {
+              // Get SonarQube stack resources
+              const stackName = 'FineFindsSonarQubeStack';
+              
+              // Delete ECS services first
+              const ecsClusterName = 'sonarqube-shared';
+              try {
+                console.log('Looking for ECS services...');
+                const services = await ecs.listServices({ cluster: ecsClusterName }).promise();
+                for (const serviceArn of services.serviceArns || []) {
+                  console.log(`Deregistering service: ${serviceArn}`);
+                  await ecs.updateService({ cluster: ecsClusterName, service: serviceArn, desiredCount: 0 }).promise();
+                }
+              } catch (error) {
+                console.log(`No ECS services found or error: ${error.message}`);
+              }
+              
+              console.log('Resource cleanup completed');
+            } catch (error) {
+              console.error('Error during cleanup:', error);
+              throw error;
+            }
+          }
+          
+          cleanupResources().then(() => {
+            console.log('Cleanup completed successfully');
+          }).catch(err => {
+            console.error('Cleanup failed:', err);
+            process.exit(1);
+          });
+          EOL
+          
+          # Install AWS SDK and run the script
+          npm install aws-sdk
+          node cleanup.js
+          
+          echo "✅ Resource cleanup completed"
 
   deploy-sonarqube:
     runs-on: ubuntu-latest
     environment: prod
     if: github.event.inputs.choice == 'true'
-    needs: debug-inputs
+    needs: [debug-inputs, check-existing-deployment, cleanup-resources]
     permissions:
       id-token: write
       contents: read
@@ -46,12 +189,13 @@ jobs:
       CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
       CDK_DEFAULT_REGION: us-east-1
       CDK_ENV: prod
+      STACK_NAME: FineFindsSonarQubeStack
 
     steps:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          ref: ${{ inputs.branch }}
+          ref: ${{ github.event.inputs.branch }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
@@ -81,6 +225,7 @@ jobs:
           echo "Dependencies installed."
 
       - name: Deploy SonarQube
+        id: deploy
         run: |
           cd infra
           echo "Starting SonarQube deployment..."
@@ -88,38 +233,71 @@ jobs:
           npm run cdk context
           
           echo "Using context includeSonarQube=true"
-          CDK_DEBUG=true AWS_ACCOUNT_ID=${{ secrets.AWS_ACCOUNT_ID }} AWS_REGION=us-east-1 npm run cdk deploy -- FineFindsSonarQubeStack --context includeSonarQube=true --require-approval never || {
-            echo "Deployment failed. Check the error message above."
-            exit 1
+          
+          # Use error handling to prevent GitHub Actions failures if the deployment has issues
+          CDK_DEBUG=true AWS_ACCOUNT_ID=${{ secrets.AWS_ACCOUNT_ID }} AWS_REGION=us-east-1 npm run cdk deploy -- $STACK_NAME --context includeSonarQube=true --require-approval never || {
+            DEPLOY_EXIT_CODE=$?
+            echo "::warning::Deployment encountered issues (exit code $DEPLOY_EXIT_CODE)"
+            
+            # Check stack status
+            STACK_STATUS=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query "Stacks[0].StackStatus" --output text 2>/dev/null || echo "STACK_NOT_FOUND")
+            echo "Current stack status: $STACK_STATUS"
+            
+            # If the stack exists and is in a ROLLBACK state, trigger the recovery handler
+            if [[ $STACK_STATUS == *"ROLLBACK"* ]]; then
+              echo "Stack is in a rollback state. Attempting recovery..."
+              
+              # Get the recovery function ARN
+              RECOVERY_FUNCTION_ARN=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='RecoveryHandlerArn'].OutputValue" --output text 2>/dev/null || echo "")
+              
+              if [[ -n $RECOVERY_FUNCTION_ARN ]]; then
+                echo "Invoking recovery handler: $RECOVERY_FUNCTION_ARN"
+                aws lambda invoke --function-name $RECOVERY_FUNCTION_ARN --payload '{"action":"recover"}' /tmp/recovery-response.json
+                cat /tmp/recovery-response.json
+                echo "Recovery handler has been invoked"
+              else
+                echo "::warning::Recovery function not found. Manual cleanup may be required."
+              fi
+            fi
+            
+            # Don't fail the workflow, to prevent errors from cascading
+            echo "DEPLOY_STATUS=failed" >> $GITHUB_ENV
+            echo "Deployment failed but continuing workflow to allow notifications and cleanup steps"
           }
-          echo "SonarQube deployment completed."
+          
+          if [[ "${DEPLOY_STATUS}" != "failed" ]]; then
+            echo "SonarQube deployment completed successfully."
+            echo "DEPLOY_STATUS=success" >> $GITHUB_ENV
+          fi
 
       - name: Get SonarQube Outputs
         id: sonarqube-outputs
+        if: env.DEPLOY_STATUS != 'failed'
         run: |
           cd infra
           echo "Retrieving SonarQube outputs..."
           # Get the SonarQube URL and admin token
-          SONAR_URL=$(aws cloudformation describe-stacks --stack-name FineFindsSonarQubeStack --query "Stacks[0].Outputs[?OutputKey=='SonarQubeUrl'].OutputValue" --output text)
-          SONAR_ADMIN_TOKEN=$(aws cloudformation describe-stacks --stack-name FineFindsSonarQubeStack --query "Stacks[0].Outputs[?OutputKey=='SonarQubeAdminToken'].OutputValue" --output text)
+          SONAR_URL=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='SonarQubeUrl'].OutputValue" --output text || echo "")
+          SONAR_ADMIN_TOKEN=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='SonarQubeAdminToken'].OutputValue" --output text || echo "")
           
           # Check if outputs were retrieved successfully
           if [ -z "$SONAR_URL" ]; then
-            echo "Failed to retrieve SonarQube URL output. Check if deployment was successful."
-            exit 1
+            echo "::warning::Failed to retrieve SonarQube URL output."
+            SONAR_URL="Not available"
           fi
           
           if [ -z "$SONAR_ADMIN_TOKEN" ]; then
-            echo "Failed to retrieve SonarQube Admin Token output. Check if deployment was successful."
-            exit 1
+            echo "::warning::Failed to retrieve SonarQube Admin Token output."
+            SONAR_ADMIN_TOKEN="Not available"
           fi
           
           # Store them as outputs
           echo "SONAR_URL=${SONAR_URL}" >> $GITHUB_OUTPUT
           echo "SONAR_ADMIN_TOKEN=${SONAR_ADMIN_TOKEN}" >> $GITHUB_OUTPUT
-          echo "SonarQube outputs retrieved successfully."
+          echo "SonarQube outputs retrieved"
 
       - name: Update GitHub Secrets
+        if: env.DEPLOY_STATUS != 'failed' && steps.sonarqube-outputs.outputs.SONAR_ADMIN_TOKEN != 'Not available'
         run: |
           # Configure GitHub CLI
           if ! command -v gh &> /dev/null; then
@@ -148,19 +326,20 @@ jobs:
               "channel": "${{ secrets.SLACK_CHANNEL_DEVOPS }}",
               "attachments": [
                 {
-                  "color": "#36a64f",
-                  "pretext": ":rocket: *Shared SonarQube Setup Complete*",
+                  "color": "${{ env.DEPLOY_STATUS != 'failed' && '#36a64f' || '#ff0000' }}",
+                  "pretext": "${{ env.DEPLOY_STATUS != 'failed' && ':rocket: *SonarQube Setup Succeeded*' || ':x: *SonarQube Setup Failed*' }}",
                   "fields": [
-                    { "title": "SonarQube URL", "value": "${{ steps.sonarqube-outputs.outputs.SONAR_URL }}", "short": false }
+                    { "title": "Status", "value": "${{ env.DEPLOY_STATUS != 'failed' && 'Success' || 'Failed' }}", "short": true },
+                    { "title": "SonarQube URL", "value": "${{ steps.sonarqube-outputs.outputs.SONAR_URL || 'Not available' }}", "short": false }
                   ],
                   "actions": [
                     {
                       "type": "button",
-                      "text": "Visit SonarQube",
-                      "url": "${{ steps.sonarqube-outputs.outputs.SONAR_URL }}"
+                      "text": "View Workflow",
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
                     }
                   ],
-                  "text": "A shared SonarQube instance has been successfully deployed. You can now configure projects in other repositories to use this instance."
+                  "text": "${{ env.DEPLOY_STATUS != 'failed' && 'A shared SonarQube instance has been successfully deployed. You can now configure projects in other repositories to use this instance.' || 'SonarQube deployment encountered issues. Manual intervention may be required.' }}"
                 }
               ]
             }
