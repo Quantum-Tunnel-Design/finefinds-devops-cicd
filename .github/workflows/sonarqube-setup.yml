@@ -45,6 +45,9 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.inputs.choice == 'true'
     needs: debug-inputs
+    permissions:
+      id-token: write
+      contents: read
     outputs:
       exists: ${{ steps.check-stack.outputs.exists }}
       status: ${{ steps.check-stack.outputs.status }}
@@ -81,6 +84,9 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.inputs.choice == 'true' && github.event.inputs.force_cleanup == 'true'
     needs: check-existing-deployment
+    permissions:
+      id-token: write
+      contents: read
     env:
       AWS_REGION: us-east-1
       CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
