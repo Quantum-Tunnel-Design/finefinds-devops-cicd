@@ -95,7 +95,6 @@ export class SonarQubeConstruct extends Construct {
           'tcp_keepalives_count': '10',
           'statement_timeout': '600000',  // 10 minutes in milliseconds
           'idle_in_transaction_session_timeout': '3600000',  // 1 hour in milliseconds
-          'connect_timeout': '30'  // 30 seconds
         }
       })
     });
@@ -120,8 +119,10 @@ export class SonarQubeConstruct extends Construct {
         streamPrefix: 'sonarqube',
       }),
       environment: {
-        SONAR_JDBC_URL: `jdbc:postgresql://${this.database.instanceEndpoint.hostname}:5432/sonarqube?socketTimeout=60&connectTimeout=30&loginTimeout=30`,
+        SONAR_JDBC_URL: `jdbc:postgresql://${this.database.instanceEndpoint.hostname}:5432/sonarqube?socketTimeout=60&connectTimeout=30&loginTimeout=30&tcpKeepAlive=true`,
+        SONARQUBE_JDBC_URL: `jdbc:postgresql://${this.database.instanceEndpoint.hostname}:5432/sonarqube?socketTimeout=60&connectTimeout=30&loginTimeout=30&tcpKeepAlive=true`,
         SONAR_JDBC_USERNAME: 'sonarqube',
+        SONARQUBE_JDBC_USERNAME: 'sonarqube',
         SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: 'true', 
         // Additional configuration for better performance
         SONAR_WEB_JAVAADDITIONALOPTS: '-Xmx2G -Xms2G',
@@ -137,6 +138,10 @@ export class SonarQubeConstruct extends Construct {
       },
       secrets: {
         SONAR_JDBC_PASSWORD: ecs.Secret.fromSecretsManager(
+          this.database.secret!,
+          'password'
+        ),
+        SONARQUBE_JDBC_PASSWORD: ecs.Secret.fromSecretsManager(
           this.database.secret!,
           'password'
         ),

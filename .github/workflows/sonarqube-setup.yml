@@ -141,6 +141,17 @@ jobs:
             echo "Stack operation completed."
           fi
           
+          # Delete stack if it's in a bad state
+          if [[ "${{ needs.check-existing-deployment.outputs.status }}" == "ROLLBACK_COMPLETE" ]]; then
+            echo "Stack is in ROLLBACK_COMPLETE state. Deleting it first..."
+            aws cloudformation delete-stack --stack-name $STACK_NAME
+            
+            echo "Waiting for stack deletion to complete..."
+            aws cloudformation wait stack-delete-complete --stack-name $STACK_NAME --timeout-in-minutes 30 || {
+              echo "Stack deletion did not complete in 30 minutes. Proceeding anyway."
+            }
+          fi
+          
           # Create a custom cleanup script
           cat > cleanup.js << 'EOL'
           const AWS = require('aws-sdk');
@@ -267,7 +278,7 @@ jobs:
               
               if [[ -n $RECOVERY_FUNCTION_ARN ]]; then
                 echo "Invoking recovery handler: $RECOVERY_FUNCTION_ARN"
-                aws lambda invoke --function-name $RECOVERY_FUNCTION_ARN --payload '{"action":"recover"}' /tmp/recovery-response.json
+                aws lambda invoke --function-name $RECOVERY_FUNCTION_ARN --payload '{"action":"recover"}' --cli-binary-format raw-in-base64-out /tmp/recovery-response.json
                 cat /tmp/recovery-response.json
                 echo "Recovery handler has been invoked"
               else
