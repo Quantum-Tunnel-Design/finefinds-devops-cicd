@@ -112,7 +112,7 @@ export class ElastiCacheConstruct extends Construct {
     new cdk.CfnOutput(this, 'RedisEndpoint', {
       value: this.replicationGroup.attrPrimaryEndPointAddress,
       description: 'Redis Primary Endpoint',
-      exportName: `finefinds-${props.environment}-redis-endpoint`,
+      exportName: `finefinds-${props.environment}-replication-redis-endpoint`,
     });
 
     // Output Redis port

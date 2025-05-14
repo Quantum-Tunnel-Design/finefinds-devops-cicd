@@ -12,7 +12,8 @@
     "deploy": "cdk deploy",
     "destroy": "cdk destroy",
     "synth": "cdk synth",
-    "bootstrap": "cdk bootstrap --qualifier finefinds"
+    "bootstrap": "cdk bootstrap --qualifier finefinds",
+    "bootstrap-secrets": "cdk --app 'npx ts-node --prefer-ts-exts bin/bootstrap-secrets.ts'"
   },
   "devDependencies": {
     "@types/jest": "^29.5.5",

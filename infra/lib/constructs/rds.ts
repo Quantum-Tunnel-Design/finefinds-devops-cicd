@@ -113,7 +113,6 @@ export class RdsConstruct extends Construct {
         deletionProtection: true,
         copyTagsToSnapshot: true,
         preferredMaintenanceWindow: 'sun:04:00-sun:05:00',
-        vpc: props.vpc,
       });
 
       // Output Aurora cluster endpoint and secret
