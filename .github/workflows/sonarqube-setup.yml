@@ -45,6 +45,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.inputs.choice == 'true'
     needs: debug-inputs
+    environment: prod
     permissions:
       id-token: write
       contents: read
@@ -55,6 +56,7 @@ jobs:
       AWS_REGION: us-east-1
       CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
       CDK_DEFAULT_REGION: us-east-1
+      CDK_ENV: prod
       STACK_NAME: FineFindsSonarQubeStack
     
     steps:
@@ -63,6 +65,8 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-prod
           aws-region: us-east-1
+          role-session-name: GitHubActions-SonarQubeSetup
+          audience: sts.amazonaws.com
           role-duration-seconds: 3600
       
       - name: Check for existing SonarQube Stack
@@ -84,6 +88,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.inputs.choice == 'true' && github.event.inputs.force_cleanup == 'true'
     needs: check-existing-deployment
+    environment: prod
     permissions:
       id-token: write
       contents: read
@@ -99,6 +104,8 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-prod
           aws-region: us-east-1
+          role-session-name: GitHubActions-SonarQubeSetup
+          audience: sts.amazonaws.com
           role-duration-seconds: 3600
       
       - name: Checkout
@@ -215,7 +222,9 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-prod
           aws-region: us-east-1
-          role-duration-seconds: 3600  # Increase session duration to 1 hour
+          role-session-name: GitHubActions-SonarQubeSetup
+          audience: sts.amazonaws.com
+          role-duration-seconds: 3600
 
       - name: Verify AWS Credentials
         run: |
@@ -241,7 +250,7 @@ jobs:
           echo "Using context includeSonarQube=true"
           
           # Use error handling to prevent GitHub Actions failures if the deployment has issues
-          CDK_DEBUG=true AWS_ACCOUNT_ID=${{ secrets.AWS_ACCOUNT_ID }} AWS_REGION=us-east-1 npm run cdk deploy -- $STACK_NAME --context includeSonarQube=true --require-approval never || {
+          CDK_DEBUG=true npm run cdk deploy -- $STACK_NAME --context includeSonarQube=true --require-approval never || {
             DEPLOY_EXIT_CODE=$?
             echo "::warning::Deployment encountered issues (exit code $DEPLOY_EXIT_CODE)"
             
