@@ -103,6 +103,13 @@ export class SonarQubeConstruct extends Construct {
             protocol: ecs.Protocol.TCP,
           },
         ],
+        healthCheck: {
+          command: ["CMD-SHELL", "wget -q --spider http://localhost:9000/api/system/status || exit 1"],
+          interval: cdk.Duration.seconds(30),
+          timeout: cdk.Duration.seconds(5),
+          retries: 3,
+          startPeriod: cdk.Duration.seconds(60),
+        },
       });
 
       // Create ECS service
@@ -120,6 +127,9 @@ export class SonarQubeConstruct extends Construct {
             : ec2.SubnetType.PRIVATE_ISOLATED,
         },
         assignPublicIp: false,
+        healthCheckGracePeriod: cdk.Duration.seconds(120),
+        minHealthyPercent: 100,
+        maxHealthyPercent: 200,
       });
 
       // Create Application Load Balancer for SonarQube
@@ -139,9 +149,11 @@ export class SonarQubeConstruct extends Construct {
         protocol: elbv2.ApplicationProtocol.HTTP,
         targetType: elbv2.TargetType.IP,
         healthCheck: {
-          path: '/',
-          interval: cdk.Duration.seconds(60),
-          timeout: cdk.Duration.seconds(5),
+          path: '/api/system/status',
+          interval: cdk.Duration.seconds(30),
+          timeout: cdk.Duration.seconds(10),
+          healthyThresholdCount: 2,
+          unhealthyThresholdCount: 3,
           healthyHttpCodes: '200',
         },
       });
