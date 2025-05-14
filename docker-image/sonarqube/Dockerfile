@@ -10,6 +10,10 @@ RUN apt-get update && apt-get install -y \
     curl \
     wget \
     htop \
+    net-tools \
+    netcat \
+    dnsutils \
+    lsof \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -23,9 +27,10 @@ ENV SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true \
     SONAR_JDBC_MINIDLE=5 \
     SONAR_WEB_STARTUPGRACEPERIOD=300
 
-# Copy health check script
+# Copy health check and entrypoint scripts
 COPY healthcheck.sh /opt/sonarqube/bin/healthcheck.sh
-RUN chmod +x /opt/sonarqube/bin/healthcheck.sh
+COPY entrypoint.sh /opt/sonarqube/bin/custom-entrypoint.sh
+RUN chmod +x /opt/sonarqube/bin/healthcheck.sh /opt/sonarqube/bin/custom-entrypoint.sh
 
 # Expose SonarQube port
 EXPOSE 9000
@@ -36,3 +41,6 @@ HEALTHCHECK --interval=30s --timeout=10s --retries=5 --start-period=180s \
 
 # Define volumes for persistence
 VOLUME ["/opt/sonarqube/data", "/opt/sonarqube/logs", "/opt/sonarqube/extensions", "/opt/sonarqube/temp"]
+
+# Use our custom entrypoint
+ENTRYPOINT ["/opt/sonarqube/bin/custom-entrypoint.sh"]

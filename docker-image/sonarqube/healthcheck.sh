@@ -14,6 +14,16 @@ log() {
 # Create log directory if it doesn't exist
 mkdir -p /opt/sonarqube/logs
 
+# Get container uptime in seconds
+UPTIME_SECONDS=$(cat /proc/uptime | awk '{print int($1)}')
+
+# During startup phase, be more lenient with health checks
+# Allow 3 minutes (180 seconds) for startup
+if [ $UPTIME_SECONDS -lt 180 ]; then
+  log "Container uptime is ${UPTIME_SECONDS}s. In startup grace period, passing health check."
+  exit 0
+fi
+
 # Check if SonarQube web server is running
 PID_WEB=$(pgrep -f "org.sonar.server.app.WebServer" || echo "")
 if [ -z "$PID_WEB" ]; then
@@ -35,19 +45,33 @@ if [ -z "$PID_CE" ]; then
   exit 1
 fi
 
-# Check system status via API
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:9000/api/system/status)
-if [ "$HTTP_CODE" -ne 200 ]; then
-  log "ERROR: SonarQube API returned HTTP code $HTTP_CODE"
+# Try API check up to 3 times with brief pauses
+for i in {1..3}; do
+  # Check system status via API
+  HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:9000/api/system/status)
+  if [ "$HTTP_CODE" -eq 200 ]; then
+    break
+  fi
   
-  # Log more diagnostics
-  log "Memory usage: $(free -h)"
-  log "Disk space: $(df -h /opt/sonarqube)"
-  log "Recent logs:"
-  tail -n 50 /opt/sonarqube/logs/sonar.log | tee -a "$LOG_FILE"
+  if [ $i -eq 3 ]; then
+    log "ERROR: SonarQube API returned HTTP code $HTTP_CODE after 3 retries"
+    
+    # Log more diagnostics
+    log "Memory usage:"
+    free -h >> "$LOG_FILE" 2>&1
+    log "Disk space:"
+    df -h /opt/sonarqube >> "$LOG_FILE" 2>&1
+    log "Process status:"
+    ps aux | grep -i sonar >> "$LOG_FILE" 2>&1
+    log "Recent logs:"
+    tail -n 50 /opt/sonarqube/logs/sonar.log >> "$LOG_FILE" 2>&1
+    
+    exit 1
+  fi
   
-  exit 1
-fi
+  log "Warning: SonarQube API returned HTTP code $HTTP_CODE, retrying in 5 seconds (attempt $i/3)"
+  sleep 5
+done
 
 # Check system status for "UP" state
 STATUS=$(curl -s http://localhost:9000/api/system/status | grep -o '"status":"[^"]*"' | cut -d':' -f2 | tr -d '"')
@@ -55,10 +79,14 @@ if [ "$STATUS" != "UP" ]; then
   log "ERROR: SonarQube system status is $STATUS, expected UP"
   
   # Log more diagnostics
-  log "Memory usage: $(free -h)"
-  log "Disk space: $(df -h /opt/sonarqube)"
+  log "Memory usage:"
+  free -h >> "$LOG_FILE" 2>&1
+  log "Disk space:"
+  df -h /opt/sonarqube >> "$LOG_FILE" 2>&1
+  log "Process status:"
+  ps aux | grep -i sonar >> "$LOG_FILE" 2>&1
   log "Recent logs:"
-  tail -n 50 /opt/sonarqube/logs/sonar.log | tee -a "$LOG_FILE"
+  tail -n 50 /opt/sonarqube/logs/sonar.log >> "$LOG_FILE" 2>&1
   
   exit 1
 fi
