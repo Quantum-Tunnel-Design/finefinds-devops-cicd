@@ -257,7 +257,7 @@ export class FineFindsStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'MigrationSubnetIds', {
       value: privateSubnets.join(','),
       description: 'Private subnet IDs for migration task',
-      exportName: `finefinds-${props.config.environment}-migration-subnet-ids`,
+      exportName: `finefinds-${props.config.environment}-migration-task-subnet-ids`,
     });
 
     // Create security group for migration task
@@ -284,7 +284,7 @@ export class FineFindsStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'MigrationSecurityGroupId', {
       value: migrationSecurityGroup.securityGroupId,
       description: 'Security group ID for migration task',
-      exportName: `finefinds-${props.config.environment}-migration-sg-id`,
+      exportName: `finefinds-${props.config.environment}-migration-task-sg-id`,
     });
 
     // Configure database security groups to allow access from ECS services
