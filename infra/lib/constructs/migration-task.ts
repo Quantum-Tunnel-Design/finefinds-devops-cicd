@@ -72,35 +72,5 @@ export class MigrationTaskConstruct extends Construct {
       description: 'ARN of the migration task definition',
       exportName: `finefinds-${props.environment}-migration-task-arn`,
     });
-
-    // Output subnet IDs and security group IDs for GitHub Actions
-    const privateSubnets = props.vpc.privateSubnets.map(subnet => subnet.subnetId);
-    new cdk.CfnOutput(this, 'PrivateSubnetIds', {
-      value: privateSubnets.join(','),
-      description: 'Private subnet IDs for migration task',
-      exportName: `finefinds-${props.environment}-private-subnet-ids`,
-    });
-
-    // Create a security group for the migration task
-    const securityGroup = new ec2.SecurityGroup(this, 'MigrationSecurityGroup', {
-      vpc: props.vpc,
-      description: 'Security group for database migration task',
-      allowAllOutbound: true,
-    });
-
-    // Allow inbound access from the security group to the database
-    if (props.config.environment === 'prod') {
-      // For production, we'll need to reference the RDS cluster security group
-      // This will be handled in the main stack
-    } else {
-      // For non-production, we'll need to reference the RDS instance security group
-      // This will be handled in the main stack
-    }
-
-    new cdk.CfnOutput(this, 'MigrationSecurityGroupId', {
-      value: securityGroup.securityGroupId,
-      description: 'Security group ID for migration task',
-      exportName: `finefinds-${props.environment}-migration-sg-id`,
-    });
   }
 } 
