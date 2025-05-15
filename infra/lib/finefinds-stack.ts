@@ -18,6 +18,7 @@ import { DynamoDBConstruct } from './constructs/dynamodb';
 import { RdsConstruct } from './constructs/rds';
 import { MigrationTaskConstruct } from './constructs/migration-task';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
 
 /**
  * Creates a secret if it doesn't exist, or imports it if it does
@@ -250,6 +251,41 @@ export class FineFindsStack extends cdk.Stack {
     ecs.service.node.addDependency(dbConnectionStringSecret);
     migrationTask.taskDefinition.node.addDependency(dbConnectionStringSecret);
     ecs.service.node.addDependency(redisConnectionSecret);
+
+    // Output subnet IDs for migration task
+    const privateSubnets = vpc.vpc.privateSubnets.map(subnet => subnet.subnetId);
+    new cdk.CfnOutput(this, 'MigrationSubnetIds', {
+      value: privateSubnets.join(','),
+      description: 'Private subnet IDs for migration task',
+      exportName: `finefinds-${props.config.environment}-migration-subnet-ids`,
+    });
+
+    // Create security group for migration task
+    const migrationSecurityGroup = new ec2.SecurityGroup(this, 'MigrationSecurityGroup', {
+      vpc: vpc.vpc,
+      description: 'Security group for database migration task',
+      allowAllOutbound: true,
+    });
+
+    // Allow inbound access from the security group to the database
+    if (props.config.environment === 'prod' && rds.cluster) {
+      rds.cluster.connections.allowDefaultPortFrom(
+        migrationSecurityGroup,
+        'Allow access from migration task'
+      );
+    } else if (rds.instance) {
+      rds.instance.connections.allowDefaultPortFrom(
+        migrationSecurityGroup,
+        'Allow access from migration task'
+      );
+    }
+
+    // Output security group ID for migration task
+    new cdk.CfnOutput(this, 'MigrationSecurityGroupId', {
+      value: migrationSecurityGroup.securityGroupId,
+      description: 'Security group ID for migration task',
+      exportName: `finefinds-${props.config.environment}-migration-sg-id`,
+    });
 
     // Configure database security groups to allow access from ECS services
     if (props.config.environment === 'prod' && rds.cluster) {
