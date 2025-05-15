@@ -70,7 +70,7 @@ export class MigrationTaskConstruct extends Construct {
     new cdk.CfnOutput(this, 'MigrationTaskDefinitionArn', {
       value: this.taskDefinition.taskDefinitionArn,
       description: 'ARN of the migration task definition',
-      exportName: `finefinds-${props.environment}-migration-task-arn`,
+      exportName: `finefinds-${props.environment}-migration-task-definition-arn`,
     });
   }
 } 
