@@ -90,7 +90,7 @@ create_environment_role() {
         return 1
     fi
     
-    role_name="github-actions-${env}"
+    role_name="github-actions-${REPO_NAME}-${env}"
     
     echo -e "\n=== Creating IAM Role for $branch ==="
     echo "Branch: $branch"

@@ -51,27 +51,33 @@ gh api repos/:owner/:repo/environments -f name="qa" || true
 gh api repos/:owner/:repo/environments -f name="sandbox" || true
 
 # Set secrets for each environment
-echo "Setting up secrets for each environment..."
-set_environment_secrets "prod"
-set_environment_secrets "staging"
-set_environment_secrets "dev"
-set_environment_secrets "qa"
-set_environment_secrets "sandbox"
+# echo "Setting up secrets for each environment..."
+# set_environment_secrets "prod"
+# set_environment_secrets "staging"
+# set_environment_secrets "dev"
+# set_environment_secrets "qa"
+# set_environment_secrets "sandbox"
 
-echo "✅ GitHub secrets setup completed for all environments!"
+# echo "✅ GitHub secrets setup completed for all environments!"
 
 # Function to set secrets for a repository
 set_repo_secrets() {
     local repo=$1
     echo "Setting secrets for repository: $repo"
+
+    gh secret set AWS_ACCOUNT_ID -b"$AWS_ACCOUNT_ID" --repo "$repo" --env "$env"
+    gh secret set AWS_REGION -b"$AWS_REGION" --repo "$repo" --env "$env"
     
     # Set GitHub token
     gh secret set SOURCE_TOKEN --body "$SOURCE_TOKEN" --repo "$repo"
+
+    gh secret set SLACK_WEBHOOK_URL -b"$SLACK_WEBHOOK_URL" --repo "$repo" --env "$env"
+    gh secret set SLACK_CHANNEL -b"$SLACK_CHANNEL" --repo "$repo" --env "$env"
     
     # Only set SonarQube secrets for non-devops repositories
-    if [[ "$repo" != *"finefinds-devops-cicd"* ]]; then
-        gh secret set SONAR_TOKEN --body "$SONAR_TOKEN" --repo "$repo"
-    fi
+    # if [[ "$repo" != *"finefinds-devops-cicd"* ]]; then
+    #     gh secret set SONAR_TOKEN --body "$SONAR_TOKEN" --repo "$repo"
+    # fi
 }
 
 # Set secrets for client web app
@@ -79,5 +85,8 @@ set_repo_secrets "Quantum-Tunnel-Design/finefinds-client-web-app"
 
 # Set secrets for admin dashboard
 set_repo_secrets "Quantum-Tunnel-Design/finefinds-admin"
+
+# Set secrets for backend services
+set_repo_secrets "Quantum-Tunnel-Design/finefinds-services"
 
 echo "GitHub secrets have been set successfully!" 

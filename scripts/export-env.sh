@@ -10,7 +10,9 @@ export REPO_NAME="finefinds-devops-cicd"
 
 # Slack Webhook URL for DevOps
 export SLACK_WEBHOOK_URL_DEVOPS="https://hooks.slack.com/services/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"
-export SLACK_CHANNEL_DEVOPS="#devops" 
+export SLACK_CHANNEL_DEVOPS="#ff-cicd-devops" 
+export SLACK_WEBHOOK_URL="https://hooks.slack.com/services/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"
+export SLACK_CHANNEL="#ff-cicd-non-prod" 
 export SLACK_BOT_DEVOPS_TOKEN="xoxb-8896608936544-8881125635028-bZjiFXcelFRUOE6rwZEsbYpr"
 
 # SonarQube Configuration
