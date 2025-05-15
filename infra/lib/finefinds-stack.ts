@@ -254,11 +254,12 @@ export class FineFindsStack extends cdk.Stack {
 
     // Output subnet IDs for migration task
     const privateSubnets = vpc.vpc.privateSubnets.map(subnet => subnet.subnetId);
-    new cdk.CfnOutput(this, 'MigrationSubnetIds', {
-      value: privateSubnets.join(','),
+    const subnetIdsOutput = new cdk.CfnOutput(this, 'MigrationSubnetIds', {
+      value: privateSubnets.length > 0 ? privateSubnets.join(',') : 'No private subnets available',
       description: 'Private subnet IDs for migration task',
       exportName: `finefinds-${props.config.environment}-migration-task-subnet-ids`,
     });
+    subnetIdsOutput.node.addDependency(vpc.vpc);
 
     // Create security group for migration task
     const migrationSecurityGroup = new ec2.SecurityGroup(this, 'MigrationSecurityGroup', {
