@@ -8,17 +8,20 @@ export const stagingConfig: BaseConfig = {
     certificateValidation: false, // No custom domain validation needed
   },
   vpc: {
-    maxAzs: 3,
-    natGateways: 2,
-    cidr: '10.2.0.0/16',
+    maxAzs: 2,
+    natGateways: 1,
+    cidr: '10.0.0.0/16',
   },
   ecs: {
     containerPort: 3000,
-    cpu: 1024,
-    memoryLimitMiB: 2048,
-    desiredCount: 2,
-    minCapacity: 2,
-    maxCapacity: 6,
+    cpu: 256,
+    memoryLimitMiB: 512,
+    desiredCount: 1,
+    minCapacity: 1,
+    maxCapacity: 2,
+  },
+  ecr: {
+    repositoryName: 'finefinds-services-staging',
   },
   cognito: {
     clientUsers: {

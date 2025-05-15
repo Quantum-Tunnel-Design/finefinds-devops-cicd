@@ -20,6 +20,9 @@ export const devConfig: BaseConfig = {
     minCapacity: 1,
     maxCapacity: 2,
   },
+  ecr: {
+    repositoryName: 'finefinds-services-dev',
+  },
   cognito: {
     clientUsers: {
       userPoolName: 'finefinds-dev-client-users',

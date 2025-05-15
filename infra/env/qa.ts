@@ -10,15 +10,18 @@ export const qaConfig: BaseConfig = {
   vpc: {
     maxAzs: 2,
     natGateways: 1,
-    cidr: '10.1.0.0/16',
+    cidr: '10.0.0.0/16',
   },
   ecs: {
     containerPort: 3000,
-    cpu: 512,
-    memoryLimitMiB: 1024,
-    desiredCount: 2,
-    minCapacity: 2,
-    maxCapacity: 4,
+    cpu: 256,
+    memoryLimitMiB: 512,
+    desiredCount: 1,
+    minCapacity: 1,
+    maxCapacity: 2,
+  },
+  ecr: {
+    repositoryName: 'finefinds-services-qa',
   },
   cognito: {
     clientUsers: {
