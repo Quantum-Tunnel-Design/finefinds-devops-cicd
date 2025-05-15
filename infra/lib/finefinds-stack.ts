@@ -253,7 +253,9 @@ export class FineFindsStack extends cdk.Stack {
     ecs.service.node.addDependency(redisConnectionSecret);
 
     // Output subnet IDs for migration task
-    const privateSubnets = vpc.vpc.privateSubnets.map(subnet => subnet.subnetId);
+    const privateSubnets = vpc.vpc.selectSubnets({
+      subnetType: ec2.SubnetType.PRIVATE_ISOLATED
+    }).subnetIds;
     const subnetIdsOutput = new cdk.CfnOutput(this, 'MigrationSubnetIds', {
       value: privateSubnets.length > 0 ? privateSubnets.join(',') : 'No private subnets available',
       description: 'Private subnet IDs for migration task',
@@ -262,11 +264,18 @@ export class FineFindsStack extends cdk.Stack {
     subnetIdsOutput.node.addDependency(vpc.vpc);
 
     // Create security group for migration task
-    const migrationSecurityGroup = new ec2.SecurityGroup(this, 'MigrationSecurityGroup', {
+    const migrationSecurityGroup = new ec2.SecurityGroup(this, 'MigrationTaskSecurityGroup', {
       vpc: vpc.vpc,
       description: 'Security group for database migration task',
       allowAllOutbound: true,
     });
+
+    // Allow inbound access from within the VPC
+    migrationSecurityGroup.addIngressRule(
+      ec2.Peer.ipv4(vpc.vpc.vpcCidrBlock),
+      ec2.Port.allTcp(),
+      'Allow all inbound from within VPC'
+    );
 
     // Allow inbound access from the security group to the database
     if (props.config.environment === 'prod' && rds.cluster) {
@@ -282,7 +291,7 @@ export class FineFindsStack extends cdk.Stack {
     }
 
     // Output security group ID for migration task
-    new cdk.CfnOutput(this, 'MigrationSecurityGroupId', {
+    new cdk.CfnOutput(this, 'MigrationTaskSecurityGroupId', {
       value: migrationSecurityGroup.securityGroupId,
       description: 'Security group ID for migration task',
       exportName: `finefinds-${props.config.environment}-migration-task-sg-id`,
