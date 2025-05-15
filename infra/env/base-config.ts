@@ -14,6 +14,9 @@ export interface BaseConfig {
     minCapacity: number;
     maxCapacity: number;
   };
+  ecr: {
+    repositoryName: string;
+  };
   monitoring: {
     alarmEmail: string;
     slackChannel: string;

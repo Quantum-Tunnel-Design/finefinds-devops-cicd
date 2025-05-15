@@ -16,6 +16,7 @@ import { RedisConstruct } from './constructs/redis';
 import { AutoShutdownConstruct } from './constructs/auto-shutdown';
 import { DynamoDBConstruct } from './constructs/dynamodb';
 import { RdsConstruct } from './constructs/rds';
+import { MigrationTaskConstruct } from './constructs/migration-task';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 
 /**
@@ -229,13 +230,25 @@ export class FineFindsStack extends cdk.Stack {
       executionRole: iam.ecsExecutionRole,
     });
     
+    // Create migration task definition
+    const migrationTask = new MigrationTaskConstruct(this, 'MigrationTask', {
+      environment: props.config.environment,
+      config: props.config,
+      vpc: vpc.vpc,
+      taskRole: iam.ecsTaskRole,
+      executionRole: iam.ecsExecutionRole,
+    });
+
     // Add dependencies to ensure proper creation order
     if (props.config.environment === 'prod' && rds.cluster) {
       ecs.service.node.addDependency(rds.cluster);
+      migrationTask.taskDefinition.node.addDependency(rds.cluster);
     } else if (rds.instance) {
       ecs.service.node.addDependency(rds.instance);
+      migrationTask.taskDefinition.node.addDependency(rds.instance);
     }
     ecs.service.node.addDependency(dbConnectionStringSecret);
+    migrationTask.taskDefinition.node.addDependency(dbConnectionStringSecret);
     ecs.service.node.addDependency(redisConnectionSecret);
 
     // Configure database security groups to allow access from ECS services
@@ -253,47 +266,6 @@ export class FineFindsStack extends cdk.Stack {
       );
     }
 
-    // Set up initial database migration task
-    const migrationTask = new cdk.aws_ecs.FargateTaskDefinition(this, 'MigrationTaskDef', {
-      memoryLimitMiB: 512,
-      cpu: 256,
-      taskRole: iam.ecsTaskRole,
-      executionRole: iam.ecsExecutionRole,
-    });
-    
-    migrationTask.addContainer('MigrationContainer', {
-      image: cdk.aws_ecs.ContainerImage.fromRegistry('891076991993.dkr.ecr.us-east-1.amazonaws.com/finefinds-base/node-20-alpha:latest'),
-      command: ['npm', 'run', 'migration:run'],
-      logging: cdk.aws_ecs.LogDrivers.awsLogs({
-        streamPrefix: 'db-migration',
-        logGroup: new cdk.aws_logs.LogGroup(this, 'MigrationLogGroup', {
-          logGroupName: `/finefinds/${props.config.environment}/db-migration`,
-          retention: props.config.environment === 'prod' 
-            ? cdk.aws_logs.RetentionDays.ONE_MONTH 
-            : cdk.aws_logs.RetentionDays.ONE_DAY,
-          removalPolicy: props.config.environment === 'prod' 
-            ? cdk.RemovalPolicy.RETAIN 
-            : cdk.RemovalPolicy.DESTROY,
-        }),
-      }),
-      environment: {
-        NODE_ENV: props.config.environment,
-      },
-      secrets: {
-        DATABASE_URL: cdk.aws_ecs.Secret.fromSecretsManager(dbConnectionStringSecret),
-        REDIS_URL: cdk.aws_ecs.Secret.fromSecretsManager(redisConnectionSecret),
-      },
-    });
-    
-    // Add dependencies for the migration task
-    if (props.config.environment === 'prod' && rds.cluster) {
-      migrationTask.node.addDependency(rds.cluster);
-    } else if (rds.instance) {
-      migrationTask.node.addDependency(rds.instance);
-    }
-    migrationTask.node.addDependency(dbConnectionStringSecret);
-    migrationTask.node.addDependency(redisConnectionSecret);
-    
     // Output important resource information
     new cdk.CfnOutput(this, 'DatabaseEndpoint', {
       value: props.config.environment === 'prod' && rds.cluster 
