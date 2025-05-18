@@ -198,7 +198,7 @@ export class S3Construct extends Construct {
             s3.HttpMethods.HEAD,
           ],
           allowedOrigins: [
-            `https://*.${props.config.dns.domainName}`,
+            `https://*.${props.config.environment === 'prod' ? 'finefindslk.com' : `${props.config.environment}.finefindslk.com`}`,
           ],
           allowedHeaders: ['*'],
           maxAge: 3000,

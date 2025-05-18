@@ -19,7 +19,7 @@ export const prodConfig: BaseConfig = {
     repositoryName: 'finefinds-prod',
   },
   monitoring: {
-    alarmEmail: 'devops@finefinds.com',
+    alarmEmail: 'devops@finefindslk.com',
     slackChannel: '#devops-alerts',
   },
   s3: {
@@ -101,7 +101,7 @@ export const prodConfig: BaseConfig = {
   smtp: {
     host: 'smtp.gmail.com',
     port: 587,
-    username: 'noreply@finefinds.com',
+    username: 'noreply@finefindslk.com',
   },
   opensearch: {
     endpoint: 'https://search-finefinds-prod-xxxxx.us-east-1.es.amazonaws.com',
@@ -123,7 +123,7 @@ export const prodConfig: BaseConfig = {
         buildCommand: 'npm run build',
         startCommand: 'npm start',
         environmentVariables: {
-          REACT_APP_API_URL: 'https://api.finefinds.com',
+          REACT_APP_API_URL: 'https://api-finefindslk.com',
           REACT_APP_ENV: 'production',
         },
       },
@@ -136,7 +136,7 @@ export const prodConfig: BaseConfig = {
         buildCommand: 'npm run build',
         startCommand: 'npm start',
         environmentVariables: {
-          REACT_APP_API_URL: 'https://api.finefinds.com',
+          REACT_APP_API_URL: 'https://api-finefindslk.com',
           REACT_APP_ENV: 'production',
         },
       },

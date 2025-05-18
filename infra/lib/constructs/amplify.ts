@@ -25,7 +25,8 @@ export class AmplifyConstruct extends Construct {
         oauthToken: cdk.SecretValue.secretsManager('github-token'),
       }),
       environmentVariables: {
-        NEXT_PUBLIC_API_URL: `https://api.${props.config.dns.domainName}`,
+        ...props.config.amplify.clientWebApp.buildSettings.environmentVariables,
+        NEXT_PUBLIC_API_URL: `https://api.${props.config.environment === 'prod' ? 'finefindslk.com' : `${props.config.environment}.finefindslk.com`}`,
         NEXT_PUBLIC_COGNITO_USER_POOL_ID: props.config.cognito.clientUsers.userPoolName,
         NEXT_PUBLIC_COGNITO_CLIENT_ID: props.config.cognito.clientUsers.userPoolName,
         NODE_ENV: props.environment,
@@ -70,7 +71,8 @@ export class AmplifyConstruct extends Construct {
         oauthToken: cdk.SecretValue.secretsManager('github-token'),
       }),
       environmentVariables: {
-        NEXT_PUBLIC_API_URL: `https://api.${props.config.dns.domainName}`,
+        ...props.config.amplify.adminApp.buildSettings.environmentVariables,
+        NEXT_PUBLIC_API_URL: `https://api.${props.config.environment === 'prod' ? 'finefindslk.com' : `${props.config.environment}.finefindslk.com`}`,
         NEXT_PUBLIC_COGNITO_USER_POOL_ID: props.config.cognito.adminUsers.userPoolName,
         NEXT_PUBLIC_COGNITO_CLIENT_ID: props.config.cognito.adminUsers.userPoolName,
         NODE_ENV: props.environment,
@@ -114,7 +116,8 @@ export class AmplifyConstruct extends Construct {
       stage: props.environment === 'prod' ? 'PRODUCTION' : 'DEVELOPMENT',
       autoBuild: true,
       environmentVariables: {
-        NEXT_PUBLIC_API_URL: `https://api.${props.config.dns.domainName}`,
+        ...props.config.amplify.clientWebApp.buildSettings.environmentVariables,
+        NEXT_PUBLIC_API_URL: `https://api.${props.config.environment === 'prod' ? 'finefindslk.com' : `${props.config.environment}.finefindslk.com`}`,
         NEXT_PUBLIC_COGNITO_USER_POOL_ID: props.config.cognito.clientUsers.userPoolName,
         NEXT_PUBLIC_COGNITO_CLIENT_ID: props.config.cognito.clientUsers.userPoolName,
         NODE_ENV: props.environment,
@@ -126,7 +129,8 @@ export class AmplifyConstruct extends Construct {
       stage: props.environment === 'prod' ? 'PRODUCTION' : 'DEVELOPMENT',
       autoBuild: true,
       environmentVariables: {
-        NEXT_PUBLIC_API_URL: `https://api.${props.config.dns.domainName}`,
+        ...props.config.amplify.adminApp.buildSettings.environmentVariables,
+        NEXT_PUBLIC_API_URL: `https://api.${props.config.environment === 'prod' ? 'finefindslk.com' : `${props.config.environment}.finefindslk.com`}`,
         NEXT_PUBLIC_COGNITO_USER_POOL_ID: props.config.cognito.adminUsers.userPoolName,
         NEXT_PUBLIC_COGNITO_CLIENT_ID: props.config.cognito.adminUsers.userPoolName,
         NODE_ENV: props.environment,

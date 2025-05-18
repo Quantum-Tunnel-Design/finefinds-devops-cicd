@@ -19,7 +19,7 @@ export const qaConfig: BaseConfig = {
     repositoryName: 'finefinds-qa',
   },
   monitoring: {
-    alarmEmail: 'devops@finefinds.com',
+    alarmEmail: 'devops@finefindslk.com',
     slackChannel: '#devops-alerts',
   },
   s3: {
@@ -101,7 +101,7 @@ export const qaConfig: BaseConfig = {
   smtp: {
     host: 'smtp.gmail.com',
     port: 587,
-    username: 'noreply@finefinds.com',
+    username: 'noreply@finefindslk.com',
   },
   opensearch: {
     endpoint: 'https://search-finefinds-qa-xxxxx.us-east-1.es.amazonaws.com',
@@ -123,7 +123,7 @@ export const qaConfig: BaseConfig = {
         buildCommand: 'npm run build',
         startCommand: 'npm start',
         environmentVariables: {
-          REACT_APP_API_URL: 'https://api.qa.finefinds.com',
+          REACT_APP_API_URL: 'https://api-qa.finefindslk.com',
           REACT_APP_ENV: 'qa',
         },
       },
@@ -136,7 +136,7 @@ export const qaConfig: BaseConfig = {
         buildCommand: 'npm run build',
         startCommand: 'npm start',
         environmentVariables: {
-          REACT_APP_API_URL: 'https://api.qa.finefinds.com',
+          REACT_APP_API_URL: 'https://api-qa.finefindslk.com',
           REACT_APP_ENV: 'qa',
         },
       },

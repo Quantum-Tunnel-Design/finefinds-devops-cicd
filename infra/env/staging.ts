@@ -19,7 +19,7 @@ export const stagingConfig: BaseConfig = {
     repositoryName: 'finefinds-staging',
   },
   monitoring: {
-    alarmEmail: 'devops@finefinds.com',
+    alarmEmail: 'devops@finefindslk.com',
     slackChannel: '#devops-alerts',
   },
   s3: {
@@ -101,7 +101,7 @@ export const stagingConfig: BaseConfig = {
   smtp: {
     host: 'smtp.gmail.com',
     port: 587,
-    username: 'noreply@finefinds.com',
+    username: 'noreply@finefindslk.com',
   },
   opensearch: {
     endpoint: 'https://search-finefinds-staging-xxxxx.us-east-1.es.amazonaws.com',
@@ -123,7 +123,7 @@ export const stagingConfig: BaseConfig = {
         buildCommand: 'npm run build',
         startCommand: 'npm start',
         environmentVariables: {
-          REACT_APP_API_URL: 'https://api.staging.finefinds.com',
+          REACT_APP_API_URL: 'https://api-staging.finefindslk.com',
           REACT_APP_ENV: 'staging',
         },
       },
@@ -136,7 +136,7 @@ export const stagingConfig: BaseConfig = {
         buildCommand: 'npm run build',
         startCommand: 'npm start',
         environmentVariables: {
-          REACT_APP_API_URL: 'https://api.staging.finefinds.com',
+          REACT_APP_API_URL: 'https://api-staging.finefindslk.com',
           REACT_APP_ENV: 'staging',
         },
       },

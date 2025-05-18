@@ -86,6 +86,7 @@ export class CognitoConstruct extends Construct {
       selfSignUpEnabled: props.config.cognito.adminUsers.selfSignUpEnabled,
       signInAliases: {
         email: true,
+        phone: true,
       },
       standardAttributes: {
         email: {
@@ -241,13 +242,10 @@ export class CognitoConstruct extends Construct {
           implicitCodeGrant: true,
         },
         callbackUrls: [
-          `https://${props.config.dns.domainName}/callback`,
-          `https://${props.config.dns.domainName}/signin`,
           // Add localhost for non-prod environments
           ...(props.environment !== 'prod' ? ['http://localhost:3000/callback', 'http://localhost:3000/signin'] : []),
         ],
         logoutUrls: [
-          `https://${props.config.dns.domainName}/signout`,
           // Add localhost for non-prod environments
           ...(props.environment !== 'prod' ? ['http://localhost:3000/signout'] : []),
         ],
