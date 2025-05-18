@@ -122,27 +122,38 @@ jobs:
           rm -f .cdk.context.json || true
           npx cdk context --clear
   
-      - name: Validate CDK Qualifier in cdk.json
+      - name: Verify CDK Qualifier
         run: |
           cd infra
+          echo "Verifying CDK qualifier configuration..."
+          
+          # Check qualifier in cdk.json
           if ! grep -q '"aws-cdk:qualifier": "ffddev"' cdk.json; then
             echo "::error::Qualifier 'ffddev' not found in cdk.json under context. Please add it."
             exit 1
           fi
+          
+          # Check qualifier in environment
+          if [ "$QUALIFIER" != "ffddev" ]; then
+            echo "::error::Environment variable QUALIFIER ($QUALIFIER) does not match expected value 'ffddev'"
+            exit 1
+          fi
+          
+          echo "✅ CDK qualifier verification passed: using 'ffddev'"
   
       - name: CDK Bootstrap (Initial Setup)
         if: github.event_name == 'push'
         run: |
           cd infra
           echo "Bootstrapping CDK for environment: ${{ env.CDK_ENV }}"
-          npx cdk bootstrap aws://${{ secrets.AWS_ACCOUNT_ID }}/${{ env.CDK_DEFAULT_REGION }} --qualifier ffddev --context environment=${{ env.CDK_ENV }} --context aws-cdk:qualifier=ffddev --require-approval never
+          npx cdk -- bootstrap aws://${{ secrets.AWS_ACCOUNT_ID }}/${{ env.CDK_DEFAULT_REGION }} --qualifier ffddev --context environment=${{ env.CDK_ENV }} --context aws-cdk:qualifier=ffddev --require-approval never
       
       - name: Bootstrap Secrets
         if: github.event_name == 'push' && env.IS_NEW_ENVIRONMENT == 'true'
         run: |
           cd infra
           echo "Bootstrapping secrets for new environment: ${{ env.CDK_ENV }}"
-          npx cdk --app 'npx ts-node --prefer-ts-exts bin/bootstrap-secrets.ts' deploy --qualifier ffddev --context environment=${{ env.CDK_ENV }} --context aws-cdk:qualifier=ffddev --require-approval never
+          npx cdk -- --app 'npx ts-node --prefer-ts-exts bin/bootstrap-secrets.ts' deploy --qualifier ffddev --context environment=${{ env.CDK_ENV }} --context aws-cdk:qualifier=ffddev --require-approval never
         
       - name: CDK Diff
         if: github.event_name == 'pull_request'

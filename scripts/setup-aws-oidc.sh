@@ -131,11 +131,13 @@ create_role_policy() {
                 "ecr:TagResource",
                 "ecr:UntagResource",
                 "ecr:DescribeImages",
-                "ecr:ListTagsForResource"
+                "ecr:ListTagsForResource",
+                "ecr:PutLifecyclePolicy"
             ],
             "Resource": [
                 "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/${repo}-${env}",
-                "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/${repo}-${env}/*"
+                "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/${repo}-${env}/*",
+                "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/cdk-ffddev-container-assets-*-*"
             ]
         },
         {
@@ -173,7 +175,7 @@ create_role_policy() {
                 "arn:aws:ecs:us-east-1:*:task/finefinds-dev-cluster/*",
                 "arn:aws:ecs:us-east-1:*:cluster/finefinds-dev-cluster"
             ]
-        }, 
+        },
         {
             "Effect": "Allow",
             "Action": [
@@ -241,7 +243,8 @@ create_role_policy() {
                 "iam:GetRolePolicy",
                 "iam:TagRole",
                 "iam:UntagRole",
-                "iam:ListRoleTags"
+                "iam:ListRoleTags",
+                "iam:ListRoles"
             ],
             "Resource": [
                 "arn:aws:iam::${ACCOUNT_ID}:role/cdk-*",
@@ -322,40 +325,22 @@ create_role_policy() {
                 "s3:DeleteBucketPolicy",
                 "s3:ListAllMyBuckets",
                 "s3:CreateBucket",
-                "s3:DeleteBucket"
+                "s3:DeleteBucket",
+                "s3:PutLifecycleConfiguration",
+                "s3:GetLifecycleConfiguration",
+                "s3:PutEncryptionConfiguration",
+                "s3:PutBucketVersioning",
+                "s3:PutBucketPublicAccessBlock"
             ],
             "Resource": [
-                "arn:aws:s3:::cdk-ffddev-assets-*",
-                "arn:aws:s3:::cdk-ffddev-assets-*/*"
-            ]
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-                "iam:GetRole",
-                "iam:ListRolePolicies",
-                "iam:ListAttachedRolePolicies",
-                "iam:GetRolePolicy",
-                "iam:ListRoles",
-                "iam:PassRole",
-                "iam:CreateRole",
-                "iam:DeleteRole",
-                "iam:PutRolePolicy",
-                "iam:DeleteRolePolicy",
-                "iam:AttachRolePolicy",
-                "iam:DetachRolePolicy"
-            ],
-            "Resource": [
-                "arn:aws:iam::${ACCOUNT_ID}:role/cdk-*",
-                "arn:aws:iam::${ACCOUNT_ID}:role/finefinds-*-ecs-task-role",
-                "arn:aws:iam::${ACCOUNT_ID}:role/finefinds-*-ecs-execution-role"
+                "arn:aws:s3:::cdk-ffddev-assets-*-*",
+                "arn:aws:s3:::cdk-ffddev-assets-*-*/*"
             ]
         }
     ]
 }
 EOF
-    echo "Created policy file: $policy_file" >&2
-    echo "$policy_file"
+    echo $policy_file
 }
 
 # Clean up existing roles and OIDC provider
