@@ -2,6 +2,7 @@ import { BaseConfig } from './base-config';
 
 export const qaConfig: BaseConfig = {
   environment: 'qa',
+  region: 'us-east-1',
   vpc: {
     cidr: '10.3.0.0/16',
     maxAzs: 2,
@@ -14,6 +15,11 @@ export const qaConfig: BaseConfig = {
     desiredCount: 2,
     minCapacity: 2,
     maxCapacity: 4,
+    healthCheckPath: '/health',
+    healthCheckInterval: 30,
+    healthCheckTimeout: 5,
+    healthCheckHealthyThresholdCount: 2,
+    healthCheckUnhealthyThresholdCount: 3,
   },
   ecr: {
     repositoryName: 'finefinds-qa',
@@ -27,12 +33,12 @@ export const qaConfig: BaseConfig = {
     lifecycleRules: true,
   },
   rds: {
-    instanceType: 'db.t3.medium',
-    instanceClass: 'db.t3',
-    instanceSize: 'medium',
+    instanceType: 't3.medium',
+    allocatedStorage: 100,
+    maxAllocatedStorage: 200,
+    backupRetention: 14,
     multiAz: true,
-    backupRetentionDays: 14,
-    performanceInsights: true,
+    deletionProtection: true,
   },
   cognito: {
     clientUsers: {
@@ -46,13 +52,21 @@ export const qaConfig: BaseConfig = {
         requireSymbols: true,
       },
       userGroups: {
-        users: {
-          name: 'Users',
-          description: 'Regular users of the FineFinds platform',
+        parents: {
+          name: 'parents',
+          description: 'Parent users who can browse and purchase items',
         },
-        premiumUsers: {
-          name: 'PremiumUsers',
-          description: 'Premium users with enhanced features',
+        students: {
+          name: 'students',
+          description: 'Student users who can browse items',
+        },
+        vendors: {
+          name: 'vendors',
+          description: 'Vendor users who can list items for sale',
+        },
+        guests: {
+          name: 'guests',
+          description: 'Guest users with limited access',
         },
       },
     },
@@ -67,17 +81,34 @@ export const qaConfig: BaseConfig = {
         requireSymbols: true,
       },
       userGroups: {
+        superAdmins: {
+          name: 'super-admins',
+          description: 'Super administrators with full system access',
+        },
         admins: {
-          name: 'Admins',
-          description: 'Administrators with full access',
+          name: 'admins',
+          description: 'Administrators with elevated privileges',
         },
         support: {
-          name: 'Support',
-          description: 'Support team members',
+          name: 'support',
+          description: 'Support staff with limited administrative access',
         },
       },
     },
-    identityProviders: {},
+    identityProviders: {
+      google: {
+        clientId: 'your-google-client-id',
+        clientSecret: 'your-google-client-secret',
+      },
+      facebook: {
+        clientId: 'your-facebook-client-id',
+        clientSecret: 'your-facebook-client-secret',
+      },
+      amazon: {
+        clientId: 'your-amazon-client-id',
+        clientSecret: 'your-amazon-client-secret',
+      },
+    },
   },
   waf: {
     rateLimit: 4000,
@@ -96,7 +127,7 @@ export const qaConfig: BaseConfig = {
     ManagedBy: 'CDK',
   },
   cloudfront: {
-    allowedCountries: ['US', 'CA'],
+    allowedCountries: ['US', 'CA', 'GB', 'AU', 'NZ'],
   },
   smtp: {
     host: 'smtp.gmail.com',
@@ -125,6 +156,7 @@ export const qaConfig: BaseConfig = {
         environmentVariables: {
           REACT_APP_API_URL: 'https://api-qa.finefindslk.com',
           REACT_APP_ENV: 'qa',
+          NEXT_PUBLIC_ENV: 'qa',
         },
       },
     },
@@ -138,8 +170,13 @@ export const qaConfig: BaseConfig = {
         environmentVariables: {
           REACT_APP_API_URL: 'https://api-qa.finefindslk.com',
           REACT_APP_ENV: 'qa',
+          NEXT_PUBLIC_ENV: 'qa',
         },
       },
     },
+  },
+  dynamodb: {
+    billingMode: 'PAY_PER_REQUEST',
+    pointInTimeRecovery: true,
   },
 }; 
