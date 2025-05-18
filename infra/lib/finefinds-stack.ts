@@ -17,6 +17,7 @@ import { DynamoDBConstruct } from './constructs/dynamodb';
 import { RdsConstruct } from './constructs/rds';
 import { MigrationTaskConstruct } from './constructs/migration-task';
 import { AmplifyConstruct } from './constructs/amplify';
+import { BastionConstruct } from './constructs/bastion';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 
@@ -410,6 +411,28 @@ export class FineFindsStack extends cdk.Stack {
       environment: props.config.environment,
       config: props.config,
     });
+
+    // Create bastion host for non-production environments
+    if (['dev', 'sandbox', 'qa', 'uat'].includes(props.config.environment)) {
+      const bastion = new BastionConstruct(this, 'Bastion', {
+        environment: props.config.environment,
+        config: props.config,
+        vpc: vpc.vpc,
+      });
+
+      // Allow bastion host to access the database
+      if (props.config.environment === 'prod' && rds.cluster) {
+        rds.cluster.connections.allowDefaultPortFrom(
+          bastion.securityGroup,
+          'Allow access from bastion host'
+        );
+      } else if (rds.instance) {
+        rds.instance.connections.allowDefaultPortFrom(
+          bastion.securityGroup,
+          'Allow access from bastion host'
+        );
+      }
+    }
 
     // Add tags to all resources
     cdk.Tags.of(this).add('Environment', props.config.environment);

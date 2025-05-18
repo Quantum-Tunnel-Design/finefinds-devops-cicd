@@ -50,12 +50,7 @@ export interface BaseConfig {
         requireNumbers: boolean;
         requireSymbols: boolean;
       };
-      userGroups: {
-        [key: string]: {
-          name: string;
-          description: string;
-        };
-      };
+      userGroups: Record<string, { name: string; description: string }>;
     };
     adminUsers: {
       userPoolName: string;
@@ -67,12 +62,7 @@ export interface BaseConfig {
         requireNumbers: boolean;
         requireSymbols: boolean;
       };
-      userGroups: {
-        [key: string]: {
-          name: string;
-          description: string;
-        };
-      };
+      userGroups: Record<string, { name: string; description: string }>;
     };
     identityProviders?: {
       google?: {
