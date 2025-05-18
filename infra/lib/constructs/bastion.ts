@@ -14,6 +14,7 @@ interface BastionConstructProps {
 export class BastionConstruct extends Construct {
   public readonly instance: ec2.Instance;
   public readonly securityGroup: ec2.SecurityGroup;
+  public readonly keyPair: ec2.CfnKeyPair;
 
   constructor(scope: Construct, id: string, props: BastionConstructProps) {
     super(scope, id);
@@ -22,6 +23,16 @@ export class BastionConstruct extends Construct {
     if (props.environment === 'prod') {
       return;
     }
+
+    // Create or import key pair
+    const keyPairName = props.config.bastion?.keyName || `finefinds-${props.environment}-bastion`;
+    this.keyPair = new ec2.CfnKeyPair(this, 'BastionKeyPair', {
+      keyName: keyPairName,
+      tags: [
+        { key: 'Environment', value: props.environment },
+        { key: 'Project', value: 'FineFinds' }
+      ]
+    });
 
     // Create security group for the bastion host
     this.securityGroup = new ec2.SecurityGroup(this, 'BastionSecurityGroup', {
@@ -61,7 +72,7 @@ export class BastionConstruct extends Construct {
       machineImage: ec2.MachineImage.latestAmazonLinux2023(),
       securityGroup: this.securityGroup,
       role: role,
-      keyName: props.config.bastion?.keyName, // Optional: specify your key pair name
+      keyName: keyPairName,
       userData: ec2.UserData.forLinux(),
     });
 
@@ -76,6 +87,13 @@ export class BastionConstruct extends Construct {
       value: this.instance.instancePublicIp,
       description: 'Public IP of the bastion host',
       exportName: `finefinds-${props.environment}-bastion-public-ip`,
+    });
+
+    // Output the key pair name
+    new cdk.CfnOutput(this, 'BastionKeyPairName', {
+      value: keyPairName,
+      description: 'Name of the key pair for bastion host access',
+      exportName: `finefinds-${props.environment}-bastion-key-pair`,
     });
 
     // Add tags
