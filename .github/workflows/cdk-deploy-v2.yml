@@ -140,13 +140,13 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           cd infra
-          npm run cdk diff -- FineFinds-${{ env.CDK_ENV }} --context env=${{ env.CDK_ENV }}
+          npm run cdk diff -- FineFinds-${{ env.CDK_ENV }} --context env=${{ env.CDK_ENV }} --context aws-cdk:qualifier=ffddev
 
       - name: CDK Deploy
         if: github.event_name == 'push' 
         run: |
           cd infra
-          npm run cdk deploy -- FineFinds-${{ env.CDK_ENV }} --context env=${{ env.CDK_ENV }} --require-approval never
+          npm run cdk deploy -- FineFinds-${{ env.CDK_ENV }} --context env=${{ env.CDK_ENV }} --context aws-cdk:qualifier=ffddev --require-approval never
         env:
           CDK_DEPLOY_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
           CDK_DEPLOY_REGION: ${{ secrets.AWS_REGION }}
