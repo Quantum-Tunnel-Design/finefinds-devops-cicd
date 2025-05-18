@@ -3,6 +3,7 @@ import { BaseConfig } from './base-config';
 export const devConfig: BaseConfig = {
   environment: 'dev',
   region: 'us-east-1',
+  account: process.env.CDK_DEFAULT_ACCOUNT || '',
   vpc: {
     cidr: '10.0.0.0/16',
     maxAzs: 2,
@@ -178,5 +179,8 @@ export const devConfig: BaseConfig = {
   dynamodb: {
     billingMode: 'PAY_PER_REQUEST',
     pointInTimeRecovery: false,
+  },
+  bastion: {
+    keyName: 'finefinds-dev-bastion',
   },
 }; 

@@ -1,6 +1,7 @@
 export interface BaseConfig {
   environment: string;
   region: string;
+  account: string;
   vpc: {
     cidr: string;
     maxAzs: number;
@@ -73,7 +74,20 @@ export interface BaseConfig {
         };
       };
     };
-    identityProviders: Record<string, any>;
+    identityProviders?: {
+      google?: {
+        clientId: string;
+        clientSecret: string;
+      };
+      facebook?: {
+        clientId: string;
+        clientSecret: string;
+      };
+      amazon?: {
+        clientId: string;
+        clientSecret: string;
+      };
+    };
   };
   waf: {
     rateLimit: number;
@@ -137,5 +151,8 @@ export interface BaseConfig {
   dynamodb: {
     billingMode: string;
     pointInTimeRecovery: boolean;
+  };
+  bastion?: {
+    keyName?: string;
   };
 } 
