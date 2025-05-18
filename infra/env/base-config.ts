@@ -1,5 +1,6 @@
 export interface BaseConfig {
   environment: string;
+  region: string;
   vpc: {
     cidr: string;
     maxAzs: number;
@@ -31,11 +32,11 @@ export interface BaseConfig {
   };
   rds: {
     instanceType: string;
-    instanceClass: string;
-    instanceSize: string;
+    allocatedStorage: number;
+    maxAllocatedStorage: number;
+    backupRetention: number;
     multiAz: boolean;
-    backupRetentionDays: number;
-    performanceInsights: boolean;
+    deletionProtection: boolean;
   };
   cognito: {
     clientUsers: {

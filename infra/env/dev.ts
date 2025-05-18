@@ -180,4 +180,3 @@ export const devConfig: BaseConfig = {
     pointInTimeRecovery: false,
   },
 }; 
-}; 
