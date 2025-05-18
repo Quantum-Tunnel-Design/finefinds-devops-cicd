@@ -312,48 +312,57 @@ export class CognitoConstruct extends Construct {
   }
 
   private configureIdentityProviders(props: CognitoConstructProps): void {
-    const { identityProviders } = props.config.cognito;
+    const identityProviders = props.config.cognito.identityProviders;
+    if (!identityProviders) {
+      return;
+    }
 
+    // Configure Google identity provider if provided
     if (identityProviders.google) {
-      new cognito.UserPoolIdentityProviderGoogle(this, 'GoogleProvider', {
+      const googleProvider = new cognito.UserPoolIdentityProviderGoogle(this, 'GoogleProvider', {
         userPool: this.clientUserPool,
         clientId: identityProviders.google.clientId,
-        clientSecretValue: cdk.SecretValue.unsafePlainText(identityProviders.google.clientSecret),
-        scopes: ['email', 'profile'],
+        clientSecret: identityProviders.google.clientSecret,
         attributeMapping: {
           email: cognito.ProviderAttribute.GOOGLE_EMAIL,
           givenName: cognito.ProviderAttribute.GOOGLE_GIVEN_NAME,
           familyName: cognito.ProviderAttribute.GOOGLE_FAMILY_NAME,
         },
       });
+
+      this.clientUserPoolClient.node.addDependency(googleProvider);
     }
 
+    // Configure Facebook identity provider if provided
     if (identityProviders.facebook) {
-      new cognito.UserPoolIdentityProviderFacebook(this, 'FacebookProvider', {
+      const facebookProvider = new cognito.UserPoolIdentityProviderFacebook(this, 'FacebookProvider', {
         userPool: this.clientUserPool,
         clientId: identityProviders.facebook.clientId,
         clientSecret: identityProviders.facebook.clientSecret,
-        scopes: ['email', 'public_profile'],
         attributeMapping: {
           email: cognito.ProviderAttribute.FACEBOOK_EMAIL,
           givenName: cognito.ProviderAttribute.FACEBOOK_FIRST_NAME,
           familyName: cognito.ProviderAttribute.FACEBOOK_LAST_NAME,
         },
       });
+
+      this.clientUserPoolClient.node.addDependency(facebookProvider);
     }
 
+    // Configure Amazon identity provider if provided
     if (identityProviders.amazon) {
-      new cognito.UserPoolIdentityProviderAmazon(this, 'AmazonProvider', {
+      const amazonProvider = new cognito.UserPoolIdentityProviderAmazon(this, 'AmazonProvider', {
         userPool: this.clientUserPool,
         clientId: identityProviders.amazon.clientId,
         clientSecret: identityProviders.amazon.clientSecret,
-        scopes: ['profile', 'postal_code'],
         attributeMapping: {
           email: cognito.ProviderAttribute.AMAZON_EMAIL,
           givenName: cognito.ProviderAttribute.AMAZON_NAME,
           familyName: cognito.ProviderAttribute.AMAZON_NAME,
         },
       });
+
+      this.clientUserPoolClient.node.addDependency(amazonProvider);
     }
   }
 } 
