@@ -44,6 +44,7 @@ jobs:
       contents: read
 
     env:
+      QUALIFIER: ffddev
       AWS_REGION: us-east-1
       CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
       CDK_DEFAULT_REGION: us-east-1
@@ -105,6 +106,22 @@ jobs:
             echo "Stack is not in an IN_PROGRESS state. Proceeding with deployment."
             echo "IS_NEW_ENVIRONMENT=false" >> $GITHUB_ENV
           fi
+
+      - name: Clean CDK Context and Cache
+        run: |
+          cd infra
+          echo "Cleaning .cdk.context.json and cached context..."
+          rm -f .cdk.context.json || true
+          npx cdk context --clear
+  
+      - name: Validate CDK Qualifier in cdk.json
+        run: |
+          cd infra
+          if ! grep -q '"aws-cdk:qualifier": "ffddev"' cdk.json; then
+            echo "::error::Qualifier 'ffddev' not found in cdk.json under context. Please add it."
+            exit 1
+          fi
+  
 
       - name: CDK Bootstrap (Initial Setup)
         if: github.event_name == 'push'
