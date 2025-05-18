@@ -45,6 +45,24 @@ class SecretsBootstrapStack extends cdk.Stack {
     // Apply a RETAIN removal policy so the secret is not deleted if this stack is destroyed
     dbConnectionStringSecret.applyRemovalPolicy(cdk.RemovalPolicy.RETAIN);
 
+    // Create GitHub token secret for Amplify apps
+    const githubTokenSecret = new secretsmanager.Secret(this, 'GitHubToken', {
+      secretName: 'github-token',
+      description: 'GitHub token for Amplify apps',
+      encryptionKey: key,
+      generateSecretString: {
+        secretStringTemplate: JSON.stringify({
+          token: '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', // This needs to be updated manually with a valid GitHub token
+        }),
+        generateStringKey: 'token',
+        excludePunctuation: false,
+        passwordLength: 40,
+      },
+    });
+
+    // Apply a RETAIN removal policy so the secret is not deleted if this stack is destroyed
+    githubTokenSecret.applyRemovalPolicy(cdk.RemovalPolicy.RETAIN);
+
     // Create a Redis connection secret with initial placeholder values
     const redisConnectionSecret = new secretsmanager.Secret(this, 'RedisConnectionString', {
       secretName: `finefinds-${environment}-redis-connection`,

@@ -112,14 +112,14 @@ jobs:
         if: github.event_name == 'push'
         run: |
           cd infra
-          npm run cdk bootstrap -- --qualifier finefinds-${{ env.CDK_ENV }} --context env=${{ env.CDK_ENV }} aws://${{ secrets.AWS_ACCOUNT_ID }}/${{ secrets.AWS_REGION }}
+          npm run cdk bootstrap -- --qualifier ffddev --context environment=${{ env.CDK_ENV }} aws://${{ secrets.AWS_ACCOUNT_ID }}/${{ secrets.AWS_REGION }}
       
       - name: Bootstrap Secrets
         if: github.event_name == 'push' && env.IS_NEW_ENVIRONMENT == 'true'
         run: |
           cd infra
           echo "This appears to be a new environment. Bootstrapping secrets first..."
-          npm run bootstrap-secrets -- --context env=${{ env.CDK_ENV }}
+          npm run bootstrap-secrets -- --context environment=${{ env.CDK_ENV }}
       
       - name: CDK Diff
         if: github.event_name == 'pull_request'
