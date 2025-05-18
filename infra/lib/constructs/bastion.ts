@@ -2,6 +2,8 @@ import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import * as cr from 'aws-cdk-lib/custom-resources';
 import { Construct } from 'constructs';
 import { BaseConfig } from '../../env/base-config';
 
@@ -14,7 +16,7 @@ interface BastionConstructProps {
 export class BastionConstruct extends Construct {
   public readonly instance: ec2.Instance;
   public readonly securityGroup: ec2.SecurityGroup;
-  public readonly keyPair: ec2.CfnKeyPair;
+  public readonly keyPairSecret: secretsmanager.ISecret;
 
   constructor(scope: Construct, id: string, props: BastionConstructProps) {
     super(scope, id);
@@ -26,13 +28,68 @@ export class BastionConstruct extends Construct {
 
     // Create or import key pair
     const keyPairName = props.config.bastion?.keyName || `finefinds-${props.environment}-bastion`;
-    this.keyPair = new ec2.CfnKeyPair(this, 'BastionKeyPair', {
-      keyName: keyPairName,
-      tags: [
-        { key: 'Environment', value: props.environment },
-        { key: 'Project', value: 'FineFinds' }
-      ]
+    
+    // Create a secret to store the private key
+    this.keyPairSecret = new secretsmanager.Secret(this, 'BastionKeyPairSecret', {
+      secretName: `finefinds-${props.environment}-bastion-key`,
+      description: 'Private key for bastion host access',
+      generateSecretString: {
+        secretStringTemplate: JSON.stringify({ keyPairName }),
+        generateStringKey: 'privateKey',
+        excludeCharacters: '{}[]()\'"/\\@:',
+      },
     });
+
+    // Create the key pair using a custom resource
+    const keyPairResource = new cr.AwsCustomResource(this, 'BastionKeyPairResource', {
+      onCreate: {
+        service: 'EC2',
+        action: 'createKeyPair',
+        parameters: {
+          KeyName: keyPairName,
+          TagSpecifications: [{
+            ResourceType: 'key-pair',
+            Tags: [
+              { Key: 'Environment', Value: props.environment },
+              { Key: 'Project', Value: 'FineFinds' }
+            ]
+          }]
+        },
+        physicalResourceId: cr.PhysicalResourceId.of(keyPairName),
+      },
+      onDelete: {
+        service: 'EC2',
+        action: 'deleteKeyPair',
+        parameters: {
+          KeyName: keyPairName
+        },
+        physicalResourceId: cr.PhysicalResourceId.of(keyPairName),
+      },
+      policy: cr.AwsCustomResourcePolicy.fromSdkCalls({
+        resources: cr.AwsCustomResourcePolicy.ANY_RESOURCE,
+      }),
+    });
+
+    // Store the private key in Secrets Manager
+    const storePrivateKey = new cr.AwsCustomResource(this, 'StorePrivateKey', {
+      onCreate: {
+        service: 'SecretsManager',
+        action: 'updateSecret',
+        parameters: {
+          SecretId: this.keyPairSecret.secretArn,
+          SecretString: JSON.stringify({
+            keyPairName,
+            privateKey: keyPairResource.getResponseField('KeyMaterial')
+          })
+        },
+        physicalResourceId: cr.PhysicalResourceId.of(`${keyPairName}-secret`),
+      },
+      policy: cr.AwsCustomResourcePolicy.fromSdkCalls({
+        resources: [this.keyPairSecret.secretArn],
+      }),
+    });
+
+    storePrivateKey.node.addDependency(keyPairResource);
 
     // Create security group for the bastion host
     this.securityGroup = new ec2.SecurityGroup(this, 'BastionSecurityGroup', {
@@ -89,11 +146,11 @@ export class BastionConstruct extends Construct {
       exportName: `finefinds-${props.environment}-bastion-public-ip`,
     });
 
-    // Output the key pair name
-    new cdk.CfnOutput(this, 'BastionKeyPairName', {
-      value: keyPairName,
-      description: 'Name of the key pair for bastion host access',
-      exportName: `finefinds-${props.environment}-bastion-key-pair`,
+    // Output the key pair secret ARN
+    new cdk.CfnOutput(this, 'BastionKeyPairSecretArn', {
+      value: this.keyPairSecret.secretArn,
+      description: 'ARN of the secret containing the bastion host private key',
+      exportName: `finefinds-${props.environment}-bastion-key-secret-arn`,
     });
 
     // Add tags
