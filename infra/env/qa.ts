@@ -3,6 +3,7 @@ import { BaseConfig } from './base-config';
 export const qaConfig: BaseConfig = {
   environment: 'qa',
   region: 'us-east-1',
+  account: process.env.CDK_DEFAULT_ACCOUNT || '',
   vpc: {
     cidr: '10.3.0.0/16',
     maxAzs: 2,
