@@ -12,7 +12,7 @@ const app = new cdk.App();
 
 // Create custom synthesizer with our qualifier
 const customSynthesizer = new cdk.DefaultStackSynthesizer({
-  qualifier: app.node.tryGetContext('qualifier') || 'ffddev',
+  qualifier: app.node.tryGetContext('qualifier') || 'ffdev',
 });
 
 // Check if SonarQube should be included

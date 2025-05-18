@@ -102,7 +102,7 @@ const app = new cdk.App();
 
 // Get environment and qualifier from context
 const environment = app.node.tryGetContext('environment') || 'dev';
-const qualifier = app.node.tryGetContext('qualifier') || 'ffddev';
+const qualifier = app.node.tryGetContext('qualifier') || 'ffdev';
 
 // Create custom synthesizer with our qualifier
 const customSynthesizer = new cdk.DefaultStackSynthesizer({

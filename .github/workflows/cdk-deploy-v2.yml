@@ -131,13 +131,14 @@ jobs:
         if: github.event_name == 'push'
         run: |
           cd infra
-          echo "Bootstrapping CDK for environment: ${{ env.CDK_ENV }}"
+          echo "Bootstrapping CDK for environment: ${{ env.CDK_ENV }}, qualifier: ${{ env.QUALIFIER }}"
           # First, ensure we're using the custom qualifier for all operations
           export CDK_QUALIFIER=${{ env.QUALIFIER }}
           
           # Bootstrap with explicit lookup role creation
           npx cdk bootstrap aws://${{ secrets.AWS_ACCOUNT_ID }}/${{ env.CDK_DEFAULT_REGION }} \
             --qualifier ${{ env.QUALIFIER }} \
+            --context qualifier=${{ env.QUALIFIER }} \
             --context environment=${{ env.CDK_ENV }} \
             --context aws-cdk:qualifier=${{ env.QUALIFIER }} \
             --context aws-cdk:lookup-role-name=cdk-${{ env.QUALIFIER }}-lookup-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
@@ -152,9 +153,10 @@ jobs:
         if: github.event_name == 'push' && env.IS_NEW_ENVIRONMENT == 'true'
         run: |
           cd infra
-          echo "Bootstrapping secrets for new environment: ${{ env.CDK_ENV }}"
+          echo "Bootstrapping secrets for new environment: ${{ env.CDK_ENV }}, qualifier: ${{ env.QUALIFIER }}"
           npx cdk --app 'npx ts-node --prefer-ts-exts bin/bootstrap-secrets.ts' deploy \
             --qualifier ${{ env.QUALIFIER }} \
+            --context qualifier=${{ env.QUALIFIER }} \
             --context environment=${{ env.CDK_ENV }} \
             --context aws-cdk:qualifier=${{ env.QUALIFIER }} \
             --context aws-cdk:lookup-role-name=cdk-${{ env.QUALIFIER }}-lookup-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
