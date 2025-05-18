@@ -3,9 +3,14 @@ import { BaseConfig } from './base-config';
 export const qaConfig: BaseConfig = {
   environment: 'qa',
   dns: {
-    domainName: '', // Using AWS default domains
-    hostedZoneId: '', // No Route53 hosted zone needed
-    certificateValidation: false, // No custom domain validation needed
+    domainName: 'finefindslk.com',
+    hostedZoneId: 'Z1234567890',
+    certificateValidation: true,
+    subdomains: {
+      client: 'qa-app.finefindslk.com',
+      admin: 'qa-admin.finefindslk.com',
+      api: 'qa-api.finefindslk.com'
+    }
   },
   vpc: {
     maxAzs: 2,
@@ -21,7 +26,7 @@ export const qaConfig: BaseConfig = {
     maxCapacity: 2,
   },
   ecr: {
-    repositoryName: 'finefinds-services-qa',
+    repositoryName: 'finefinds-client-web-app-qa',
   },
   cognito: {
     clientUsers: {
@@ -130,5 +135,33 @@ export const qaConfig: BaseConfig = {
     Environment: 'qa',
     Project: 'FineFinds',
     ManagedBy: 'CDK',
+  },
+  amplify: {
+    clientWebApp: {
+      repository: 'finefinds-client-web-app',
+      owner: 'Quantum-Tunnel-Design',
+      branch: 'qa',
+      buildSettings: {
+        buildCommand: 'pnpm build',
+        startCommand: 'pnpm start',
+        environmentVariables: {
+          NEXT_PUBLIC_API_URL: 'https://qa-api.finefindslk.com',
+          NODE_ENV: 'qa',
+        },
+      },
+    },
+    adminApp: {
+      repository: 'finefinds-admin',
+      owner: 'Quantum-Tunnel-Design',
+      branch: 'qa',
+      buildSettings: {
+        buildCommand: 'pnpm build',
+        startCommand: 'pnpm start',
+        environmentVariables: {
+          NEXT_PUBLIC_API_URL: 'https://qa-api.finefindslk.com',
+          NODE_ENV: 'qa',
+        },
+      },
+    },
   },
 }; 

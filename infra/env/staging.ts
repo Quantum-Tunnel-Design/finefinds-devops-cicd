@@ -3,25 +3,30 @@ import { BaseConfig } from './base-config';
 export const stagingConfig: BaseConfig = {
   environment: 'staging',
   dns: {
-    domainName: '', // Using AWS default domains
-    hostedZoneId: '', // No Route53 hosted zone needed
-    certificateValidation: false, // No custom domain validation needed
+    domainName: 'finefindslk.com',
+    hostedZoneId: 'Z1234567890',
+    certificateValidation: true,
+    subdomains: {
+      client: 'staging-app.finefindslk.com',
+      admin: 'staging-admin.finefindslk.com',
+      api: 'staging-api.finefindslk.com'
+    }
   },
   vpc: {
     maxAzs: 2,
     natGateways: 1,
-    cidr: '10.0.0.0/16',
+    cidr: '10.1.0.0/16',
   },
   ecs: {
     containerPort: 3000,
-    cpu: 256,
-    memoryLimitMiB: 512,
-    desiredCount: 1,
-    minCapacity: 1,
-    maxCapacity: 2,
+    cpu: 512,
+    memoryLimitMiB: 1024,
+    desiredCount: 2,
+    minCapacity: 2,
+    maxCapacity: 4,
   },
   ecr: {
-    repositoryName: 'finefinds-services-staging',
+    repositoryName: 'finefinds-client-web-app-staging',
   },
   cognito: {
     clientUsers: {
@@ -37,19 +42,19 @@ export const stagingConfig: BaseConfig = {
       userGroups: {
         parents: {
           name: 'Parents',
-          description: 'Parent users group',
+          description: 'Parent users',
         },
         students: {
           name: 'Students',
-          description: 'Student users group',
+          description: 'Student users',
         },
         vendors: {
           name: 'Vendors',
-          description: 'Vendor users group',
+          description: 'Vendor users',
         },
         guests: {
           name: 'Guests',
-          description: 'Guest users group',
+          description: 'Guest users',
         },
       },
     },
@@ -66,15 +71,15 @@ export const stagingConfig: BaseConfig = {
       userGroups: {
         superAdmins: {
           name: 'SuperAdmins',
-          description: 'Super admin users group',
+          description: 'Super administrator users',
         },
         admins: {
           name: 'Admins',
-          description: 'Admin users group',
+          description: 'Administrator users',
         },
         support: {
           name: 'Support',
-          description: 'Support users group',
+          description: 'Support team users',
         },
       },
     },
@@ -89,12 +94,12 @@ export const stagingConfig: BaseConfig = {
     lifecycleRules: true,
   },
   redis: {
-    nodeType: 'cache.t3.medium',  // Medium instance for staging
-    numNodes: 2,                  // Multi-node for staging
-    engineVersion: '7.0',         // Latest stable Redis version
-    snapshotRetentionLimit: 5,    // Keep 5 snapshots for staging
-    snapshotWindow: '03:00-04:00', // UTC time
-    maintenanceWindow: 'sun:04:00-sun:05:00', // UTC time
+    nodeType: 'cache.t3.medium',
+    numNodes: 2,
+    engineVersion: '7.0',
+    snapshotRetentionLimit: 5,
+    snapshotWindow: '03:00-04:00',
+    maintenanceWindow: 'sun:04:00-sun:05:00',
   },
   rds: {
     instanceType: 'db.t3.medium',
@@ -121,14 +126,42 @@ export const stagingConfig: BaseConfig = {
   smtp: {
     host: 'email-smtp.us-east-1.amazonaws.com',
     port: 587,
-    username: 'AKIAXXXXXXXXXXXXXXXX', // Replace with your SMTP username
+    username: 'AKIAXXXXXXXXXXXXXXXX',
   },
   opensearch: {
-    endpoint: 'https://search-finefinds-staging-xxxxxxxxxxxx.us-east-1.es.amazonaws.com', // Replace with your OpenSearch endpoint
+    endpoint: 'https://search-finefinds-staging-xxxxxxxxxxxx.us-east-1.es.amazonaws.com',
   },
   tags: {
     Environment: 'staging',
     Project: 'FineFinds',
     ManagedBy: 'CDK',
+  },
+  amplify: {
+    clientWebApp: {
+      repository: 'finefinds-client-web-app',
+      owner: 'Quantum-Tunnel-Design',
+      branch: 'staging',
+      buildSettings: {
+        buildCommand: 'pnpm build',
+        startCommand: 'pnpm start',
+        environmentVariables: {
+          NEXT_PUBLIC_API_URL: 'https://staging-api.finefindslk.com',
+          NODE_ENV: 'staging',
+        },
+      },
+    },
+    adminApp: {
+      repository: 'finefinds-admin',
+      owner: 'Quantum-Tunnel-Design',
+      branch: 'staging',
+      buildSettings: {
+        buildCommand: 'pnpm build',
+        startCommand: 'pnpm start',
+        environmentVariables: {
+          NEXT_PUBLIC_API_URL: 'https://staging-api.finefindslk.com',
+          NODE_ENV: 'staging',
+        },
+      },
+    },
   },
 }; 

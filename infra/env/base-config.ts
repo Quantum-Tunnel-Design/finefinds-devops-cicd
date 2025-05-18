@@ -118,6 +118,11 @@ export interface BaseConfig {
     domainName: string;
     hostedZoneId: string;
     certificateValidation: boolean;
+    subdomains: {
+      client: string;
+      admin: string;
+      api: string;
+    };
   };
   tags: {
     [key: string]: string;
@@ -140,5 +145,31 @@ export interface BaseConfig {
     snapshotRetentionLimit: number;
     snapshotWindow: string;
     maintenanceWindow: string;
+  };
+  amplify: {
+    clientWebApp: {
+      repository: string;
+      owner: string;
+      branch: string;
+      buildSettings: {
+        buildCommand: string;
+        startCommand: string;
+        environmentVariables: {
+          [key: string]: string;
+        };
+      };
+    };
+    adminApp: {
+      repository: string;
+      owner: string;
+      branch: string;
+      buildSettings: {
+        buildCommand: string;
+        startCommand: string;
+        environmentVariables: {
+          [key: string]: string;
+        };
+      };
+    };
   };
 } 

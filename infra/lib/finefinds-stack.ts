@@ -17,6 +17,7 @@ import { AutoShutdownConstruct } from './constructs/auto-shutdown';
 import { DynamoDBConstruct } from './constructs/dynamodb';
 import { RdsConstruct } from './constructs/rds';
 import { MigrationTaskConstruct } from './constructs/migration-task';
+import { AmplifyConstruct } from './constructs/amplify';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 
@@ -400,6 +401,12 @@ export class FineFindsStack extends cdk.Stack {
         kmsKey: kms.key,
       });
     }
+
+    // Create Amplify apps for frontend applications
+    const amplify = new AmplifyConstruct(this, 'Amplify', {
+      environment: props.config.environment,
+      config: props.config,
+    });
 
     // Add tags to all resources
     cdk.Tags.of(this).add('Environment', props.config.environment);

@@ -3,9 +3,14 @@ import { BaseConfig } from './base-config';
 export const devConfig: BaseConfig = {
   environment: 'dev',
   dns: {
-    domainName: '', // Using AWS default domains
-    hostedZoneId: '', // No Route53 hosted zone needed
-    certificateValidation: false, // No custom domain validation needed
+    domainName: 'finefindslk.com',
+    hostedZoneId: 'Z1234567890',
+    certificateValidation: true,
+    subdomains: {
+      client: 'dev-app.finefindslk.com',
+      admin: 'dev-admin.finefindslk.com',
+      api: 'dev-api.finefindslk.com'
+    }
   },
   vpc: {
     maxAzs: 2,
@@ -21,7 +26,7 @@ export const devConfig: BaseConfig = {
     maxCapacity: 2,
   },
   ecr: {
-    repositoryName: 'finefinds-services-dev',
+    repositoryName: 'finefinds-client-web-app-dev',
   },
   cognito: {
     clientUsers: {
@@ -37,19 +42,19 @@ export const devConfig: BaseConfig = {
       userGroups: {
         parents: {
           name: 'Parents',
-          description: 'Parent users group',
+          description: 'Parent users',
         },
         students: {
           name: 'Students',
-          description: 'Student users group',
+          description: 'Student users',
         },
         vendors: {
           name: 'Vendors',
-          description: 'Vendor users group',
+          description: 'Vendor users',
         },
         guests: {
           name: 'Guests',
-          description: 'Guest users group',
+          description: 'Guest users',
         },
       },
     },
@@ -66,15 +71,15 @@ export const devConfig: BaseConfig = {
       userGroups: {
         superAdmins: {
           name: 'SuperAdmins',
-          description: 'Super admin users group',
+          description: 'Super administrator users',
         },
         admins: {
           name: 'Admins',
-          description: 'Admin users group',
+          description: 'Administrator users',
         },
         support: {
           name: 'Support',
-          description: 'Support users group',
+          description: 'Support team users',
         },
       },
     },
@@ -130,5 +135,33 @@ export const devConfig: BaseConfig = {
     Environment: 'dev',
     Project: 'FineFinds',
     ManagedBy: 'CDK',
+  },
+  amplify: {
+    clientWebApp: {
+      repository: 'finefinds-client-web-app',
+      owner: 'Quantum-Tunnel-Design',
+      branch: 'dev',
+      buildSettings: {
+        buildCommand: 'pnpm build',
+        startCommand: 'pnpm start',
+        environmentVariables: {
+          NEXT_PUBLIC_API_URL: 'https://dev-api.finefindslk.com',
+          NODE_ENV: 'development',
+        },
+      },
+    },
+    adminApp: {
+      repository: 'finefinds-admin',
+      owner: 'Quantum-Tunnel-Design',
+      branch: 'dev',
+      buildSettings: {
+        buildCommand: 'pnpm build',
+        startCommand: 'pnpm start',
+        environmentVariables: {
+          NEXT_PUBLIC_API_URL: 'https://dev-api.finefindslk.com',
+          NODE_ENV: 'development',
+        },
+      },
+    },
   },
 }; 
