@@ -199,10 +199,10 @@ class SecretsBootstrapStack extends cdk.Stack {
     const githubTokenSecret = secretsmanager.Secret.fromSecretNameV2(this, 'ImportedGitHubToken', githubSecretName);
     const redisConnectionSecret = secretsmanager.Secret.fromSecretNameV2(this, 'ImportedRedisConnectionString', redisSecretName);
 
-    // Apply RETAIN removal policy to all secrets
-    [dbConnectionStringSecret, githubTokenSecret, redisConnectionSecret].forEach(secret => {
-      secret.applyRemovalPolicy(cdk.RemovalPolicy.RETAIN);
-    });
+    // Apply RETAIN removal policy to the custom resources
+    dbSecret.node.addDependency(dbConnectionStringSecret);
+    githubSecret.node.addDependency(githubTokenSecret);
+    redisSecret.node.addDependency(redisConnectionSecret);
 
     // Output the secret ARNs for reference
     new cdk.CfnOutput(this, 'DbConnectionSecretArn', {
