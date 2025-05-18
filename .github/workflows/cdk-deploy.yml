@@ -72,7 +72,6 @@ jobs:
         with:
           node-version: '20'
           cache: 'false'
-          cache-dependency-path: infra/package-lock.json
 
       - name: Install Dependencies
         run: |
