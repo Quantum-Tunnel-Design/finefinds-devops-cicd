@@ -1,6 +1,8 @@
 import * as cdk from 'aws-cdk-lib';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as cr from 'aws-cdk-lib/custom-resources';
 import { Construct } from 'constructs';
 import { BaseConfig } from '../../env/base-config';
 
@@ -177,10 +179,53 @@ export class CognitoConstruct extends Construct {
   private createClientUserGroups(props: CognitoConstructProps): void {
     // Create user groups for client user pool
     Object.entries(props.config.cognito.clientUsers.userGroups).forEach(([key, group]) => {
-      new cognito.CfnUserPoolGroup(this, `ClientUserGroup-${key}`, {
-        userPoolId: this.clientUserPool.userPoolId,
-        groupName: group.name,
-        description: group.description,
+      const customResource = new cdk.CustomResource(this, `ClientUserGroup-${key}`, {
+        serviceToken: new cr.Provider(this, `ClientUserGroupProvider-${key}`, {
+          onEventHandler: new lambda.Function(this, `ClientUserGroupHandler-${key}`, {
+            runtime: lambda.Runtime.NODEJS_18_X,
+            handler: 'index.handler',
+            code: lambda.Code.fromInline(`
+              const AWS = require('aws-sdk');
+              const cognito = new AWS.CognitoIdentityServiceProvider();
+              
+              exports.handler = async (event) => {
+                if (event.RequestType === 'Delete') {
+                  return;
+                }
+                
+                const params = {
+                  UserPoolId: '${this.clientUserPool.userPoolId}',
+                  GroupName: '${group.name}',
+                  Description: '${group.description}'
+                };
+                
+                try {
+                  await cognito.getGroup(params).promise();
+                  console.log('Group already exists');
+                } catch (error) {
+                  if (error.code === 'ResourceNotFoundException') {
+                    await cognito.createGroup(params).promise();
+                    console.log('Group created');
+                  } else {
+                    throw error;
+                  }
+                }
+                
+                return {
+                  PhysicalResourceId: '${group.name}',
+                  Data: {
+                    GroupName: '${group.name}'
+                  }
+                };
+              }
+            `),
+            timeout: cdk.Duration.seconds(30),
+          }),
+        }).serviceToken,
+        properties: {
+          GroupName: group.name,
+          Description: group.description,
+        },
       });
     });
   }
@@ -188,10 +233,53 @@ export class CognitoConstruct extends Construct {
   private createAdminUserGroups(props: CognitoConstructProps): void {
     // Create user groups for admin user pool
     Object.entries(props.config.cognito.adminUsers.userGroups).forEach(([key, group]) => {
-      new cognito.CfnUserPoolGroup(this, `AdminUserGroup-${key}`, {
-        userPoolId: this.adminUserPool.userPoolId,
-        groupName: group.name,
-        description: group.description,
+      const customResource = new cdk.CustomResource(this, `AdminUserGroup-${key}`, {
+        serviceToken: new cr.Provider(this, `AdminUserGroupProvider-${key}`, {
+          onEventHandler: new lambda.Function(this, `AdminUserGroupHandler-${key}`, {
+            runtime: lambda.Runtime.NODEJS_18_X,
+            handler: 'index.handler',
+            code: lambda.Code.fromInline(`
+              const AWS = require('aws-sdk');
+              const cognito = new AWS.CognitoIdentityServiceProvider();
+              
+              exports.handler = async (event) => {
+                if (event.RequestType === 'Delete') {
+                  return;
+                }
+                
+                const params = {
+                  UserPoolId: '${this.adminUserPool.userPoolId}',
+                  GroupName: '${group.name}',
+                  Description: '${group.description}'
+                };
+                
+                try {
+                  await cognito.getGroup(params).promise();
+                  console.log('Group already exists');
+                } catch (error) {
+                  if (error.code === 'ResourceNotFoundException') {
+                    await cognito.createGroup(params).promise();
+                    console.log('Group created');
+                  } else {
+                    throw error;
+                  }
+                }
+                
+                return {
+                  PhysicalResourceId: '${group.name}',
+                  Data: {
+                    GroupName: '${group.name}'
+                  }
+                };
+              }
+            `),
+            timeout: cdk.Duration.seconds(30),
+          }),
+        }).serviceToken,
+        properties: {
+          GroupName: group.name,
+          Description: group.description,
+        },
       });
     });
   }

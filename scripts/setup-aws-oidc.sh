@@ -290,6 +290,65 @@ create_role_policy() {
                 "arn:aws:route53:::hostedzone/*",
                 "arn:aws:route53:::change/*"
             ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ssm:GetParameter",
+                "ssm:GetParameters",
+                "ssm:GetParametersByPath",
+                "ssm:PutParameter",
+                "ssm:DeleteParameter",
+                "ssm:DeleteParameters",
+                "ssm:DescribeParameters",
+                "ssm:ListTagsForResource",
+                "ssm:AddTagsToResource",
+                "ssm:RemoveTagsFromResource"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:GetObject",
+                "s3:GetObjectVersion",
+                "s3:PutObject",
+                "s3:DeleteObject",
+                "s3:ListBucket",
+                "s3:GetBucketVersioning",
+                "s3:GetBucketLocation",
+                "s3:GetBucketPolicy",
+                "s3:PutBucketPolicy",
+                "s3:DeleteBucketPolicy",
+                "s3:ListAllMyBuckets",
+                "s3:CreateBucket",
+                "s3:DeleteBucket"
+            ],
+            "Resource": [
+                "arn:aws:s3:::cdk-hnb659fds-assets-*",
+                "arn:aws:s3:::cdk-hnb659fds-assets-*/*"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "iam:GetRole",
+                "iam:ListRolePolicies",
+                "iam:ListAttachedRolePolicies",
+                "iam:GetRolePolicy",
+                "iam:ListRoles",
+                "iam:PassRole",
+                "iam:CreateRole",
+                "iam:DeleteRole",
+                "iam:PutRolePolicy",
+                "iam:DeleteRolePolicy",
+                "iam:AttachRolePolicy",
+                "iam:DetachRolePolicy"
+            ],
+            "Resource": [
+                "arn:aws:iam::${ACCOUNT_ID}:role/cdk-*",
+                "arn:aws:iam::${ACCOUNT_ID}:role/cdk-hnb659fds-*"
+            ]
         }
     ]
 }
