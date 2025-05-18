@@ -12,6 +12,11 @@ export interface BaseConfig {
     desiredCount: number;
     minCapacity: number;
     maxCapacity: number;
+    healthCheckPath: string;
+    healthCheckInterval: number;
+    healthCheckTimeout: number;
+    healthCheckHealthyThresholdCount: number;
+    healthCheckUnhealthyThresholdCount: number;
   };
   ecr: {
     repositoryName: string;
