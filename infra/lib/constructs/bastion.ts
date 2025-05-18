@@ -85,9 +85,14 @@ export class BastionConstruct extends Construct {
         action: 'updateSecret',
         parameters: {
           SecretId: this.keyPairSecret.secretArn,
-          SecretString: JSON.stringify({
-            keyPairName,
-            privateKey: keyPairResource.getResponseField('KeyMaterial')
+          SecretString: cdk.Lazy.string({
+            produce: () => {
+              const keyMaterial = keyPairResource.getResponseField('KeyMaterial');
+              return JSON.stringify({
+                keyPairName,
+                privateKey: keyMaterial
+              }, null, 2);
+            }
           })
         },
         physicalResourceId: cr.PhysicalResourceId.of(`${keyPairName}-secret`),
