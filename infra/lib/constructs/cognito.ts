@@ -46,8 +46,8 @@ export class CognitoConstruct extends Construct {
     this.adminUserPool = this.createUserPool('Admin', props.config.cognito.adminUsers, props.environment);
 
     // Create user groups
-    this.createUserGroups(this.clientUserPool, props.config.cognito.clientUsers.userGroups, 'Client');
-    this.createUserGroups(this.adminUserPool, props.config.cognito.adminUsers.userGroups, 'Admin');
+    this.createUserGroups(this.clientUserPool, props.config.cognito.clientUsers.userGroups, 'Client', props.environment);
+    this.createUserGroups(this.adminUserPool, props.config.cognito.adminUsers.userGroups, 'Admin', props.environment);
 
     // Create app clients
     this.clientUserPoolClient = this.createUserPoolClient('Client', this.clientUserPool, props);
@@ -122,14 +122,19 @@ export class CognitoConstruct extends Construct {
   private createUserGroups(
     userPool: cognito.UserPool,
     groups: Record<string, { name: string; description: string }>,
-    type: 'Client' | 'Admin'
+    type: 'Client' | 'Admin',
+    environment: string
   ): void {
+    const isProd = environment === 'prod';
     Object.entries(groups).forEach(([key, group]) => {
-      new cognito.CfnUserPoolGroup(this, `${type}UserGroup-${key}`, {
+      const userGroup = new cognito.CfnUserPoolGroup(this, `${type}UserGroup-${key}`, {
         userPoolId: userPool.userPoolId,
         groupName: group.name,
         description: group.description,
       });
+      
+      // Apply removal policy to the user group
+      userGroup.applyRemovalPolicy(isProd ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY);
     });
   }
 
