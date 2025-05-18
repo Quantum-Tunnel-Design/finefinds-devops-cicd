@@ -359,6 +359,7 @@ export class CognitoConstruct extends Construct {
         attributeMapping: {
           email: cognito.ProviderAttribute.AMAZON_EMAIL,
           givenName: cognito.ProviderAttribute.AMAZON_NAME,
+          familyName: cognito.ProviderAttribute.AMAZON_NAME,
         },
       });
     }
