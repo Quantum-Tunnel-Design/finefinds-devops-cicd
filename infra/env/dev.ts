@@ -2,6 +2,7 @@ import { BaseConfig } from './base-config';
 
 export const devConfig: BaseConfig = {
   environment: 'dev',
+  region: 'us-east-1',
   vpc: {
     cidr: '10.0.0.0/16',
     maxAzs: 2,
@@ -14,6 +15,11 @@ export const devConfig: BaseConfig = {
     desiredCount: 1,
     minCapacity: 1,
     maxCapacity: 2,
+    healthCheckPath: '/health',
+    healthCheckInterval: 30,
+    healthCheckTimeout: 5,
+    healthCheckHealthyThresholdCount: 2,
+    healthCheckUnhealthyThresholdCount: 3,
   },
   ecr: {
     repositoryName: 'finefinds-dev',
@@ -27,16 +33,16 @@ export const devConfig: BaseConfig = {
     lifecycleRules: true,
   },
   rds: {
-    instanceType: 'db.t3.micro',
-    instanceClass: 'db.t3',
-    instanceSize: 'micro',
+    instanceType: 't3.micro',
+    allocatedStorage: 20,
+    maxAllocatedStorage: 100,
+    backupRetention: 7,
     multiAz: false,
-    backupRetentionDays: 7,
-    performanceInsights: false,
+    deletionProtection: false,
   },
   cognito: {
     clientUsers: {
-      userPoolName: 'finefinds-dev-client-users',
+      userPoolName: 'finefinds-client-users-dev',
       selfSignUpEnabled: true,
       passwordPolicy: {
         minLength: 8,
@@ -46,18 +52,26 @@ export const devConfig: BaseConfig = {
         requireSymbols: true,
       },
       userGroups: {
-        users: {
-          name: 'Users',
-          description: 'Regular users of the FineFinds platform',
+        parents: {
+          name: 'parents',
+          description: 'Parent users who can browse and purchase items',
         },
-        premiumUsers: {
-          name: 'PremiumUsers',
-          description: 'Premium users with enhanced features',
+        students: {
+          name: 'students',
+          description: 'Student users who can browse items',
+        },
+        vendors: {
+          name: 'vendors',
+          description: 'Vendor users who can list items for sale',
+        },
+        guests: {
+          name: 'guests',
+          description: 'Guest users with limited access',
         },
       },
     },
     adminUsers: {
-      userPoolName: 'finefinds-dev-admin-users',
+      userPoolName: 'finefinds-admin-users-dev',
       selfSignUpEnabled: false,
       passwordPolicy: {
         minLength: 12,
@@ -67,17 +81,34 @@ export const devConfig: BaseConfig = {
         requireSymbols: true,
       },
       userGroups: {
+        superAdmins: {
+          name: 'super-admins',
+          description: 'Super administrators with full system access',
+        },
         admins: {
-          name: 'Admins',
-          description: 'Administrators with full access',
+          name: 'admins',
+          description: 'Administrators with elevated privileges',
         },
         support: {
-          name: 'Support',
-          description: 'Support team members',
+          name: 'support',
+          description: 'Support staff with limited administrative access',
         },
       },
     },
-    identityProviders: {},
+    identityProviders: {
+      google: {
+        clientId: 'your-google-client-id',
+        clientSecret: 'your-google-client-secret',
+      },
+      facebook: {
+        clientId: 'your-facebook-client-id',
+        clientSecret: 'your-facebook-client-secret',
+      },
+      amazon: {
+        clientId: 'your-amazon-client-id',
+        clientSecret: 'your-amazon-client-secret',
+      },
+    },
   },
   waf: {
     rateLimit: 2000,
@@ -96,7 +127,7 @@ export const devConfig: BaseConfig = {
     ManagedBy: 'CDK',
   },
   cloudfront: {
-    allowedCountries: ['US', 'CA'],
+    allowedCountries: ['US', 'CA', 'GB', 'AU', 'NZ'],
   },
   smtp: {
     host: 'smtp.gmail.com',
@@ -125,6 +156,7 @@ export const devConfig: BaseConfig = {
         environmentVariables: {
           REACT_APP_API_URL: 'https://api-dev.finefindslk.com',
           REACT_APP_ENV: 'dev',
+          NEXT_PUBLIC_ENV: 'dev',
         },
       },
     },
@@ -138,8 +170,14 @@ export const devConfig: BaseConfig = {
         environmentVariables: {
           REACT_APP_API_URL: 'https://api-dev.finefindslk.com',
           REACT_APP_ENV: 'dev',
+          NEXT_PUBLIC_ENV: 'dev',
         },
       },
     },
   },
+  dynamodb: {
+    billingMode: 'PAY_PER_REQUEST',
+    pointInTimeRecovery: false,
+  },
+}; 
 }; 

@@ -175,55 +175,24 @@ export class CognitoConstruct extends Construct {
   }
 
   private createClientUserGroups(props: CognitoConstructProps): void {
-    // Create parent group
-    new cognito.CfnUserPoolGroup(this, 'ParentGroup', {
-      userPoolId: this.clientUserPool.userPoolId,
-      groupName: props.config.cognito.clientUsers.userGroups.parents.name,
-      description: props.config.cognito.clientUsers.userGroups.parents.description,
-    });
-
-    // Create student group
-    new cognito.CfnUserPoolGroup(this, 'StudentGroup', {
-      userPoolId: this.clientUserPool.userPoolId,
-      groupName: props.config.cognito.clientUsers.userGroups.students.name,
-      description: props.config.cognito.clientUsers.userGroups.students.description,
-    });
-
-    // Create vendor group
-    new cognito.CfnUserPoolGroup(this, 'VendorGroup', {
-      userPoolId: this.clientUserPool.userPoolId,
-      groupName: props.config.cognito.clientUsers.userGroups.vendors.name,
-      description: props.config.cognito.clientUsers.userGroups.vendors.description,
-    });
-
-    // Create guest group
-    new cognito.CfnUserPoolGroup(this, 'GuestGroup', {
-      userPoolId: this.clientUserPool.userPoolId,
-      groupName: props.config.cognito.clientUsers.userGroups.guests.name,
-      description: props.config.cognito.clientUsers.userGroups.guests.description,
+    // Create user groups for client user pool
+    Object.entries(props.config.cognito.clientUsers.userGroups).forEach(([key, group]) => {
+      new cognito.CfnUserPoolGroup(this, `ClientUserGroup-${key}`, {
+        userPoolId: this.clientUserPool.userPoolId,
+        groupName: group.name,
+        description: group.description,
+      });
     });
   }
 
   private createAdminUserGroups(props: CognitoConstructProps): void {
-    // Create super admin group
-    new cognito.CfnUserPoolGroup(this, 'SuperAdminGroup', {
-      userPoolId: this.adminUserPool.userPoolId,
-      groupName: props.config.cognito.adminUsers.userGroups.superAdmins.name,
-      description: props.config.cognito.adminUsers.userGroups.superAdmins.description,
-    });
-
-    // Create admin group
-    new cognito.CfnUserPoolGroup(this, 'AdminGroup', {
-      userPoolId: this.adminUserPool.userPoolId,
-      groupName: props.config.cognito.adminUsers.userGroups.admins.name,
-      description: props.config.cognito.adminUsers.userGroups.admins.description,
-    });
-
-    // Create support group
-    new cognito.CfnUserPoolGroup(this, 'SupportGroup', {
-      userPoolId: this.adminUserPool.userPoolId,
-      groupName: props.config.cognito.adminUsers.userGroups.support.name,
-      description: props.config.cognito.adminUsers.userGroups.support.description,
+    // Create user groups for admin user pool
+    Object.entries(props.config.cognito.adminUsers.userGroups).forEach(([key, group]) => {
+      new cognito.CfnUserPoolGroup(this, `AdminUserGroup-${key}`, {
+        userPoolId: this.adminUserPool.userPoolId,
+        groupName: group.name,
+        description: group.description,
+      });
     });
   }
 
