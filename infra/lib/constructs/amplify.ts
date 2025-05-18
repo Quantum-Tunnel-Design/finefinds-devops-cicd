@@ -22,7 +22,9 @@ export class AmplifyConstruct extends Construct {
       sourceCodeProvider: new amplify.GitHubSourceCodeProvider({
         owner: 'Quantum-Tunnel-Design',
         repository: 'finefinds-client-web-app',
-        oauthToken: cdk.SecretValue.secretsManager('github-token'),
+        oauthToken: cdk.SecretValue.secretsManager('github-token', {
+          jsonField: 'token',
+        }),
       }),
       environmentVariables: {
         ...props.config.amplify.clientWebApp.buildSettings.environmentVariables,
@@ -68,7 +70,9 @@ export class AmplifyConstruct extends Construct {
       sourceCodeProvider: new amplify.GitHubSourceCodeProvider({
         owner: 'Quantum-Tunnel-Design',
         repository: 'finefinds-admin',
-        oauthToken: cdk.SecretValue.secretsManager('github-token'),
+        oauthToken: cdk.SecretValue.secretsManager('github-token', {
+          jsonField: 'token',
+        }),
       }),
       environmentVariables: {
         ...props.config.amplify.adminApp.buildSettings.environmentVariables,
