@@ -28,7 +28,7 @@ export class EcsConstruct extends Construct {
     this.cluster = new ecs.Cluster(this, 'Cluster', {
       vpc: props.vpc,
       clusterName: `finefinds-${props.environment}-cluster`,
-      containerInsights: props.environment === 'prod',
+      containerInsightsV2: props.environment === 'prod' ? ecs.ContainerInsights.ENABLED : ecs.ContainerInsights.DISABLED,
     });
 
     // Create task definition

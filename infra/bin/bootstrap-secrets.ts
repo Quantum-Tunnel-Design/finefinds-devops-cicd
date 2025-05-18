@@ -100,13 +100,14 @@ class SecretsBootstrapStack extends cdk.Stack {
 // Create app and instantiate stack
 const app = new cdk.App();
 
+// Get environment and qualifier from context
+const environment = app.node.tryGetContext('environment') || 'dev';
+const qualifier = app.node.tryGetContext('qualifier') || 'ffddev';
+
 // Create custom synthesizer with our qualifier
 const customSynthesizer = new cdk.DefaultStackSynthesizer({
-  qualifier: 'ffddev',
+  qualifier: qualifier,
 });
-
-// Get environment from context or default to dev
-const environment = app.node.tryGetContext('env') || 'dev';
 
 new SecretsBootstrapStack(app, `FineFinds-Secrets-Bootstrap-${environment}`, {
   env: {

@@ -76,10 +76,6 @@ export class CognitoConstruct extends Construct {
       removalPolicy: props.environment === 'prod' 
         ? cdk.RemovalPolicy.RETAIN 
         : cdk.RemovalPolicy.DESTROY,
-      // Use advancedSecurityMode (enable only in production to save costs ~$0.05/MAU)
-      advancedSecurityMode: props.environment === 'prod'
-        ? cognito.AdvancedSecurityMode.ENFORCED
-        : cognito.AdvancedSecurityMode.OFF,
     });
 
     // Create admin user pool
@@ -134,10 +130,6 @@ export class CognitoConstruct extends Construct {
       removalPolicy: props.environment === 'prod' 
         ? cdk.RemovalPolicy.RETAIN 
         : cdk.RemovalPolicy.DESTROY,
-      // Use advancedSecurityMode (enable only in production to save costs)
-      advancedSecurityMode: props.environment === 'prod'
-        ? cognito.AdvancedSecurityMode.ENFORCED
-        : cognito.AdvancedSecurityMode.OFF,
     });
 
     // Create user groups for client pool
@@ -326,7 +318,7 @@ export class CognitoConstruct extends Construct {
       new cognito.UserPoolIdentityProviderGoogle(this, 'GoogleProvider', {
         userPool: this.clientUserPool,
         clientId: identityProviders.google.clientId,
-        clientSecret: identityProviders.google.clientSecret,
+        clientSecretValue: cdk.SecretValue.unsafePlainText(identityProviders.google.clientSecret),
         scopes: ['email', 'profile'],
         attributeMapping: {
           email: cognito.ProviderAttribute.GOOGLE_EMAIL,

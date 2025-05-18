@@ -8,6 +8,6 @@
     "deploy": "cdk deploy",
     "destroy": "cdk destroy",
     "synth": "cdk synth",
-    "bootstrap": "cdk bootstrap --qualifier finefinds"
+    "bootstrap": "cdk bootstrap --qualifier ffddev"
   }
 }

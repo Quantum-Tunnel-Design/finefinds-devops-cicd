@@ -209,7 +209,7 @@ export class S3Construct extends Construct {
     // Create CloudFront distribution
     this.distribution = new cloudfront.Distribution(this, 'MediaDistribution', {
       defaultBehavior: {
-        origin: new origins.S3Origin(this.mediaBucket),
+        origin: new origins.HttpOrigin(`${this.mediaBucket.bucketName}.s3.amazonaws.com`),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
         cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
