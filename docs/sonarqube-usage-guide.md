@@ -33,9 +33,9 @@ name: SonarQube Scan
 
 on:
   push:
-    branches: [ main, dev, staging, qa ]
+    branches: [ main, dev, uat, qa ]
   pull_request:
-    branches: [ main, dev, staging, qa ]
+    branches: [ main, dev, uat, qa ]
 
 jobs:
   sonarqube-scan:
@@ -99,7 +99,7 @@ Adjust the configuration based on your project's language and structure.
 
 ## Branch-Based Scanning
 
-The workflow is configured to scan different branches (main, dev, staging, qa), which will allow you to:
+The workflow is configured to scan different branches (main, dev, uat, qa), which will allow you to:
 
 1. Track code quality across different environments
 2. Compare quality between branches

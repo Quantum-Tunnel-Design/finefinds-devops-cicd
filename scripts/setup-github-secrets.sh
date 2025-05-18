@@ -45,7 +45,7 @@ set_environment_secrets() {
 # Create environments if they don't exist
 echo "Creating environments..."
 gh api repos/:owner/:repo/environments -f name="prod" || true
-gh api repos/:owner/:repo/environments -f name="staging" || true
+gh api repos/:owner/:repo/environments -f name="uat" || true
 gh api repos/:owner/:repo/environments -f name="dev" || true
 gh api repos/:owner/:repo/environments -f name="qa" || true
 gh api repos/:owner/:repo/environments -f name="sandbox" || true
@@ -53,7 +53,7 @@ gh api repos/:owner/:repo/environments -f name="sandbox" || true
 # Set secrets for each environment
 # echo "Setting up secrets for each environment..."
 # set_environment_secrets "prod"
-# set_environment_secrets "staging"
+# set_environment_secrets "uat"
 # set_environment_secrets "dev"
 # set_environment_secrets "qa"
 # set_environment_secrets "sandbox"

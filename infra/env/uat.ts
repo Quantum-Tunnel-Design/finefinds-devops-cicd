@@ -1,7 +1,7 @@
 import { BaseConfig } from './base-config';
 
 export const stagingConfig: BaseConfig = {
-  environment: 'staging',
+  environment: 'uat',
   region: 'us-east-1',
   vpc: {
     cidr: '10.1.0.0/16',
@@ -22,7 +22,7 @@ export const stagingConfig: BaseConfig = {
     healthCheckUnhealthyThresholdCount: 3,
   },
   ecr: {
-    repositoryName: 'finefinds-staging',
+    repositoryName: 'finefinds-uat',
   },
   monitoring: {
     alarmEmail: 'devops@finefindslk.com',
@@ -42,7 +42,7 @@ export const stagingConfig: BaseConfig = {
   },
   cognito: {
     clientUsers: {
-      userPoolName: 'finefinds-staging-client-users',
+      userPoolName: 'finefinds-uat-client-users',
       selfSignUpEnabled: true,
       passwordPolicy: {
         minLength: 8,
@@ -71,7 +71,7 @@ export const stagingConfig: BaseConfig = {
       },
     },
     adminUsers: {
-      userPoolName: 'finefinds-staging-admin-users',
+      userPoolName: 'finefinds-uat-admin-users',
       selfSignUpEnabled: false,
       passwordPolicy: {
         minLength: 12,
@@ -122,7 +122,7 @@ export const stagingConfig: BaseConfig = {
     yearlyRetention: 2,
   },
   tags: {
-    Environment: 'staging',
+    Environment: 'uat',
     Project: 'FineFinds',
     ManagedBy: 'CDK',
   },
@@ -135,7 +135,7 @@ export const stagingConfig: BaseConfig = {
     username: 'noreply@finefindslk.com',
   },
   opensearch: {
-    endpoint: 'https://search-finefinds-staging-xxxxx.us-east-1.es.amazonaws.com',
+    endpoint: 'https://search-finefinds-uat-xxxxx.us-east-1.es.amazonaws.com',
   },
   redis: {
     nodeType: 'cache.t3.medium',
@@ -149,28 +149,28 @@ export const stagingConfig: BaseConfig = {
     clientWebApp: {
       repository: 'finefinds-client-web',
       owner: 'amalgamage',
-      branch: 'staging',
+      branch: 'uat',
       buildSettings: {
         buildCommand: 'npm run build',
         startCommand: 'npm start',
         environmentVariables: {
-          REACT_APP_API_URL: 'https://api-staging.finefindslk.com',
-          REACT_APP_ENV: 'staging',
-          NEXT_PUBLIC_ENV: 'staging',
+          REACT_APP_API_URL: 'https://api-uat.finefindslk.com',
+          REACT_APP_ENV: 'uat',
+          NEXT_PUBLIC_ENV: 'uat',
         },
       },
     },
     adminApp: {
       repository: 'finefinds-admin',
       owner: 'amalgamage',
-      branch: 'staging',
+      branch: 'uat',
       buildSettings: {
         buildCommand: 'npm run build',
         startCommand: 'npm start',
         environmentVariables: {
-          REACT_APP_API_URL: 'https://api-staging.finefindslk.com',
-          REACT_APP_ENV: 'staging',
-          NEXT_PUBLIC_ENV: 'staging',
+          REACT_APP_API_URL: 'https://api-uat.finefindslk.com',
+          REACT_APP_ENV: 'uat',
+          NEXT_PUBLIC_ENV: 'uat',
         },
       },
     },

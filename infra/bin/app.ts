@@ -4,7 +4,7 @@ import * as cdk from 'aws-cdk-lib';
 import { FineFindsStack } from '../lib/finefinds-stack';
 import { FineFindsSonarQubeStack } from '../lib/sonarqube-stack';
 import { devConfig } from '../env/dev';
-import { stagingConfig } from '../env/staging';
+import { stagingConfig } from '../env/uat';
 import { qaConfig } from '../env/qa';
 import { prodConfig } from '../env/prod';
 
@@ -12,7 +12,7 @@ const app = new cdk.App();
 
 // Create custom synthesizer with our qualifier
 const customSynthesizer = new cdk.DefaultStackSynthesizer({
-  qualifier: 'ffddev',
+  qualifier: app.node.tryGetContext('qualifier') || 'ffddev',
 });
 
 // Check if SonarQube should be included
@@ -46,7 +46,7 @@ if (includeSonarQube) {
     case 'prod':
       config = prodConfig;
       break;
-    case 'staging':
+    case 'uat':
       config = stagingConfig;
       break;
     case 'qa':

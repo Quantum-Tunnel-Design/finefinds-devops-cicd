@@ -2,7 +2,7 @@ name: CDK Deploy v2
 
 on:
   push:
-    branches: [main, qa, staging, dev]
+    branches: [main, qa, uat, dev]
 
 permissions:
   id-token: write
@@ -35,16 +35,21 @@ jobs:
     environment: >-
       ${{ 
         github.ref == 'refs/heads/main' && 'prod' || 
-        github.ref == 'refs/heads/staging' && 'staging' || 
+        github.ref == 'refs/heads/uat' && 'uat' || 
         github.ref == 'refs/heads/qa' && 'qa' || 
         'dev' 
       }}
     permissions:
       id-token: write
       contents: read
-
     env:
-      QUALIFIER: ffddev
+      QUALIFIER: >-
+        ${{ 
+          github.ref == 'refs/heads/main' && 'ffprod' || 
+          github.ref == 'refs/heads/uat' && 'ffuat' || 
+          github.ref == 'refs/heads/qa' && 'ffqa' || 
+          'ffdev'
+        }}
       AWS_REGION: us-east-1
       CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
       CDK_DEFAULT_REGION: us-east-1
@@ -52,7 +57,7 @@ jobs:
       CDK_ENV: >-
         ${{ 
           github.ref == 'refs/heads/main' && 'prod' || 
-          github.ref == 'refs/heads/staging' && 'staging' || 
+          github.ref == 'refs/heads/uat' && 'uat' || 
           github.ref == 'refs/heads/qa' && 'qa' || 
           'dev' 
         }}
@@ -122,44 +127,25 @@ jobs:
           rm -f .cdk.context.json || true
           npx cdk context --clear
   
-      - name: Verify CDK Qualifier
-        run: |
-          cd infra
-          echo "Verifying CDK qualifier configuration..."
-          
-          # Check qualifier in cdk.json
-          if ! grep -q '"aws-cdk:qualifier": "ffddev"' cdk.json; then
-            echo "::error::Qualifier 'ffddev' not found in cdk.json under context. Please add it."
-            exit 1
-          fi
-          
-          # Check qualifier in environment
-          if [ "$QUALIFIER" != "ffddev" ]; then
-            echo "::error::Environment variable QUALIFIER ($QUALIFIER) does not match expected value 'ffddev'"
-            exit 1
-          fi
-          
-          echo "✅ CDK qualifier verification passed: using 'ffddev'"
-  
       - name: CDK Bootstrap (Initial Setup)
         if: github.event_name == 'push'
         run: |
           cd infra
           echo "Bootstrapping CDK for environment: ${{ env.CDK_ENV }}"
           # First, ensure we're using the custom qualifier for all operations
-          export CDK_QUALIFIER=ffddev
+          export CDK_QUALIFIER=${{ env.QUALIFIER }}
           
           # Bootstrap with explicit lookup role creation
           npx cdk bootstrap aws://${{ secrets.AWS_ACCOUNT_ID }}/${{ env.CDK_DEFAULT_REGION }} \
-            --qualifier ffddev \
+            --qualifier ${{ env.QUALIFIER }} \
             --context environment=${{ env.CDK_ENV }} \
-            --context aws-cdk:qualifier=ffddev \
-            --context aws-cdk:lookup-role-name=cdk-ffddev-lookup-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
-            --context aws-cdk:deploy-role-name=cdk-ffddev-deploy-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
-            --context aws-cdk:file-asset-role-name=cdk-ffddev-file-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
-            --context aws-cdk:image-asset-role-name=cdk-ffddev-image-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
-            --context aws-cdk:image-asset-publishing-role-name=cdk-ffddev-image-publishing-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
-            --context aws-cdk:asset-publishing-role-name=cdk-ffddev-publishing-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --context aws-cdk:qualifier=${{ env.QUALIFIER }} \
+            --context aws-cdk:lookup-role-name=cdk-${{ env.QUALIFIER }}-lookup-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --context aws-cdk:deploy-role-name=cdk-${{ env.QUALIFIER }}-deploy-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --context aws-cdk:file-asset-role-name=cdk-${{ env.QUALIFIER }}-file-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --context aws-cdk:image-asset-role-name=cdk-${{ env.QUALIFIER }}-image-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --context aws-cdk:image-asset-publishing-role-name=cdk-${{ env.QUALIFIER }}-image-publishing-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --context aws-cdk:asset-publishing-role-name=cdk-${{ env.QUALIFIER }}-publishing-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
             --require-approval never
       
       - name: Bootstrap Secrets
@@ -168,28 +154,28 @@ jobs:
           cd infra
           echo "Bootstrapping secrets for new environment: ${{ env.CDK_ENV }}"
           npx cdk --app 'npx ts-node --prefer-ts-exts bin/bootstrap-secrets.ts' deploy \
-            --qualifier ffddev \
+            --qualifier ${{ env.QUALIFIER }} \
             --context environment=${{ env.CDK_ENV }} \
-            --context aws-cdk:qualifier=ffddev \
-            --context aws-cdk:lookup-role-name=cdk-ffddev-lookup-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
-            --context aws-cdk:deploy-role-name=cdk-ffddev-deploy-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
-            --context aws-cdk:file-asset-role-name=cdk-ffddev-file-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
-            --context aws-cdk:image-asset-role-name=cdk-ffddev-image-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
-            --context aws-cdk:image-asset-publishing-role-name=cdk-ffddev-image-publishing-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
-            --context aws-cdk:asset-publishing-role-name=cdk-ffddev-publishing-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --context aws-cdk:qualifier=${{ env.QUALIFIER }} \
+            --context aws-cdk:lookup-role-name=cdk-${{ env.QUALIFIER }}-lookup-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --context aws-cdk:deploy-role-name=cdk-${{ env.QUALIFIER }}-deploy-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --context aws-cdk:file-asset-role-name=cdk-${{ env.QUALIFIER }}-file-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --context aws-cdk:image-asset-role-name=cdk-${{ env.QUALIFIER }}-image-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --context aws-cdk:image-asset-publishing-role-name=cdk-${{ env.QUALIFIER }}-image-publishing-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --context aws-cdk:asset-publishing-role-name=cdk-${{ env.QUALIFIER }}-publishing-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
             --require-approval never
         
       - name: CDK Diff
         if: github.event_name == 'pull_request'
         run: |
           cd infra
-          npm run cdk diff -- FineFinds-${{ env.CDK_ENV }} --context env=${{ env.CDK_ENV }} --context aws-cdk:qualifier=ffddev
+          npm run cdk diff -- FineFinds-${{ env.CDK_ENV }} --context env=${{ env.CDK_ENV }} --context aws-cdk:qualifier=${{ env.QUALIFIER }}
 
       - name: CDK Deploy
         if: github.event_name == 'push' 
         run: |
           cd infra
-          npm run cdk deploy -- FineFinds-${{ env.CDK_ENV }} --context env=${{ env.CDK_ENV }} --context aws-cdk:qualifier=ffddev --require-approval never
+          npm run cdk deploy -- FineFinds-${{ env.CDK_ENV }} --context env=${{ env.CDK_ENV }} --context aws-cdk:qualifier=${{ env.QUALIFIER }} --require-approval never
         env:
           CDK_DEPLOY_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
           CDK_DEPLOY_REGION: ${{ secrets.AWS_REGION }}

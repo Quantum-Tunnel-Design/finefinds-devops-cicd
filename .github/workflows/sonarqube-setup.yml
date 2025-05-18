@@ -20,7 +20,7 @@ on:
           - main
           - dev
           - qa
-          - staging
+          - uat
       force_cleanup:
         description: 'Force cleanup of existing resources before deployment'
         required: false

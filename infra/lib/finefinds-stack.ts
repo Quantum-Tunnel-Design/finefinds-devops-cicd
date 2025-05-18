@@ -397,7 +397,7 @@ export class FineFindsStack extends cdk.Stack {
     }
 
     // Create DynamoDB tables if needed
-    if (props.config.environment === 'prod' || props.config.environment === 'staging') {
+    if (props.config.environment === 'prod' || props.config.environment === 'uat') {
       const dynamodb = new DynamoDBConstruct(this, 'DynamoDB', {
         environment: props.config.environment,
         config: props.config,

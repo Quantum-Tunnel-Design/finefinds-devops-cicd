@@ -7,12 +7,12 @@ if ! command -v gh &> /dev/null; then
 fi
 
 # Define environment mapping using indexed arrays
-BRANCHES=("main" "dev" "qa" "staging" "sandbox")
-ENVIRONMENTS=("prod" "dev" "qa" "staging" "sandbox")
+BRANCHES=("main" "dev" "qa" "uat" "sandbox")
+ENVIRONMENTS=("prod" "dev" "qa" "uat" "sandbox")
 
 # Function to validate environment names
 validate_environments() {
-    local valid_envs=("main" "dev" "qa" "staging" "sandbox")
+    local valid_envs=("main" "dev" "qa" "uat" "sandbox")
     for i in "${!BRANCHES[@]}"; do
         if [[ ! " ${valid_envs[@]} " =~ " ${BRANCHES[$i]} " ]]; then
             echo "Error: Invalid branch name: ${BRANCHES[$i]}"
@@ -48,7 +48,7 @@ validate_environments
 setup_environment_protection "main" "prod" 30 2
 
 # Staging
-setup_environment_protection "staging" "staging" 15 1
+setup_environment_protection "uat" "uat" 15 1
 
 # Development
 setup_environment_protection "dev" "dev" 0 0

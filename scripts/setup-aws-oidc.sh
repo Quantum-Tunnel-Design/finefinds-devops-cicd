@@ -9,13 +9,13 @@ OIDC_ARN="arn:aws:iam::$ACCOUNT_ID:oidc-provider/token.actions.githubusercontent
 
 # Define repositories and their environments
 REPOS=(
-    # "finefinds-services:Backend Service:services"
-    # "finefinds-client-web-app:Client Web App:client"
-    # "finefinds-admin:Admin App:admin"
+    "finefinds-services:Backend Service:services"
+    "finefinds-client-web-app:Client Web App:client"
+    "finefinds-admin:Admin App:admin"
     "finefinds-devops-cicd:DevOps Project:devops"
 )
 
-ENVIRONMENTS=("dev" "qa" "staging" "prod" "sandbox")
+ENVIRONMENTS=("dev" "qa" "uat" "prod")
 
 # Function to create trust policy for a repo and environment
 create_trust_policy() {
@@ -137,7 +137,7 @@ create_role_policy() {
             "Resource": [
                 "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/${repo}-${env}",
                 "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/${repo}-${env}/*",
-                "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/cdk-ffddev-container-assets-*-*"
+                "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/cdk-ff${env}-container-assets-*-*"
             ]
         },
         {
@@ -333,8 +333,8 @@ create_role_policy() {
                 "s3:PutBucketPublicAccessBlock"
             ],
             "Resource": [
-                "arn:aws:s3:::cdk-ffddev-assets-*-*",
-                "arn:aws:s3:::cdk-ffddev-assets-*-*/*"
+                "arn:aws:s3:::cdk-ff${env}-assets-*-*",
+                "arn:aws:s3:::cdk-ff${env}-assets-*-*/*"
             ]
         }
     ]
