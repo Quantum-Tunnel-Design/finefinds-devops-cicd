@@ -1,8 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import * as lambda from 'aws-cdk-lib/aws-lambda';
-import * as cr from 'aws-cdk-lib/custom-resources';
 import { Construct } from 'constructs';
 import { BaseConfig } from '../../env/base-config';
 
@@ -29,17 +27,9 @@ export class CognitoConstruct extends Construct {
   public readonly adminUserPool: cognito.UserPool;
   public readonly clientUserPoolClient: cognito.UserPoolClient;
   public readonly adminUserPoolClient: cognito.UserPoolClient;
-  private readonly awsSdkLayer: lambda.LayerVersion;
 
   constructor(scope: Construct, id: string, props: CognitoConstructProps) {
     super(scope, id);
-
-    // Create Lambda layer with aws-sdk
-    this.awsSdkLayer = new lambda.LayerVersion(this, 'AwsSdkLayer', {
-      code: lambda.Code.fromAsset('../../lambda/layers/aws-sdk'),
-      compatibleRuntimes: [lambda.Runtime.NODEJS_18_X],
-      description: 'Layer containing aws-sdk for Cognito user group handlers',
-    });
 
     // Create user pools
     this.clientUserPool = this.createUserPool('Client', props.config.cognito.clientUsers, props.environment);
