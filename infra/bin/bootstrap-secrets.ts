@@ -99,7 +99,10 @@ class SecretsBootstrapStack extends cdk.Stack {
 
 // Create app and instantiate stack
 const app = new cdk.App();
-new SecretsBootstrapStack(app, 'FineFinds-Secrets-Bootstrap', {
+// Get environment from context or default to dev
+const environment = app.node.tryGetContext('env') || 'dev';
+
+new SecretsBootstrapStack(app, `FineFinds-Secrets-Bootstrap-${environment}`, {
   env: {
     account: process.env.CDK_DEFAULT_ACCOUNT,
     region: process.env.CDK_DEFAULT_REGION
