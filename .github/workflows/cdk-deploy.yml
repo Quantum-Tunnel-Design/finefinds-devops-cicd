@@ -119,7 +119,7 @@ jobs:
         run: |
           cd infra
           echo "This appears to be a new environment. Bootstrapping secrets first..."
-          npm run bootstrap-secrets -- deploy --qualifier ffddev --context environment=${{ env.CDK_ENV }}
+          npx cdk --app 'npx ts-node --prefer-ts-exts bin/bootstrap-secrets.ts' deploy --qualifier ffddev --context environment=${{ env.CDK_ENV }}
       
       - name: CDK Diff
         if: github.event_name == 'pull_request'
