@@ -71,7 +71,16 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20'
+          node-version: '18'
+
+      
+      - name: Install CDK CLI
+        run: |
+          npm install -g aws-cdk@latest
+  
+      - name: Verify CDK Version
+        run: |
+          cdk --version 
 
       - name: Install Dependencies
         run: |
@@ -213,4 +222,4 @@ jobs:
               ]
             }
         env:
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }} 
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
