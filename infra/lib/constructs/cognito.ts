@@ -16,9 +16,17 @@ export class CognitoConstruct extends Construct {
   public readonly adminUserPool: cognito.UserPool;
   public readonly clientUserPoolClient: cognito.UserPoolClient;
   public readonly adminUserPoolClient: cognito.UserPoolClient;
+  private readonly awsSdkLayer: lambda.LayerVersion;
 
   constructor(scope: Construct, id: string, props: CognitoConstructProps) {
     super(scope, id);
+
+    // Create Lambda layer with aws-sdk
+    this.awsSdkLayer = new lambda.LayerVersion(this, 'AwsSdkLayer', {
+      code: lambda.Code.fromAsset('../lambda/layers/aws-sdk'),
+      compatibleRuntimes: [lambda.Runtime.NODEJS_18_X],
+      description: 'Layer containing aws-sdk for Cognito user group handlers',
+    });
 
     // Create client user pool
     this.clientUserPool = new cognito.UserPool(this, 'ClientUserPool', {
@@ -176,41 +184,13 @@ export class CognitoConstruct extends Construct {
           onEventHandler: new lambda.Function(this, `ClientUserGroupHandler-${key}`, {
             runtime: lambda.Runtime.NODEJS_18_X,
             handler: 'index.handler',
-            code: lambda.Code.fromInline(`
-              const AWS = require('aws-sdk');
-              const cognito = new AWS.CognitoIdentityServiceProvider();
-              
-              exports.handler = async (event) => {
-                if (event.RequestType === 'Delete') {
-                  return;
-                }
-                
-                const params = {
-                  UserPoolId: '${this.clientUserPool.userPoolId}',
-                  GroupName: '${group.name}',
-                  Description: '${group.description}'
-                };
-                
-                try {
-                  await cognito.getGroup(params).promise();
-                  console.log('Group already exists');
-                } catch (error) {
-                  if (error.code === 'ResourceNotFoundException') {
-                    await cognito.createGroup(params).promise();
-                    console.log('Group created');
-                  } else {
-                    throw error;
-                  }
-                }
-                
-                return {
-                  PhysicalResourceId: '${group.name}',
-                  Data: {
-                    GroupName: '${group.name}'
-                  }
-                };
-              }
-            `),
+            code: lambda.Code.fromAsset('../lambda/cognito-user-groups'),
+            layers: [this.awsSdkLayer],
+            environment: {
+              USER_POOL_ID: this.clientUserPool.userPoolId,
+              GROUP_NAME: group.name,
+              GROUP_DESCRIPTION: group.description,
+            },
             timeout: cdk.Duration.seconds(30),
           }),
         }).serviceToken,
@@ -230,41 +210,13 @@ export class CognitoConstruct extends Construct {
           onEventHandler: new lambda.Function(this, `AdminUserGroupHandler-${key}`, {
             runtime: lambda.Runtime.NODEJS_18_X,
             handler: 'index.handler',
-            code: lambda.Code.fromInline(`
-              const AWS = require('aws-sdk');
-              const cognito = new AWS.CognitoIdentityServiceProvider();
-              
-              exports.handler = async (event) => {
-                if (event.RequestType === 'Delete') {
-                  return;
-                }
-                
-                const params = {
-                  UserPoolId: '${this.adminUserPool.userPoolId}',
-                  GroupName: '${group.name}',
-                  Description: '${group.description}'
-                };
-                
-                try {
-                  await cognito.getGroup(params).promise();
-                  console.log('Group already exists');
-                } catch (error) {
-                  if (error.code === 'ResourceNotFoundException') {
-                    await cognito.createGroup(params).promise();
-                    console.log('Group created');
-                  } else {
-                    throw error;
-                  }
-                }
-                
-                return {
-                  PhysicalResourceId: '${group.name}',
-                  Data: {
-                    GroupName: '${group.name}'
-                  }
-                };
-              }
-            `),
+            code: lambda.Code.fromAsset('../lambda/cognito-user-groups'),
+            layers: [this.awsSdkLayer],
+            environment: {
+              USER_POOL_ID: this.adminUserPool.userPoolId,
+              GROUP_NAME: group.name,
+              GROUP_DESCRIPTION: group.description,
+            },
             timeout: cdk.Duration.seconds(30),
           }),
         }).serviceToken,
