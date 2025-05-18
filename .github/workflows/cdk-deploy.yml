@@ -106,19 +106,20 @@ jobs:
             echo "IS_NEW_ENVIRONMENT=false" >> $GITHUB_ENV
           fi
 
-      - name: CDK Bootstrap
+      - name: CDK Bootstrap (Initial Setup)
         if: github.event_name == 'push'
         run: |
           cd infra
-          npm run cdk bootstrap -- --qualifier ffddev --context environment=${{ env.CDK_ENV }} aws://${{ secrets.AWS_ACCOUNT_ID }}/${{ secrets.AWS_REGION }}
+          echo "Bootstrapping CDK for environment: ${{ env.CDK_ENV }}"
+          npx cdk bootstrap aws://${{ secrets.AWS_ACCOUNT_ID }}/${{ env.CDK_DEFAULT_REGION }} --qualifier ffddev --context environment=${{ env.CDK_ENV }}
       
       - name: Bootstrap Secrets
         if: github.event_name == 'push' && env.IS_NEW_ENVIRONMENT == 'true'
         run: |
           cd infra
-          echo "This appears to be a new environment. Bootstrapping secrets first..."
+          echo "Bootstrapping secrets for new environment: ${{ env.CDK_ENV }}"
           npx cdk --app 'npx ts-node --prefer-ts-exts bin/bootstrap-secrets.ts' deploy --qualifier ffddev --context environment=${{ env.CDK_ENV }}
-      
+        
       - name: CDK Diff
         if: github.event_name == 'pull_request'
         run: |
