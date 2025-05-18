@@ -1,4 +1,4 @@
-name: CDK Deploy
+name: CDK Deploy v2
 
 on:
   push:
@@ -122,7 +122,6 @@ jobs:
             exit 1
           fi
   
-
       - name: CDK Bootstrap (Initial Setup)
         if: github.event_name == 'push'
         run: |

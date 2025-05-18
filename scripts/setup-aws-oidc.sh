@@ -365,7 +365,7 @@ echo "Cleaning up existing roles and OIDC provider..."
 aws iam delete-open-id-connect-provider --open-id-connect-provider-arn $OIDC_ARN || true
 
 # Delete existing roles
-for role in $(aws iam list-roles --query "Roles[?starts_with(RoleName, 'github-actions-')].RoleName" --output text); do
+for role in $(aws iam list-roles --query "Roles[?starts_with(RoleName, 'github-actions-devops-')].RoleName" --output text); do
     echo "Processing role: $role"
     # Detach managed policies
     for policy_arn in $(aws iam list-attached-role-policies --role-name $role --query "AttachedPolicies[].PolicyArn" --output text); do
