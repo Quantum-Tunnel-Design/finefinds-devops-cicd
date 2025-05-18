@@ -347,7 +347,6 @@ create_role_policy() {
             ],
             "Resource": [
                 "arn:aws:iam::${ACCOUNT_ID}:role/cdk-*",
-                "arn:aws:iam::${ACCOUNT_ID}:role/cdk-hnb659fds-*"
             ]
         }
     ]
