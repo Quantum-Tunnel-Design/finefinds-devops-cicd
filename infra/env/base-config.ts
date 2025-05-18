@@ -1,10 +1,9 @@
 export interface BaseConfig {
   environment: string;
-  enableDynamoDB?: boolean;
   vpc: {
+    cidr: string;
     maxAzs: number;
     natGateways: number;
-    cidr: string;
   };
   ecs: {
     containerPort: number;
@@ -45,19 +44,7 @@ export interface BaseConfig {
         requireSymbols: boolean;
       };
       userGroups: {
-        parents: {
-          name: string;
-          description: string;
-        };
-        students: {
-          name: string;
-          description: string;
-        };
-        vendors: {
-          name: string;
-          description: string;
-        };
-        guests: {
+        [key: string]: {
           name: string;
           description: string;
         };
@@ -74,34 +61,13 @@ export interface BaseConfig {
         requireSymbols: boolean;
       };
       userGroups: {
-        superAdmins: {
-          name: string;
-          description: string;
-        };
-        admins: {
-          name: string;
-          description: string;
-        };
-        support: {
+        [key: string]: {
           name: string;
           description: string;
         };
       };
     };
-    identityProviders: {
-      google?: {
-        clientId: string;
-        clientSecret: string;
-      };
-      facebook?: {
-        clientId: string;
-        clientSecret: string;
-      };
-      amazon?: {
-        clientId: string;
-        clientSecret: string;
-      };
-    };
+    identityProviders: Record<string, any>;
   };
   waf: {
     rateLimit: number;
@@ -113,16 +79,6 @@ export interface BaseConfig {
     weeklyRetention: number;
     monthlyRetention: number;
     yearlyRetention: number;
-  };
-  dns: {
-    domainName: string;
-    hostedZoneId: string;
-    certificateValidation: boolean;
-    subdomains: {
-      client: string;
-      admin: string;
-      api: string;
-    };
   };
   tags: {
     [key: string]: string;

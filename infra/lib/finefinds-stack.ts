@@ -7,7 +7,6 @@ import { EcsConstruct } from './constructs/ecs';
 import { IamConstruct } from './constructs/iam';
 import { CognitoConstruct } from './constructs/cognito';
 import { MonitoringConstruct } from './constructs/monitoring';
-import { DnsConstruct } from './constructs/dns';
 import { BackupConstruct } from './constructs/backup';
 import { WafConstruct } from './constructs/waf';
 import { CloudFrontConstruct } from './constructs/cloudfront';
@@ -350,12 +349,34 @@ export class FineFindsStack extends cdk.Stack {
       alarmTopic,
     });
 
-    // Create DNS Resources
-    const dns = new DnsConstruct(this, 'Dns', {
+    // Create CloudFront Resources
+    const cloudfront = new CloudFrontConstruct(this, 'CloudFront', {
       environment: props.config.environment,
       config: props.config,
       loadBalancer: ecs.loadBalancer,
-      domainName: props.config.dns.domainName,
+      uploadsBucket: new cdk.aws_s3.Bucket(this, 'UploadsBucket', {
+        bucketName: `finefinds-${props.config.environment}-uploads`,
+        versioned: props.config.s3.versioned,
+        encryption: cdk.aws_s3.BucketEncryption.S3_MANAGED,
+        blockPublicAccess: cdk.aws_s3.BlockPublicAccess.BLOCK_ALL,
+        removalPolicy: props.config.environment === 'prod' 
+          ? cdk.RemovalPolicy.RETAIN 
+          : cdk.RemovalPolicy.DESTROY,
+      }),
+    });
+
+    // Output CloudFront distribution domain name for manual DNS configuration in Dreamhost
+    new cdk.CfnOutput(this, 'CloudFrontDomainName', {
+      value: cloudfront.distribution.distributionDomainName,
+      description: 'CloudFront distribution domain name for Dreamhost DNS configuration',
+      exportName: `finefinds-${props.config.environment}-cf-domain-name`,
+    });
+
+    // Output load balancer DNS name for manual DNS configuration in Dreamhost
+    new cdk.CfnOutput(this, 'LoadBalancerDnsName', {
+      value: ecs.loadBalancer.loadBalancerDnsName,
+      description: 'Load Balancer DNS name for Dreamhost DNS configuration',
+      exportName: `finefinds-${props.config.environment}-lb-dns-name`,
     });
 
     // Create Backup Resources (only for production)
@@ -375,26 +396,8 @@ export class FineFindsStack extends cdk.Stack {
       });
     }
 
-    // Create CloudFront Resources
-    const cloudfront = new CloudFrontConstruct(this, 'CloudFront', {
-      environment: props.config.environment,
-      config: props.config,
-      loadBalancer: ecs.loadBalancer,
-      uploadsBucket: new cdk.aws_s3.Bucket(this, 'UploadsBucket', {
-        bucketName: `finefinds-${props.config.environment}-uploads`,
-        versioned: props.config.s3.versioned,
-        encryption: cdk.aws_s3.BucketEncryption.S3_MANAGED,
-        blockPublicAccess: cdk.aws_s3.BlockPublicAccess.BLOCK_ALL,
-        removalPolicy: props.config.environment === 'prod' 
-          ? cdk.RemovalPolicy.RETAIN 
-          : cdk.RemovalPolicy.DESTROY,
-      }),
-    });
-    
     // Create DynamoDB tables if needed
-    // Note: Only include this if your application requires DynamoDB
-    // This is optimized for cost in non-production environments
-    if (props.config.enableDynamoDB ?? false) {
+    if (props.config.environment === 'prod' || props.config.environment === 'staging') {
       const dynamodb = new DynamoDBConstruct(this, 'DynamoDB', {
         environment: props.config.environment,
         config: props.config,

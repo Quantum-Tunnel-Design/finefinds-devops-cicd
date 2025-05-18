@@ -2,20 +2,10 @@ import { BaseConfig } from './base-config';
 
 export const stagingConfig: BaseConfig = {
   environment: 'staging',
-  dns: {
-    domainName: 'finefindslk.com',
-    hostedZoneId: 'Z1234567890',
-    certificateValidation: true,
-    subdomains: {
-      client: 'staging-app.finefindslk.com',
-      admin: 'staging-admin.finefindslk.com',
-      api: 'staging-api.finefindslk.com'
-    }
-  },
   vpc: {
+    cidr: '10.1.0.0/16',
     maxAzs: 2,
     natGateways: 1,
-    cidr: '10.1.0.0/16',
   },
   ecs: {
     containerPort: 3000,
@@ -26,7 +16,23 @@ export const stagingConfig: BaseConfig = {
     maxCapacity: 4,
   },
   ecr: {
-    repositoryName: 'finefinds-client-web-app-staging',
+    repositoryName: 'finefinds-staging',
+  },
+  monitoring: {
+    alarmEmail: 'devops@finefinds.com',
+    slackChannel: '#devops-alerts',
+  },
+  s3: {
+    versioned: true,
+    lifecycleRules: true,
+  },
+  rds: {
+    instanceType: 'db.t3.medium',
+    instanceClass: 'db.t3',
+    instanceSize: 'medium',
+    multiAz: true,
+    backupRetentionDays: 21,
+    performanceInsights: true,
   },
   cognito: {
     clientUsers: {
@@ -40,21 +46,13 @@ export const stagingConfig: BaseConfig = {
         requireSymbols: true,
       },
       userGroups: {
-        parents: {
-          name: 'Parents',
-          description: 'Parent users',
+        users: {
+          name: 'Users',
+          description: 'Regular users of the FineFinds platform',
         },
-        students: {
-          name: 'Students',
-          description: 'Student users',
-        },
-        vendors: {
-          name: 'Vendors',
-          description: 'Vendor users',
-        },
-        guests: {
-          name: 'Guests',
-          description: 'Guest users',
+        premiumUsers: {
+          name: 'PremiumUsers',
+          description: 'Premium users with enhanced features',
         },
       },
     },
@@ -69,45 +67,17 @@ export const stagingConfig: BaseConfig = {
         requireSymbols: true,
       },
       userGroups: {
-        superAdmins: {
-          name: 'SuperAdmins',
-          description: 'Super administrator users',
-        },
         admins: {
           name: 'Admins',
-          description: 'Administrator users',
+          description: 'Administrators with full access',
         },
         support: {
           name: 'Support',
-          description: 'Support team users',
+          description: 'Support team members',
         },
       },
     },
     identityProviders: {},
-  },
-  monitoring: {
-    alarmEmail: 'staging-alerts@finefinds.com',
-    slackChannel: '#staging-alerts',
-  },
-  s3: {
-    versioned: true,
-    lifecycleRules: true,
-  },
-  redis: {
-    nodeType: 'cache.t3.medium',
-    numNodes: 2,
-    engineVersion: '7.0',
-    snapshotRetentionLimit: 5,
-    snapshotWindow: '03:00-04:00',
-    maintenanceWindow: 'sun:04:00-sun:05:00',
-  },
-  rds: {
-    instanceType: 'db.t3.medium',
-    instanceClass: 'db.t3',
-    instanceSize: 'medium',
-    multiAz: true,
-    backupRetentionDays: 21,
-    performanceInsights: true,
   },
   waf: {
     rateLimit: 4000,
@@ -115,51 +85,59 @@ export const stagingConfig: BaseConfig = {
     enableRateLimit: true,
   },
   backup: {
-    dailyRetention: 21,
-    weeklyRetention: 10,
-    monthlyRetention: 8,
-    yearlyRetention: 3,
-  },
-  cloudfront: {
-    allowedCountries: ['US', 'CA'],
-  },
-  smtp: {
-    host: 'email-smtp.us-east-1.amazonaws.com',
-    port: 587,
-    username: 'AKIAXXXXXXXXXXXXXXXX',
-  },
-  opensearch: {
-    endpoint: 'https://search-finefinds-staging-xxxxxxxxxxxx.us-east-1.es.amazonaws.com',
+    dailyRetention: 14,
+    weeklyRetention: 8,
+    monthlyRetention: 6,
+    yearlyRetention: 2,
   },
   tags: {
     Environment: 'staging',
     Project: 'FineFinds',
     ManagedBy: 'CDK',
   },
+  cloudfront: {
+    allowedCountries: ['US', 'CA'],
+  },
+  smtp: {
+    host: 'smtp.gmail.com',
+    port: 587,
+    username: 'noreply@finefinds.com',
+  },
+  opensearch: {
+    endpoint: 'https://search-finefinds-staging-xxxxx.us-east-1.es.amazonaws.com',
+  },
+  redis: {
+    nodeType: 'cache.t3.medium',
+    numNodes: 2,
+    engineVersion: '7.0',
+    snapshotRetentionLimit: 3,
+    snapshotWindow: '03:00-04:00',
+    maintenanceWindow: 'sun:04:00-sun:05:00',
+  },
   amplify: {
     clientWebApp: {
-      repository: 'finefinds-client-web-app',
-      owner: 'Quantum-Tunnel-Design',
+      repository: 'finefinds-client-web',
+      owner: 'amalgamage',
       branch: 'staging',
       buildSettings: {
-        buildCommand: 'pnpm build',
-        startCommand: 'pnpm start',
+        buildCommand: 'npm run build',
+        startCommand: 'npm start',
         environmentVariables: {
-          NEXT_PUBLIC_API_URL: 'https://staging-api.finefindslk.com',
-          NODE_ENV: 'staging',
+          REACT_APP_API_URL: 'https://api.staging.finefinds.com',
+          REACT_APP_ENV: 'staging',
         },
       },
     },
     adminApp: {
       repository: 'finefinds-admin',
-      owner: 'Quantum-Tunnel-Design',
+      owner: 'amalgamage',
       branch: 'staging',
       buildSettings: {
-        buildCommand: 'pnpm build',
-        startCommand: 'pnpm start',
+        buildCommand: 'npm run build',
+        startCommand: 'npm start',
         environmentVariables: {
-          NEXT_PUBLIC_API_URL: 'https://staging-api.finefindslk.com',
-          NODE_ENV: 'staging',
+          REACT_APP_API_URL: 'https://api.staging.finefinds.com',
+          REACT_APP_ENV: 'staging',
         },
       },
     },

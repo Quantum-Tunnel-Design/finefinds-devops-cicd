@@ -2,20 +2,10 @@ import { BaseConfig } from './base-config';
 
 export const devConfig: BaseConfig = {
   environment: 'dev',
-  dns: {
-    domainName: 'finefindslk.com',
-    hostedZoneId: 'Z1234567890',
-    certificateValidation: true,
-    subdomains: {
-      client: 'dev-app.finefindslk.com',
-      admin: 'dev-admin.finefindslk.com',
-      api: 'dev-api.finefindslk.com'
-    }
-  },
   vpc: {
+    cidr: '10.0.0.0/16',
     maxAzs: 2,
     natGateways: 1,
-    cidr: '10.0.0.0/16',
   },
   ecs: {
     containerPort: 3000,
@@ -26,7 +16,23 @@ export const devConfig: BaseConfig = {
     maxCapacity: 2,
   },
   ecr: {
-    repositoryName: 'finefinds-client-web-app-dev',
+    repositoryName: 'finefinds-dev',
+  },
+  monitoring: {
+    alarmEmail: 'devops@finefinds.com',
+    slackChannel: '#devops-alerts',
+  },
+  s3: {
+    versioned: true,
+    lifecycleRules: true,
+  },
+  rds: {
+    instanceType: 'db.t3.micro',
+    instanceClass: 'db.t3',
+    instanceSize: 'micro',
+    multiAz: false,
+    backupRetentionDays: 7,
+    performanceInsights: false,
   },
   cognito: {
     clientUsers: {
@@ -40,21 +46,13 @@ export const devConfig: BaseConfig = {
         requireSymbols: true,
       },
       userGroups: {
-        parents: {
-          name: 'Parents',
-          description: 'Parent users',
+        users: {
+          name: 'Users',
+          description: 'Regular users of the FineFinds platform',
         },
-        students: {
-          name: 'Students',
-          description: 'Student users',
-        },
-        vendors: {
-          name: 'Vendors',
-          description: 'Vendor users',
-        },
-        guests: {
-          name: 'Guests',
-          description: 'Guest users',
+        premiumUsers: {
+          name: 'PremiumUsers',
+          description: 'Premium users with enhanced features',
         },
       },
     },
@@ -69,45 +67,17 @@ export const devConfig: BaseConfig = {
         requireSymbols: true,
       },
       userGroups: {
-        superAdmins: {
-          name: 'SuperAdmins',
-          description: 'Super administrator users',
-        },
         admins: {
           name: 'Admins',
-          description: 'Administrator users',
+          description: 'Administrators with full access',
         },
         support: {
           name: 'Support',
-          description: 'Support team users',
+          description: 'Support team members',
         },
       },
     },
     identityProviders: {},
-  },
-  monitoring: {
-    alarmEmail: 'dev-alerts@finefinds.com',
-    slackChannel: '#dev-alerts',
-  },
-  s3: {
-    versioned: true,
-    lifecycleRules: true,
-  },
-  redis: {
-    nodeType: 'cache.t3.micro',  // Small instance for dev
-    numNodes: 1,                 // Single node for dev
-    engineVersion: '7.0',        // Latest stable Redis version
-    snapshotRetentionLimit: 1,   // Keep 1 snapshot for dev
-    snapshotWindow: '03:00-04:00', // UTC time
-    maintenanceWindow: 'sun:04:00-sun:05:00', // UTC time
-  },
-  rds: {
-    instanceType: 'db.t3.micro',
-    instanceClass: 'db.t3',
-    instanceSize: 'micro',
-    multiAz: false,
-    backupRetentionDays: 7,
-    performanceInsights: false,
   },
   waf: {
     rateLimit: 2000,
@@ -120,46 +90,54 @@ export const devConfig: BaseConfig = {
     monthlyRetention: 3,
     yearlyRetention: 1,
   },
-  cloudfront: {
-    allowedCountries: ['US', 'CA'],
-  },
-  smtp: {
-    host: 'email-smtp.us-east-1.amazonaws.com',
-    port: 587,
-    username: 'AKIAXXXXXXXXXXXXXXXX', // Replace with your SMTP username
-  },
-  opensearch: {
-    endpoint: 'https://search-finefinds-dev-xxxxxxxxxxxx.us-east-1.es.amazonaws.com', // Replace with your OpenSearch endpoint
-  },
   tags: {
     Environment: 'dev',
     Project: 'FineFinds',
     ManagedBy: 'CDK',
   },
+  cloudfront: {
+    allowedCountries: ['US', 'CA'],
+  },
+  smtp: {
+    host: 'smtp.gmail.com',
+    port: 587,
+    username: 'noreply@finefinds.com',
+  },
+  opensearch: {
+    endpoint: 'https://search-finefinds-dev-xxxxx.us-east-1.es.amazonaws.com',
+  },
+  redis: {
+    nodeType: 'cache.t3.micro',
+    numNodes: 1,
+    engineVersion: '7.0',
+    snapshotRetentionLimit: 1,
+    snapshotWindow: '03:00-04:00',
+    maintenanceWindow: 'sun:04:00-sun:05:00',
+  },
   amplify: {
     clientWebApp: {
-      repository: 'finefinds-client-web-app',
-      owner: 'Quantum-Tunnel-Design',
+      repository: 'finefinds-client-web',
+      owner: 'amalgamage',
       branch: 'dev',
       buildSettings: {
-        buildCommand: 'pnpm build',
-        startCommand: 'pnpm start',
+        buildCommand: 'npm run build',
+        startCommand: 'npm start',
         environmentVariables: {
-          NEXT_PUBLIC_API_URL: 'https://dev-api.finefindslk.com',
-          NODE_ENV: 'development',
+          REACT_APP_API_URL: 'https://api.dev.finefinds.com',
+          REACT_APP_ENV: 'dev',
         },
       },
     },
     adminApp: {
       repository: 'finefinds-admin',
-      owner: 'Quantum-Tunnel-Design',
+      owner: 'amalgamage',
       branch: 'dev',
       buildSettings: {
-        buildCommand: 'pnpm build',
-        startCommand: 'pnpm start',
+        buildCommand: 'npm run build',
+        startCommand: 'npm start',
         environmentVariables: {
-          NEXT_PUBLIC_API_URL: 'https://dev-api.finefindslk.com',
-          NODE_ENV: 'development',
+          REACT_APP_API_URL: 'https://api.dev.finefinds.com',
+          REACT_APP_ENV: 'dev',
         },
       },
     },
