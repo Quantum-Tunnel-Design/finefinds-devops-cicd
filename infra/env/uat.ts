@@ -3,6 +3,7 @@ import { BaseConfig } from './base-config';
 export const stagingConfig: BaseConfig = {
   environment: 'uat',
   region: 'us-east-1',
+  account: process.env.CDK_DEFAULT_ACCOUNT || '',
   vpc: {
     cidr: '10.1.0.0/16',
     maxAzs: 2,
