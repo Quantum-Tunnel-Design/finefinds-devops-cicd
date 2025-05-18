@@ -325,8 +325,8 @@ create_role_policy() {
                 "s3:DeleteBucket"
             ],
             "Resource": [
-                "arn:aws:s3:::cdk-hnb659fds-assets-*",
-                "arn:aws:s3:::cdk-hnb659fds-assets-*/*"
+                "arn:aws:s3:::cdk-ffddev-assets-*",
+                "arn:aws:s3:::cdk-ffddev-assets-*/*"
             ]
         },
         {
@@ -347,6 +347,8 @@ create_role_policy() {
             ],
             "Resource": [
                 "arn:aws:iam::${ACCOUNT_ID}:role/cdk-*",
+                "arn:aws:iam::${ACCOUNT_ID}:role/finefinds-*-ecs-task-role",
+                "arn:aws:iam::${ACCOUNT_ID}:role/finefinds-*-ecs-execution-role"
             ]
         }
     ]
