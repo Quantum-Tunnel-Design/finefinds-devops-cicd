@@ -2,32 +2,50 @@ const AWS = require('aws-sdk');
 const cognito = new AWS.CognitoIdentityServiceProvider();
 
 exports.handler = async (event) => {
-  if (event.RequestType === 'Delete') {
-    return;
-  }
-
   const params = {
     UserPoolId: process.env.USER_POOL_ID,
-    GroupName: process.env.GROUP_NAME,
-    Description: process.env.GROUP_DESCRIPTION
+    GroupName: process.env.GROUP_NAME
   };
 
   try {
-    await cognito.getGroup(params).promise();
-    console.log('Group already exists');
-  } catch (error) {
-    if (error.code === 'ResourceNotFoundException') {
-      await cognito.createGroup(params).promise();
-      console.log('Group created');
-    } else {
-      throw error;
+    if (event.RequestType === 'Delete') {
+      try {
+        await cognito.deleteGroup(params).promise();
+        console.log('Group deleted successfully');
+      } catch (error) {
+        if (error.code === 'ResourceNotFoundException') {
+          console.log('Group already deleted');
+        } else {
+          throw error;
+        }
+      }
+      return;
     }
-  }
 
-  return {
-    PhysicalResourceId: process.env.GROUP_NAME,
-    Data: {
-      GroupName: process.env.GROUP_NAME
+    // For Create/Update operations
+    try {
+      await cognito.getGroup(params).promise();
+      console.log('Group already exists');
+    } catch (error) {
+      if (error.code === 'ResourceNotFoundException') {
+        await cognito.createGroup({
+          ...params,
+          Description: process.env.GROUP_DESCRIPTION
+        }).promise();
+        console.log('Group created');
+      } else {
+        throw error;
+      }
     }
-  };
+
+    return {
+      PhysicalResourceId: process.env.GROUP_NAME,
+      Data: {
+        GroupName: process.env.GROUP_NAME
+      }
+    };
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
 }; 
