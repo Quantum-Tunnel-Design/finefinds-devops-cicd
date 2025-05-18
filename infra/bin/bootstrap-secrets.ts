@@ -70,10 +70,9 @@ class SecretsBootstrapStack extends cdk.Stack {
     const dbSecret = new cr.AwsCustomResource(this, 'DbConnectionString', {
       onCreate: {
         service: 'SecretsManager',
-        action: 'createSecret',
+        action: 'putSecretValue',
         parameters: {
-          Name: dbSecretName,
-          Description: 'Database connection string for the application',
+          SecretId: dbSecretName,
           SecretString: JSON.stringify({
             dbName: 'finefinds',
             engine: 'postgres',
@@ -87,7 +86,7 @@ class SecretsBootstrapStack extends cdk.Stack {
       },
       onUpdate: {
         service: 'SecretsManager',
-        action: 'updateSecret',
+        action: 'putSecretValue',
         parameters: {
           SecretId: dbSecretName,
           SecretString: JSON.stringify({
@@ -118,10 +117,9 @@ class SecretsBootstrapStack extends cdk.Stack {
     const githubSecret = new cr.AwsCustomResource(this, 'GitHubToken', {
       onCreate: {
         service: 'SecretsManager',
-        action: 'createSecret',
+        action: 'putSecretValue',
         parameters: {
-          Name: githubSecretName,
-          Description: 'GitHub token for Amplify apps',
+          SecretId: githubSecretName,
           SecretString: JSON.stringify({
             token: 'placeholder-will-be-updated'
           })
@@ -130,7 +128,7 @@ class SecretsBootstrapStack extends cdk.Stack {
       },
       onUpdate: {
         service: 'SecretsManager',
-        action: 'updateSecret',
+        action: 'putSecretValue',
         parameters: {
           SecretId: githubSecretName,
           SecretString: JSON.stringify({
@@ -156,10 +154,9 @@ class SecretsBootstrapStack extends cdk.Stack {
     const redisSecret = new cr.AwsCustomResource(this, 'RedisConnectionString', {
       onCreate: {
         service: 'SecretsManager',
-        action: 'createSecret',
+        action: 'putSecretValue',
         parameters: {
-          Name: redisSecretName,
-          Description: 'Redis connection details for the application',
+          SecretId: redisSecretName,
           SecretString: JSON.stringify({
             host: 'placeholder-will-be-updated',
             port: 6379,
@@ -170,7 +167,7 @@ class SecretsBootstrapStack extends cdk.Stack {
       },
       onUpdate: {
         service: 'SecretsManager',
-        action: 'updateSecret',
+        action: 'putSecretValue',
         parameters: {
           SecretId: redisSecretName,
           SecretString: JSON.stringify({
