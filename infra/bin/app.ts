@@ -10,6 +10,11 @@ import { prodConfig } from '../env/prod';
 
 const app = new cdk.App();
 
+// Create custom synthesizer with our qualifier
+const customSynthesizer = new cdk.DefaultStackSynthesizer({
+  qualifier: 'ffddev',
+});
+
 // Check if SonarQube should be included
 const includeSonarQube = app.node.tryGetContext('includeSonarQube') === 'true';
 
@@ -27,6 +32,7 @@ if (includeSonarQube) {
       region: process.env.CDK_DEFAULT_REGION || 'us-east-1',
     },
     config: devConfig,
+    synthesizer: customSynthesizer,
   });
   
   console.log('SonarQube stack created. No other stacks will be deployed in this run.');
@@ -57,6 +63,7 @@ if (includeSonarQube) {
       region: process.env.CDK_DEFAULT_REGION || 'us-east-1',
     },
     config,
+    synthesizer: customSynthesizer,
   });
   
   console.log(`Stack FineFinds-${environment} created.`);

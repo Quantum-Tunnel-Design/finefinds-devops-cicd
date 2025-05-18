@@ -146,14 +146,38 @@ jobs:
         run: |
           cd infra
           echo "Bootstrapping CDK for environment: ${{ env.CDK_ENV }}"
-          npx cdk -- bootstrap aws://${{ secrets.AWS_ACCOUNT_ID }}/${{ env.CDK_DEFAULT_REGION }} --qualifier ffddev --context environment=${{ env.CDK_ENV }} --context aws-cdk:qualifier=ffddev --require-approval never
+          # First, ensure we're using the custom qualifier for all operations
+          export CDK_QUALIFIER=ffddev
+          
+          # Bootstrap with explicit lookup role creation
+          npx cdk bootstrap aws://${{ secrets.AWS_ACCOUNT_ID }}/${{ env.CDK_DEFAULT_REGION }} \
+            --qualifier ffddev \
+            --context environment=${{ env.CDK_ENV }} \
+            --context aws-cdk:qualifier=ffddev \
+            --context aws-cdk:lookup-role-name=cdk-ffddev-lookup-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --context aws-cdk:deploy-role-name=cdk-ffddev-deploy-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --context aws-cdk:file-asset-role-name=cdk-ffddev-file-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --context aws-cdk:image-asset-role-name=cdk-ffddev-image-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --context aws-cdk:image-asset-publishing-role-name=cdk-ffddev-image-publishing-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --context aws-cdk:asset-publishing-role-name=cdk-ffddev-publishing-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --require-approval never
       
       - name: Bootstrap Secrets
         if: github.event_name == 'push' && env.IS_NEW_ENVIRONMENT == 'true'
         run: |
           cd infra
           echo "Bootstrapping secrets for new environment: ${{ env.CDK_ENV }}"
-          npx cdk -- --app 'npx ts-node --prefer-ts-exts bin/bootstrap-secrets.ts' deploy --qualifier ffddev --context environment=${{ env.CDK_ENV }} --context aws-cdk:qualifier=ffddev --require-approval never
+          npx cdk --app 'npx ts-node --prefer-ts-exts bin/bootstrap-secrets.ts' deploy \
+            --qualifier ffddev \
+            --context environment=${{ env.CDK_ENV }} \
+            --context aws-cdk:qualifier=ffddev \
+            --context aws-cdk:lookup-role-name=cdk-ffddev-lookup-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --context aws-cdk:deploy-role-name=cdk-ffddev-deploy-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --context aws-cdk:file-asset-role-name=cdk-ffddev-file-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --context aws-cdk:image-asset-role-name=cdk-ffddev-image-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --context aws-cdk:image-asset-publishing-role-name=cdk-ffddev-image-publishing-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --context aws-cdk:asset-publishing-role-name=cdk-ffddev-publishing-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --require-approval never
         
       - name: CDK Diff
         if: github.event_name == 'pull_request'

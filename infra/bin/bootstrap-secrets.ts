@@ -99,6 +99,12 @@ class SecretsBootstrapStack extends cdk.Stack {
 
 // Create app and instantiate stack
 const app = new cdk.App();
+
+// Create custom synthesizer with our qualifier
+const customSynthesizer = new cdk.DefaultStackSynthesizer({
+  qualifier: 'ffddev',
+});
+
 // Get environment from context or default to dev
 const environment = app.node.tryGetContext('env') || 'dev';
 
@@ -107,5 +113,6 @@ new SecretsBootstrapStack(app, `FineFinds-Secrets-Bootstrap-${environment}`, {
     account: process.env.CDK_DEFAULT_ACCOUNT,
     region: process.env.CDK_DEFAULT_REGION
   },
-  description: 'Stack for bootstrapping secrets required by FineFinds infrastructure'
+  description: 'Stack for bootstrapping secrets required by FineFinds infrastructure',
+  synthesizer: customSynthesizer,
 }); 
