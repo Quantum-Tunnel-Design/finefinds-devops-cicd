@@ -134,4 +134,8 @@ export interface BaseConfig {
       };
     };
   };
+  dynamodb: {
+    billingMode: string;
+    pointInTimeRecovery: boolean;
+  };
 } 
