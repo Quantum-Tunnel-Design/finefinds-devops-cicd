@@ -1,7 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import * as logs from 'aws-cdk-lib/aws-logs';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as cr from 'aws-cdk-lib/custom-resources';
 import { Construct } from 'constructs';
@@ -65,9 +64,18 @@ export class BastionConstruct extends Construct {
         },
         physicalResourceId: cr.PhysicalResourceId.of(keyPairName),
       },
-      policy: cr.AwsCustomResourcePolicy.fromSdkCalls({
-        resources: cr.AwsCustomResourcePolicy.ANY_RESOURCE,
-      }),
+      policy: cr.AwsCustomResourcePolicy.fromStatements([
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: [
+            'ec2:CreateKeyPair',
+            'ec2:DeleteKeyPair',
+            'ec2:CreateTags',
+            'ec2:DescribeKeyPairs'
+          ],
+          resources: ['*']
+        })
+      ]),
     });
 
     // Store the private key in Secrets Manager
@@ -84,9 +92,16 @@ export class BastionConstruct extends Construct {
         },
         physicalResourceId: cr.PhysicalResourceId.of(`${keyPairName}-secret`),
       },
-      policy: cr.AwsCustomResourcePolicy.fromSdkCalls({
-        resources: [this.keyPairSecret.secretArn],
-      }),
+      policy: cr.AwsCustomResourcePolicy.fromStatements([
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: [
+            'secretsmanager:UpdateSecret',
+            'secretsmanager:GetSecretValue'
+          ],
+          resources: [this.keyPairSecret.secretArn]
+        })
+      ]),
     });
 
     storePrivateKey.node.addDependency(keyPairResource);
