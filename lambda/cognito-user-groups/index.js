@@ -1,6 +1,30 @@
 const AWS = require('aws-sdk');
 const cognito = new AWS.CognitoIdentityServiceProvider();
 
+// Helper function to wait
+const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Helper function to handle retries with exponential backoff
+async function retryWithBackoff(operation, maxRetries = 5, initialDelay = 1000) {
+  let retries = 0;
+  let delay = initialDelay;
+
+  while (true) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (error.code === 'TooManyRequestsException' && retries < maxRetries) {
+        console.log(`Rate limited, retrying in ${delay}ms (attempt ${retries + 1}/${maxRetries})`);
+        await wait(delay);
+        delay *= 2; // Exponential backoff
+        retries++;
+        continue;
+      }
+      throw error;
+    }
+  }
+}
+
 exports.handler = async (event) => {
   const params = {
     UserPoolId: process.env.USER_POOL_ID,
@@ -10,7 +34,7 @@ exports.handler = async (event) => {
   try {
     if (event.RequestType === 'Delete') {
       try {
-        await cognito.deleteGroup(params).promise();
+        await retryWithBackoff(() => cognito.deleteGroup(params).promise());
         console.log('Group deleted successfully');
       } catch (error) {
         if (error.code === 'ResourceNotFoundException') {
@@ -24,14 +48,14 @@ exports.handler = async (event) => {
 
     // For Create/Update operations
     try {
-      await cognito.getGroup(params).promise();
+      await retryWithBackoff(() => cognito.getGroup(params).promise());
       console.log('Group already exists');
     } catch (error) {
       if (error.code === 'ResourceNotFoundException') {
-        await cognito.createGroup({
+        await retryWithBackoff(() => cognito.createGroup({
           ...params,
           Description: process.env.GROUP_DESCRIPTION
-        }).promise();
+        }).promise());
         console.log('Group created');
       } else {
         throw error;
