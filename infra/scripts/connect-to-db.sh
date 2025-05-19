@@ -10,10 +10,10 @@ if [ ! -f "$KEY_FILE" ]; then
 fi
 
 # Get the bastion host IP
-BASTION_IP=$(aws cloudformation describe-stacks --stack-name FineFindsV1-Dev --query 'Stacks[0].Outputs[?OutputKey==`BastionPublicIp`].OutputValue' --output text)
+BASTION_IP=$(aws cloudformation describe-stacks --stack-name FineFinds-Dev --query 'Stacks[0].Outputs[?OutputKey==`BastionPublicIp`].OutputValue' --output text)
 
 # Get the database endpoint
-DB_ENDPOINT=$(aws cloudformation describe-stacks --stack-name FineFindsV1-Dev --query 'Stacks[0].Outputs[?OutputKey==`DatabaseEndpoint`].OutputValue' --output text)
+DB_ENDPOINT=$(aws cloudformation describe-stacks --stack-name FineFinds-Dev --query 'Stacks[0].Outputs[?OutputKey==`DatabaseEndpoint`].OutputValue' --output text)
 
 # Get the database credentials
 DB_SECRET=$(aws secretsmanager get-secret-value --secret-id finefinds-dev-db-connection --query 'SecretString' --output text)

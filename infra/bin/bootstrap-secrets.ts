@@ -231,7 +231,7 @@ const customSynthesizer = new cdk.DefaultStackSynthesizer({
   qualifier: qualifier,
 });
 
-new SecretsBootstrapStack(app, `FineFindsV1-Secrets-Bootstrap-${environment}`, {
+new SecretsBootstrapStack(app, `FineFinds-Secrets-Bootstrap-${environment}`, {
   env: {
     account: process.env.CDK_DEFAULT_ACCOUNT,
     region: process.env.CDK_DEFAULT_REGION

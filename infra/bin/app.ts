@@ -57,7 +57,7 @@ if (includeSonarQube) {
   }
   
   // Create the stack for the specified environment
-  new FineFindsStack(app, `FineFindsV1-${environment}`, {
+  new FineFindsStack(app, `FineFinds-${environment}`, {
     env: {
       account: process.env.CDK_DEFAULT_ACCOUNT,
       region: process.env.CDK_DEFAULT_REGION || 'us-east-1',
@@ -66,5 +66,5 @@ if (includeSonarQube) {
     synthesizer: customSynthesizer,
   });
   
-  console.log(`Stack FineFindsV1-${environment} created.`);
+  console.log(`Stack FineFinds-${environment} created.`);
 } 

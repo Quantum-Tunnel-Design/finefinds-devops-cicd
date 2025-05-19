@@ -99,7 +99,7 @@ jobs:
 
       - name: Check for ongoing stack operations
         run: |
-          STACK_NAME="FineFindsV1-${{ env.CDK_ENV }}"
+          STACK_NAME="FineFinds-${{ env.CDK_ENV }}"
           echo "Checking status of $STACK_NAME stack..."
           
           # Check if the stack exists and get its status
@@ -179,13 +179,13 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           cd infra
-          npm run cdk diff -- FineFindsV1-${{ env.CDK_ENV }} --context env=${{ env.CDK_ENV }} --context version=${{ env.STACK_VERSION }} --context aws-cdk:qualifier=${{ env.QUALIFIER }}
+          npm run cdk diff -- FineFinds-${{ env.CDK_ENV }} --context env=${{ env.CDK_ENV }} --context version=${{ env.STACK_VERSION }} --context aws-cdk:qualifier=${{ env.QUALIFIER }}
 
       - name: CDK Deploy
         if: github.event_name == 'push' 
         run: |
           cd infra
-          npm run cdk deploy -- FineFindsV1-${{ env.CDK_ENV }} --context env=${{ env.CDK_ENV }} --context version=${{ env.STACK_VERSION }} --context aws-cdk:qualifier=${{ env.QUALIFIER }} --require-approval never
+          npm run cdk deploy -- FineFinds-${{ env.CDK_ENV }} --context env=${{ env.CDK_ENV }} --context version=${{ env.STACK_VERSION }} --context aws-cdk:qualifier=${{ env.QUALIFIER }} --require-approval never
         env:
           CDK_DEPLOY_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
           CDK_DEPLOY_REGION: ${{ secrets.AWS_REGION }}
