@@ -59,3 +59,4 @@ infra/.env.*
 dist/finefinds-dev-bastion.pem
 
 *.pem
+*.pub

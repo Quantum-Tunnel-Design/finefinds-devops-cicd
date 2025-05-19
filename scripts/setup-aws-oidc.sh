@@ -68,9 +68,35 @@ create_role_policy() {
         {
             "Effect": "Allow",
             "Action": [
-                "ecr:GetAuthorizationToken"
+                "ecr:GetAuthorizationToken",
+                "ecr:BatchCheckLayerAvailability",
+                "ecr:GetDownloadUrlForLayer",
+                "ecr:GetRepositoryPolicy",
+                "ecr:DescribeRepositories",
+                "ecr:ListImages",
+                "ecr:DescribeImages",
+                "ecr:BatchGetImage",
+                "ecr:InitiateLayerUpload",
+                "ecr:UploadLayerPart",
+                "ecr:CompleteLayerUpload",
+                "ecr:PutImage",
+                "ecr:CreateRepository",
+                "ecr:DeleteRepository",
+                "ecr:SetRepositoryPolicy",
+                "ecr:DeleteRepositoryPolicy",
+                "ecr:TagResource",
+                "ecr:UntagResource",
+                "ecr:DescribeImages",
+                "ecr:ListTagsForResource",
+                "ecr:PutLifecyclePolicy"
             ],
-            "Resource": "*"
+            "Resource": [
+                "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/${repo}-${env}",
+                "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/${repo}-${env}/*",
+                "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/cdk-ff${env}-container-assets-*-*",
+                "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/finefinds-services-${env}",
+                "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/finefinds-services-${env}/*"
+            ]
         },
         {
             "Effect": "Allow",
@@ -88,9 +114,10 @@ create_role_policy() {
                 "secretsmanager:GetSecretValue"
             ],
             "Resource": [
-                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-cognito-config-*",
-                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:github-token-*",
-                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:FineFindsdevRdsDatabaseSecr-0zIOqlcLlE2c-ZrJHtZ"
+                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-cognito-config",
+                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-redis-connection-*",
+                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:FineFinds*RdsDatabaseSecr-*",
+                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:github-token-*"
             ]
         },
         {
@@ -121,36 +148,6 @@ create_role_policy() {
                 "arn:aws:cloudformation:${AWS_REGION}:${ACCOUNT_ID}:stack/CDKToolkit/*",
                 "arn:aws:cloudformation:${AWS_REGION}:${ACCOUNT_ID}:stack/FineFinds-*/*",
                 "arn:aws:cloudformation:${AWS_REGION}:${ACCOUNT_ID}:stack/FineFinds-*"
-            ]
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-                "ecr:BatchCheckLayerAvailability",
-                "ecr:GetDownloadUrlForLayer",
-                "ecr:GetRepositoryPolicy",
-                "ecr:DescribeRepositories",
-                "ecr:ListImages",
-                "ecr:DescribeImages",
-                "ecr:BatchGetImage",
-                "ecr:InitiateLayerUpload",
-                "ecr:UploadLayerPart",
-                "ecr:CompleteLayerUpload",
-                "ecr:PutImage",
-                "ecr:CreateRepository",
-                "ecr:DeleteRepository",
-                "ecr:SetRepositoryPolicy",
-                "ecr:DeleteRepositoryPolicy",
-                "ecr:TagResource",
-                "ecr:UntagResource",
-                "ecr:DescribeImages",
-                "ecr:ListTagsForResource",
-                "ecr:PutLifecyclePolicy"
-            ],
-            "Resource": [
-                "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/${repo}-${env}",
-                "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/${repo}-${env}/*",
-                "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/cdk-ff${env}-container-assets-*-*"
             ]
         },
         {
