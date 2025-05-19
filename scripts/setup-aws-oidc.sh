@@ -120,7 +120,7 @@ create_role_policy() {
                 "secretsmanager:GetSecretValue"
             ],
             "Resource": [
-                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-cognito-config",
+                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-cognito-config*",
                 "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-redis-connection-*",
                 "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:FineFinds*RdsDatabaseSecr-*",
                 "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:github-token-*"
