@@ -41,15 +41,70 @@ export class BastionConstruct extends Construct {
       handler: 'index.handler',
       code: lambda.Code.fromInline(`
         const AWS = require('aws-sdk');
+        const https = require('https');
+        const url = require('url');
+
+        // Initialize AWS services
         const ec2 = new AWS.EC2();
         const secretsManager = new AWS.SecretsManager();
-        const response = require('cfn-response');
+
+        const cfnResponse = {
+          SUCCESS: 'SUCCESS',
+          FAILED: 'FAILED',
+          send: function(event, context, responseStatus, responseData, physicalResourceId) {
+            console.log('Sending response to CloudFormation:', {
+              status: responseStatus,
+              data: responseData,
+              physicalResourceId: physicalResourceId
+            });
+
+            const responseBody = JSON.stringify({
+              Status: responseStatus,
+              Reason: responseStatus === 'FAILED' ? responseData.error : 'See the details in CloudWatch Log Stream: ' + context.logStreamName,
+              PhysicalResourceId: physicalResourceId || context.logStreamName,
+              StackId: event.StackId,
+              RequestId: event.RequestId,
+              LogicalResourceId: event.LogicalResourceId,
+              Data: responseData
+            });
+
+            const parsedUrl = url.parse(event.ResponseURL);
+            const options = {
+              hostname: parsedUrl.hostname,
+              port: 443,
+              path: parsedUrl.path,
+              method: 'PUT',
+              headers: {
+                'content-type': '',
+                'content-length': responseBody.length
+              }
+            };
+
+            return new Promise((resolve, reject) => {
+              const request = https.request(options, (response) => {
+                console.log('CloudFormation response status:', response.statusCode);
+                console.log('CloudFormation response message:', response.statusMessage);
+                resolve();
+              });
+
+              request.on('error', (error) => {
+                console.error('Failed to send response to CloudFormation:', error);
+                reject(error);
+              });
+
+              request.write(responseBody);
+              request.end();
+            });
+          }
+        };
 
         exports.handler = async (event, context) => {
-          console.log('Event:', JSON.stringify(event, null, 2));
+          console.log('Received event:', JSON.stringify(event, null, 2));
           
           try {
             if (event.RequestType === 'Create' || event.RequestType === 'Update') {
+              console.log('Creating/Updating key pair:', event.ResourceProperties.KeyName);
+              
               // Create key pair
               const keyPair = await ec2.createKeyPair({
                 KeyName: event.ResourceProperties.KeyName,
@@ -62,6 +117,8 @@ export class BastionConstruct extends Construct {
                 }]
               }).promise();
 
+              console.log('Key pair created successfully');
+
               // Store private key in Secrets Manager
               await secretsManager.updateSecret({
                 SecretId: event.ResourceProperties.SecretArn,
@@ -71,20 +128,29 @@ export class BastionConstruct extends Construct {
                 })
               }).promise();
 
-              await response.send(event, context, response.SUCCESS, {
+              console.log('Private key stored in Secrets Manager');
+
+              await cfnResponse.send(event, context, cfnResponse.SUCCESS, {
                 KeyName: keyPair.KeyName
               }, keyPair.KeyName);
             } else if (event.RequestType === 'Delete') {
+              console.log('Deleting key pair:', event.PhysicalResourceId);
+              
               // Delete key pair
               await ec2.deleteKeyPair({
                 KeyName: event.PhysicalResourceId
               }).promise();
               
-              await response.send(event, context, response.SUCCESS, {}, event.PhysicalResourceId);
+              console.log('Key pair deleted successfully');
+              
+              await cfnResponse.send(event, context, cfnResponse.SUCCESS, {}, event.PhysicalResourceId);
             }
           } catch (error) {
-            console.error('Error:', error);
-            await response.send(event, context, response.FAILED, { error: error.message });
+            console.error('Error occurred:', error);
+            await cfnResponse.send(event, context, cfnResponse.FAILED, { 
+              error: error.message,
+              stack: error.stack
+            });
           }
         };
       `),
