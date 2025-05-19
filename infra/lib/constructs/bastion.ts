@@ -13,6 +13,7 @@ interface BastionConstructProps {
 export class BastionConstruct extends Construct {
   public readonly instance: ec2.Instance;
   public readonly securityGroup: ec2.SecurityGroup;
+  public readonly sshUsername: string = 'ec2-user'; // Amazon Linux 2023 default username
 
   constructor(scope: Construct, id: string, props: BastionConstructProps) {
     super(scope, id);
@@ -79,6 +80,13 @@ export class BastionConstruct extends Construct {
       value: this.instance.instancePublicIp,
       description: 'Public IP of the bastion host',
       exportName: `finefinds-${props.environment}-bastion-public-ip`,
+    });
+
+    // Output the SSH username
+    new cdk.CfnOutput(this, 'BastionSshUsername', {
+      value: this.sshUsername,
+      description: 'SSH username for the bastion host',
+      exportName: `finefinds-${props.environment}-bastion-ssh-username`,
     });
 
     // Add tags

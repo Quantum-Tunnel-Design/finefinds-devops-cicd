@@ -2,7 +2,7 @@
 
 # Get environment from argument or use 'dev' as default
 ENVIRONMENT=${1:-dev}
-KEY_FILE="finefinds-${ENVIRONMENT}-bastion.pem"
+KEY_FILE="$(dirname "$0")/finefinds-${ENVIRONMENT}-bastion.pem"
 
 # Check if key file exists
 if [ ! -f "$KEY_FILE" ]; then
@@ -11,10 +11,24 @@ if [ ! -f "$KEY_FILE" ]; then
 fi
 
 # Get the bastion host IP
-BASTION_IP=$(aws cloudformation describe-stacks --stack-name FineFinds-${ENVIRONMENT^} --query 'Stacks[0].Outputs[?OutputKey==`BastionPublicIp`].OutputValue' --output text)
+BASTION_IP=$(aws cloudformation describe-stacks --stack-name FineFinds-${ENVIRONMENT} --query 'Stacks[0].Outputs[?OutputKey==`BastionBastionPublicIp700A555F`].OutputValue' --output text)
+
+if [ -z "$BASTION_IP" ]; then
+    echo "Error: Could not retrieve bastion IP from CloudFormation outputs"
+    exit 1
+fi
+
+# Get the SSH username (default to ec2-user if not found in outputs)
+SSH_USERNAME=$(aws cloudformation describe-stacks --stack-name FineFinds-${ENVIRONMENT} --query 'Stacks[0].Outputs[?OutputKey==`BastionSshUsername`].OutputValue' --output text)
+SSH_USERNAME=${SSH_USERNAME:-ec2-user}
 
 # Get the database endpoint
-DB_ENDPOINT=$(aws cloudformation describe-stacks --stack-name FineFinds-${ENVIRONMENT^} --query 'Stacks[0].Outputs[?OutputKey==`DatabaseEndpoint`].OutputValue' --output text)
+DB_ENDPOINT=$(aws cloudformation describe-stacks --stack-name FineFinds-${ENVIRONMENT} --query 'Stacks[0].Outputs[?OutputKey==`DatabaseEndpoint`].OutputValue' --output text)
+
+if [ -z "$DB_ENDPOINT" ]; then
+    echo "Error: Could not retrieve database endpoint from CloudFormation outputs"
+    exit 1
+fi
 
 # Get the database credentials
 DB_SECRET=$(aws secretsmanager get-secret-value --secret-id finefinds-${ENVIRONMENT}-db-connection --query 'SecretString' --output text)
@@ -23,6 +37,7 @@ DB_PASSWORD=$(echo $DB_SECRET | jq -r '.password')
 
 echo "Setting up SSH tunnel..."
 echo "Bastion IP: $BASTION_IP"
+echo "SSH Username: $SSH_USERNAME"
 echo "Database Endpoint: $DB_ENDPOINT"
 echo "Database Username: $DB_USERNAME"
 echo ""
@@ -32,4 +47,4 @@ echo ""
 echo "Press Ctrl+C to stop the tunnel when done."
 
 # Create the SSH tunnel
-ssh -i "$KEY_FILE" -L 5432:$DB_ENDPOINT:5432 ec2-user@$BASTION_IP 
+ssh -i "$KEY_FILE" -L 5432:$DB_ENDPOINT:5432 $SSH_USERNAME@$BASTION_IP 

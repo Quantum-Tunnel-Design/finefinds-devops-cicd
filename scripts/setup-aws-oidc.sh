@@ -77,7 +77,10 @@ create_role_policy() {
             "Action": [
                 "rds:DescribeDBInstances"
             ],
-            "Resource": "arn:aws:rds:us-east-1:*:db:finefinds-${env}-db"
+            "Resource": [
+                "arn:aws:rds:us-east-1:*:db:finefinds-${env}-db",
+                "arn:aws:rds:us-east-1:***:db:finefinds-dev-rdsdatabase74c89a2a-tgxwanklvozk"
+            ]
         },
         {
             "Effect": "Allow",
@@ -87,7 +90,7 @@ create_role_policy() {
             "Resource": [
                 "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-cognito-config-*",
                 "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:github-token-*",
-                "arn:aws:secretsmanager:us-east-1:*:secret:finefinds-${env}-rds-credentials-*"
+                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:FineFindsdevRdsDatabaseSecr-0zIOqlcLlE2c-ZrJHtZ"
             ]
         },
         {
@@ -115,8 +118,9 @@ create_role_policy() {
                 "cloudformation:DescribeStackResource"
             ],
             "Resource": [
-                "arn:aws:cloudformation:us-east-1:*:stack/CDKToolkit/*",
-                "arn:aws:cloudformation:us-east-1:*:stack/FineFinds-*/*"
+                "arn:aws:cloudformation:${AWS_REGION}:${ACCOUNT_ID}:stack/CDKToolkit/*",
+                "arn:aws:cloudformation:${AWS_REGION}:${ACCOUNT_ID}:stack/FineFinds-*/*",
+                "arn:aws:cloudformation:${AWS_REGION}:${ACCOUNT_ID}:stack/FineFinds-*"
             ]
         },
         {
@@ -201,6 +205,7 @@ create_role_policy() {
             "Resource": [
                 "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:cluster/finefinds-${env}",
                 "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:service/finefinds-${env}-cluster/*",
+                "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:service/FineFinds${env}EcsService*",
                 "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:task-definition/*"
             ]
         },
