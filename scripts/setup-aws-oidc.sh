@@ -108,7 +108,7 @@ create_role_policy() {
             ],
             "Resource": [
                 "arn:aws:cloudformation:us-east-1:*:stack/CDKToolkit/*",
-                "arn:aws:cloudformation:us-east-1:*:stack/FineFinds-*/*"
+                "arn:aws:cloudformation:us-east-1:*:stack/FineFindsV1-*/*"
             ]
         },
         {

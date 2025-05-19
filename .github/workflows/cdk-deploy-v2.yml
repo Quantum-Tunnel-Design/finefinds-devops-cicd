@@ -61,6 +61,12 @@ jobs:
           github.ref == 'refs/heads/qa' && 'qa' || 
           'dev' 
         }}
+      # Add version environment variable
+      STACK_VERSION: >-
+        ${{ 
+          github.ref == 'refs/tags/*' && github.ref_name || 
+          format('{0}-{1}', github.run_number, github.sha)
+        }}
 
     steps:
       - name: Checkout
@@ -93,7 +99,7 @@ jobs:
 
       - name: Check for ongoing stack operations
         run: |
-          STACK_NAME="FineFinds-${{ env.CDK_ENV }}"
+          STACK_NAME="FineFindsV1-${{ env.CDK_ENV }}"
           echo "Checking status of $STACK_NAME stack..."
           
           # Check if the stack exists and get its status
@@ -140,6 +146,7 @@ jobs:
             --qualifier ${{ env.QUALIFIER }} \
             --context qualifier=${{ env.QUALIFIER }} \
             --context environment=${{ env.CDK_ENV }} \
+            --context version=${{ env.STACK_VERSION }} \
             --context aws-cdk:qualifier=${{ env.QUALIFIER }} \
             --context aws-cdk:lookup-role-name=cdk-${{ env.QUALIFIER }}-lookup-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
             --context aws-cdk:deploy-role-name=cdk-${{ env.QUALIFIER }}-deploy-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
@@ -158,6 +165,7 @@ jobs:
             --qualifier ${{ env.QUALIFIER }} \
             --context qualifier=${{ env.QUALIFIER }} \
             --context environment=${{ env.CDK_ENV }} \
+            --context version=${{ env.STACK_VERSION }} \
             --context aws-cdk:qualifier=${{ env.QUALIFIER }} \
             --context aws-cdk:lookup-role-name=cdk-${{ env.QUALIFIER }}-lookup-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
             --context aws-cdk:deploy-role-name=cdk-${{ env.QUALIFIER }}-deploy-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
@@ -171,13 +179,13 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           cd infra
-          npm run cdk diff -- FineFinds-${{ env.CDK_ENV }} --context env=${{ env.CDK_ENV }} --context aws-cdk:qualifier=${{ env.QUALIFIER }}
+          npm run cdk diff -- FineFindsV1-${{ env.CDK_ENV }} --context env=${{ env.CDK_ENV }} --context version=${{ env.STACK_VERSION }} --context aws-cdk:qualifier=${{ env.QUALIFIER }}
 
       - name: CDK Deploy
         if: github.event_name == 'push' 
         run: |
           cd infra
-          npm run cdk deploy -- FineFinds-${{ env.CDK_ENV }} --context env=${{ env.CDK_ENV }} --context aws-cdk:qualifier=${{ env.QUALIFIER }} --require-approval never
+          npm run cdk deploy -- FineFindsV1-${{ env.CDK_ENV }} --context env=${{ env.CDK_ENV }} --context version=${{ env.STACK_VERSION }} --context aws-cdk:qualifier=${{ env.QUALIFIER }} --require-approval never
         env:
           CDK_DEPLOY_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
           CDK_DEPLOY_REGION: ${{ secrets.AWS_REGION }}
@@ -197,6 +205,7 @@ jobs:
                   "pretext": ":white_check_mark: *CDK Deploy Succeeded*",
                   "fields": [
                     { "title": "Environment", "value": "${{ env.CDK_ENV }}", "short": true },
+                    { "title": "Version", "value": "${{ env.STACK_VERSION }}", "short": true },
                     { "title": "Branch", "value": "${{ github.ref_name }}", "short": true },
                     { "title": "Actor", "value": "${{ github.actor }}", "short": true },
                     { "title": "Commit", "value": "${{ github.sha }}", "short": false }
@@ -229,6 +238,7 @@ jobs:
                   "pretext": ":x: *CDK Deploy Failed*",
                   "fields": [
                     { "title": "Environment", "value": "${{ env.CDK_ENV }}", "short": true },
+                    { "title": "Version", "value": "${{ env.STACK_VERSION }}", "short": true },
                     { "title": "Branch", "value": "${{ github.ref_name }}", "short": true },
                     { "title": "Actor", "value": "${{ github.actor }}", "short": true },
                     { "title": "Commit", "value": "${{ github.sha }}", "short": false }
