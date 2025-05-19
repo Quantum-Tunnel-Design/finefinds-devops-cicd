@@ -39,25 +39,22 @@ export class AmplifyConstruct extends Construct {
           phases: {
             preBuild: {
               commands: [
-                'npm ci',
-                'npm install -g pnpm',
-                'pnpm install',
+                'npm ci'
               ],
             },
             build: {
               commands: [
-                'pnpm build',
+                'npm run build'
               ],
             },
           },
           artifacts: {
-            baseDirectory: '.next',
+            baseDirectory: 'dist',
             files: ['**/*'],
           },
           cache: {
             paths: [
-              'node_modules/**/*',
-              '.next/cache/**/*',
+              'node_modules/**/*'
             ],
           },
         },
@@ -87,25 +84,22 @@ export class AmplifyConstruct extends Construct {
           phases: {
             preBuild: {
               commands: [
-                'npm ci',
-                'npm install -g pnpm',
-                'pnpm install',
+                'npm ci'
               ],
             },
             build: {
               commands: [
-                'pnpm build',
+                'npm run build'
               ],
             },
           },
           artifacts: {
-            baseDirectory: '.next',
+            baseDirectory: 'dist',
             files: ['**/*'],
           },
           cache: {
             paths: [
-              'node_modules/**/*',
-              '.next/cache/**/*',
+              'node_modules/**/*'
             ],
           },
         },
