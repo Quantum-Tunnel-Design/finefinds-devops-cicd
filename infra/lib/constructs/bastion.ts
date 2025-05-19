@@ -44,9 +44,13 @@ export class BastionConstruct extends Construct {
         const https = require('https');
         const url = require('url');
 
-        // Initialize AWS services
-        const ec2 = new AWS.EC2();
-        const secretsManager = new AWS.SecretsManager();
+        // Initialize AWS services with retry configuration
+        const config = new AWS.Config({
+          maxRetries: 3,
+          retryDelayOptions: { base: 300 }
+        });
+        const ec2 = new AWS.EC2(config);
+        const secretsManager = new AWS.SecretsManager(config);
 
         const cfnResponse = {
           SUCCESS: 'SUCCESS',
@@ -101,52 +105,101 @@ export class BastionConstruct extends Construct {
         exports.handler = async (event, context) => {
           console.log('Received event:', JSON.stringify(event, null, 2));
           
+          // Set a timeout to ensure we respond to CloudFormation
+          const timeout = setTimeout(() => {
+            console.error('Function timed out');
+            cfnResponse.send(event, context, cfnResponse.FAILED, {
+              error: 'Function timed out after 5 minutes'
+            });
+          }, 4 * 60 * 1000); // 4 minutes (leaving 1 minute buffer)
+          
           try {
             if (event.RequestType === 'Create' || event.RequestType === 'Update') {
               console.log('Creating/Updating key pair:', event.ResourceProperties.KeyName);
               
-              // Create key pair
-              const keyPair = await ec2.createKeyPair({
-                KeyName: event.ResourceProperties.KeyName,
-                TagSpecifications: [{
-                  ResourceType: 'key-pair',
-                  Tags: [
-                    { Key: 'Environment', Value: event.ResourceProperties.Environment },
-                    { Key: 'Project', Value: 'FineFinds' }
-                  ]
-                }]
-              }).promise();
+              // Create key pair with retry logic
+              let keyPair;
+              let retries = 0;
+              const maxRetries = 3;
+              
+              while (retries < maxRetries) {
+                try {
+                  keyPair = await ec2.createKeyPair({
+                    KeyName: event.ResourceProperties.KeyName,
+                    TagSpecifications: [{
+                      ResourceType: 'key-pair',
+                      Tags: [
+                        { Key: 'Environment', Value: event.ResourceProperties.Environment },
+                        { Key: 'Project', Value: 'FineFinds' }
+                      ]
+                    }]
+                  }).promise();
+                  break;
+                } catch (error) {
+                  retries++;
+                  if (retries === maxRetries) throw error;
+                  console.log(\`Retry \${retries} of \${maxRetries} for key pair creation\`);
+                  await new Promise(resolve => setTimeout(resolve, 1000 * retries));
+                }
+              }
 
               console.log('Key pair created successfully');
 
-              // Store private key in Secrets Manager
-              await secretsManager.updateSecret({
-                SecretId: event.ResourceProperties.SecretArn,
-                SecretString: JSON.stringify({
-                  keyPairName: keyPair.KeyName,
-                  privateKey: keyPair.KeyMaterial
-                })
-              }).promise();
+              // Store private key in Secrets Manager with retry logic
+              retries = 0;
+              while (retries < maxRetries) {
+                try {
+                  await secretsManager.updateSecret({
+                    SecretId: event.ResourceProperties.SecretArn,
+                    SecretString: JSON.stringify({
+                      keyPairName: keyPair.KeyName,
+                      privateKey: keyPair.KeyMaterial
+                    })
+                  }).promise();
+                  break;
+                } catch (error) {
+                  retries++;
+                  if (retries === maxRetries) throw error;
+                  console.log(\`Retry \${retries} of \${maxRetries} for secret update\`);
+                  await new Promise(resolve => setTimeout(resolve, 1000 * retries));
+                }
+              }
 
               console.log('Private key stored in Secrets Manager');
 
+              clearTimeout(timeout);
               await cfnResponse.send(event, context, cfnResponse.SUCCESS, {
                 KeyName: keyPair.KeyName
               }, keyPair.KeyName);
             } else if (event.RequestType === 'Delete') {
               console.log('Deleting key pair:', event.PhysicalResourceId);
               
-              // Delete key pair
-              await ec2.deleteKeyPair({
-                KeyName: event.PhysicalResourceId
-              }).promise();
+              // Delete key pair with retry logic
+              let retries = 0;
+              const maxRetries = 3;
+              
+              while (retries < maxRetries) {
+                try {
+                  await ec2.deleteKeyPair({
+                    KeyName: event.PhysicalResourceId
+                  }).promise();
+                  break;
+                } catch (error) {
+                  retries++;
+                  if (retries === maxRetries) throw error;
+                  console.log(\`Retry \${retries} of \${maxRetries} for key pair deletion\`);
+                  await new Promise(resolve => setTimeout(resolve, 1000 * retries));
+                }
+              }
               
               console.log('Key pair deleted successfully');
               
+              clearTimeout(timeout);
               await cfnResponse.send(event, context, cfnResponse.SUCCESS, {}, event.PhysicalResourceId);
             }
           } catch (error) {
             console.error('Error occurred:', error);
+            clearTimeout(timeout);
             await cfnResponse.send(event, context, cfnResponse.FAILED, { 
               error: error.message,
               stack: error.stack
