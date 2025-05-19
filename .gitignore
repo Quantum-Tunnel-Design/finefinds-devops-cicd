@@ -56,4 +56,6 @@ frontend/admin-portal/.env
 infra/.env
 infra/.env.*
 
-dist/
+dist/finefinds-dev-bastion.pem
+
+*.pem

@@ -75,11 +75,19 @@ create_role_policy() {
         {
             "Effect": "Allow",
             "Action": [
+                "rds:DescribeDBInstances"
+            ],
+            "Resource": "arn:aws:rds:us-east-1:*:db:finefinds-${env}-db"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
                 "secretsmanager:GetSecretValue"
             ],
             "Resource": [
                 "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-cognito-config-*",
-                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:github-token-*"
+                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:github-token-*",
+                "arn:aws:secretsmanager:us-east-1:*:secret:finefinds-${env}-rds-credentials-*"
             ]
         },
         {
