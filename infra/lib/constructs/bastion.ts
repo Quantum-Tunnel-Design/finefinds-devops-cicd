@@ -2,7 +2,8 @@ import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
-import * as cr from 'aws-cdk-lib/custom-resources';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import { CustomResource } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { BaseConfig } from '../../env/base-config';
 
@@ -32,84 +33,97 @@ export class BastionConstruct extends Construct {
     this.keyPairSecret = new secretsmanager.Secret(this, 'BastionKeyPairSecret', {
       secretName: `finefinds-${props.environment}-bastion-key`,
       description: 'Private key for bastion host access',
-      generateSecretString: {
-        secretStringTemplate: JSON.stringify({ keyPairName }),
-        generateStringKey: 'privateKey',
-        excludeCharacters: '{}[]()\'"/\\@:',
-      },
     });
 
-    // Create the key pair using a custom resource
-    const keyPairResource = new cr.AwsCustomResource(this, 'BastionKeyPairResource', {
-      onCreate: {
-        service: 'EC2',
-        action: 'createKeyPair',
-        parameters: {
-          KeyName: keyPairName,
-          TagSpecifications: [{
-            ResourceType: 'key-pair',
-            Tags: [
-              { Key: 'Environment', Value: props.environment },
-              { Key: 'Project', Value: 'FineFinds' }
-            ]
-          }]
-        },
-        physicalResourceId: cr.PhysicalResourceId.of(keyPairName),
-      },
-      onDelete: {
-        service: 'EC2',
-        action: 'deleteKeyPair',
-        parameters: {
-          KeyName: keyPairName
-        },
-        physicalResourceId: cr.PhysicalResourceId.of(keyPairName),
-      },
-      policy: cr.AwsCustomResourcePolicy.fromStatements([
-        new iam.PolicyStatement({
-          effect: iam.Effect.ALLOW,
-          actions: [
-            'ec2:CreateKeyPair',
-            'ec2:DeleteKeyPair',
-            'ec2:CreateTags',
-            'ec2:DescribeKeyPairs'
-          ],
-          resources: ['*']
-        })
-      ]),
-    });
+    // Create Lambda function to handle key pair creation and storage
+    const keyPairHandler = new lambda.Function(this, 'KeyPairHandler', {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      handler: 'index.handler',
+      code: lambda.Code.fromInline(`
+        const AWS = require('aws-sdk');
+        const ec2 = new AWS.EC2();
+        const secretsManager = new AWS.SecretsManager();
+        const response = require('cfn-response');
 
-    // Store the private key in Secrets Manager
-    const storePrivateKey = new cr.AwsCustomResource(this, 'StorePrivateKey', {
-      onCreate: {
-        service: 'SecretsManager',
-        action: 'updateSecret',
-        parameters: {
-          SecretId: this.keyPairSecret.secretArn,
-          SecretString: cdk.Lazy.string({
-            produce: () => {
-              const keyMaterial = keyPairResource.getResponseField('KeyMaterial');
-              return JSON.stringify({
-                keyPairName,
-                privateKey: keyMaterial
-              }, null, 2);
+        exports.handler = async (event, context) => {
+          console.log('Event:', JSON.stringify(event, null, 2));
+          
+          try {
+            if (event.RequestType === 'Create' || event.RequestType === 'Update') {
+              // Create key pair
+              const keyPair = await ec2.createKeyPair({
+                KeyName: event.ResourceProperties.KeyName,
+                TagSpecifications: [{
+                  ResourceType: 'key-pair',
+                  Tags: [
+                    { Key: 'Environment', Value: event.ResourceProperties.Environment },
+                    { Key: 'Project', Value: 'FineFinds' }
+                  ]
+                }]
+              }).promise();
+
+              // Store private key in Secrets Manager
+              await secretsManager.updateSecret({
+                SecretId: event.ResourceProperties.SecretArn,
+                SecretString: JSON.stringify({
+                  keyPairName: keyPair.KeyName,
+                  privateKey: keyPair.KeyMaterial
+                })
+              }).promise();
+
+              await response.send(event, context, response.SUCCESS, {
+                KeyName: keyPair.KeyName
+              }, keyPair.KeyName);
+            } else if (event.RequestType === 'Delete') {
+              // Delete key pair
+              await ec2.deleteKeyPair({
+                KeyName: event.PhysicalResourceId
+              }).promise();
+              
+              await response.send(event, context, response.SUCCESS, {}, event.PhysicalResourceId);
             }
-          })
-        },
-        physicalResourceId: cr.PhysicalResourceId.of(`${keyPairName}-secret`),
+          } catch (error) {
+            console.error('Error:', error);
+            await response.send(event, context, response.FAILED, { error: error.message });
+          }
+        };
+      `),
+      timeout: cdk.Duration.minutes(5),
+      environment: {
+        NODE_OPTIONS: '--enable-source-maps',
       },
-      policy: cr.AwsCustomResourcePolicy.fromStatements([
-        new iam.PolicyStatement({
-          effect: iam.Effect.ALLOW,
-          actions: [
-            'secretsmanager:UpdateSecret',
-            'secretsmanager:GetSecretValue'
-          ],
-          resources: [this.keyPairSecret.secretArn]
-        })
-      ]),
     });
 
-    storePrivateKey.node.addDependency(keyPairResource);
+    // Grant permissions to the Lambda function
+    keyPairHandler.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        'ec2:CreateKeyPair',
+        'ec2:DeleteKeyPair',
+        'ec2:CreateTags',
+        'ec2:DescribeKeyPairs'
+      ],
+      resources: ['*']
+    }));
+
+    keyPairHandler.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        'secretsmanager:UpdateSecret',
+        'secretsmanager:GetSecretValue'
+      ],
+      resources: [this.keyPairSecret.secretArn]
+    }));
+
+    // Create custom resource to invoke the Lambda function
+    const keyPairResource = new CustomResource(this, 'KeyPairResource', {
+      serviceToken: keyPairHandler.functionArn,
+      properties: {
+        KeyName: keyPairName,
+        Environment: props.environment,
+        SecretArn: this.keyPairSecret.secretArn,
+      },
+    });
 
     // Create security group for the bastion host
     this.securityGroup = new ec2.SecurityGroup(this, 'BastionSecurityGroup', {
