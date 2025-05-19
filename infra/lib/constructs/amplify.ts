@@ -31,6 +31,7 @@ export class AmplifyConstruct extends Construct {
         NEXT_PUBLIC_API_URL: `https://api.${props.config.environment === 'prod' ? 'finefindslk.com' : `${props.config.environment}.finefindslk.com`}`,
         NEXT_PUBLIC_COGNITO_USER_POOL_ID: props.config.cognito.clientUsers.userPoolName,
         NEXT_PUBLIC_COGNITO_CLIENT_ID: props.config.cognito.clientUsers.userPoolName,
+        NEXT_PUBLIC_AWS_REGION: props.config.region || 'us-east-1',
         NODE_ENV: props.environment,
       },
       buildSpec: codebuild.BuildSpec.fromObject({
@@ -39,7 +40,8 @@ export class AmplifyConstruct extends Construct {
           phases: {
             preBuild: {
               commands: [
-                'npm ci'
+                'npm ci',
+                'npm install -g aws-amplify'
               ],
             },
             build: {
@@ -49,12 +51,18 @@ export class AmplifyConstruct extends Construct {
             },
           },
           artifacts: {
-            baseDirectory: 'dist',
-            files: ['**/*'],
+            baseDirectory: '.next',
+            files: [
+              '**/*',
+              'public/**/*',
+              'package.json',
+              'next.config.js'
+            ],
           },
           cache: {
             paths: [
-              'node_modules/**/*'
+              'node_modules/**/*',
+              '.next/cache/**/*'
             ],
           },
         },
@@ -76,6 +84,7 @@ export class AmplifyConstruct extends Construct {
         NEXT_PUBLIC_API_URL: `https://api.${props.config.environment === 'prod' ? 'finefindslk.com' : `${props.config.environment}.finefindslk.com`}`,
         NEXT_PUBLIC_COGNITO_USER_POOL_ID: props.config.cognito.adminUsers.userPoolName,
         NEXT_PUBLIC_COGNITO_CLIENT_ID: props.config.cognito.adminUsers.userPoolName,
+        NEXT_PUBLIC_AWS_REGION: props.config.region || 'us-east-1',
         NODE_ENV: props.environment,
       },
       buildSpec: codebuild.BuildSpec.fromObject({
@@ -84,7 +93,8 @@ export class AmplifyConstruct extends Construct {
           phases: {
             preBuild: {
               commands: [
-                'npm ci'
+                'npm ci',
+                'npm install -g aws-amplify'
               ],
             },
             build: {
@@ -94,12 +104,18 @@ export class AmplifyConstruct extends Construct {
             },
           },
           artifacts: {
-            baseDirectory: 'dist',
-            files: ['**/*'],
+            baseDirectory: '.next',
+            files: [
+              '**/*',
+              'public/**/*',
+              'package.json',
+              'next.config.js'
+            ],
           },
           cache: {
             paths: [
-              'node_modules/**/*'
+              'node_modules/**/*',
+              '.next/cache/**/*'
             ],
           },
         },
@@ -118,6 +134,7 @@ export class AmplifyConstruct extends Construct {
         NEXT_PUBLIC_API_URL: `https://api.${props.config.environment === 'prod' ? 'finefindslk.com' : `${props.config.environment}.finefindslk.com`}`,
         NEXT_PUBLIC_COGNITO_USER_POOL_ID: props.config.cognito.clientUsers.userPoolName,
         NEXT_PUBLIC_COGNITO_CLIENT_ID: props.config.cognito.clientUsers.userPoolName,
+        NEXT_PUBLIC_AWS_REGION: props.config.region || 'us-east-1',
         NODE_ENV: props.environment,
       },
     });
@@ -131,6 +148,7 @@ export class AmplifyConstruct extends Construct {
         NEXT_PUBLIC_API_URL: `https://api.${props.config.environment === 'prod' ? 'finefindslk.com' : `${props.config.environment}.finefindslk.com`}`,
         NEXT_PUBLIC_COGNITO_USER_POOL_ID: props.config.cognito.adminUsers.userPoolName,
         NEXT_PUBLIC_COGNITO_CLIENT_ID: props.config.cognito.adminUsers.userPoolName,
+        NEXT_PUBLIC_AWS_REGION: props.config.region || 'us-east-1',
         NODE_ENV: props.environment,
       },
     });
