@@ -220,7 +220,7 @@ create_role_policy() {
                 "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:service/finefinds-${env}-cluster/*",
                 "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:service/FineFinds${env}EcsService*",
                 "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:task-definition/*",
-                "arn:aws:iam::${ACCOUNT_ID}:role/github-actions-*"
+                "arn:aws:iam::***:role/github-actions-services-*"
             ]
         },
         {
@@ -229,10 +229,16 @@ create_role_policy() {
                 "iam:PassRole"
             ],
             "Resource": [
+                "arn:aws:iam::${ACCOUNT_ID}:role/cdk-*",
                 "arn:aws:iam::${ACCOUNT_ID}:role/ecsTaskExecutionRole",
                 "arn:aws:iam::${ACCOUNT_ID}:role/ecsInstanceRole",
-                "arn:aws:iam::${ACCOUNT_ID}:role/finefinds-dev-ecs-task-role",
-                "arn:aws:iam::${ACCOUNT_ID}:role/finefinds-dev-ecs-execution-role"
+                "arn:aws:iam::${ACCOUNT_ID}:role/finefinds-*-ecs-task-role",
+                "arn:aws:iam::${ACCOUNT_ID}:role/finefinds-*-ecs-execution-role",
+                "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:cluster/finefinds-${env}",
+                "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:service/finefinds-${env}-cluster/*",
+                "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:service/FineFinds${env}EcsService*",
+                "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:task-definition/*",
+                "arn:aws:iam::${ACCOUNT_ID}:role/github-actions-*"
             ]
         },
         {
@@ -263,7 +269,6 @@ create_role_policy() {
                 "iam:GetRole",
                 "iam:PutRolePolicy",
                 "iam:DeleteRolePolicy",
-                "iam:PassRole",
                 "iam:AttachRolePolicy",
                 "iam:DetachRolePolicy",
                 "iam:ListAttachedRolePolicies",
