@@ -75,6 +75,13 @@ create_role_policy() {
         {
             "Effect": "Allow",
             "Action": [
+                "kms:Decrypt"
+            ],
+            "Resource": "arn:aws:kms:${AWS_REGION}:${ACCOUNT_ID}:key/*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
                 "ecr:BatchCheckLayerAvailability",
                 "ecr:GetDownloadUrlForLayer",
                 "ecr:GetRepositoryPolicy",
@@ -117,13 +124,16 @@ create_role_policy() {
         {
             "Effect": "Allow",
             "Action": [
-                "secretsmanager:GetSecretValue"
+                "secretsmanager:GetSecretValue",
+                "secretsmanager:DescribeSecret"
             ],
             "Resource": [
                 "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-cognito-config*",
-                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-redis-connection-*",
+                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-redis-connection*",
+                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-db-connection*",
                 "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:FineFinds*RdsDatabaseSecr-*",
-                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:github-token-*"
+                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:github-token-*",
+                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-jwt*"
             ]
         },
         {
@@ -261,6 +271,7 @@ create_role_policy() {
                 "iam:TagRole",
                 "iam:UntagRole",
                 "iam:ListRoleTags",
+                "iam:SimulatePrincipalPolicy",
                 "iam:ListRoles"
             ],
             "Resource": [
@@ -268,7 +279,8 @@ create_role_policy() {
                 "arn:aws:iam::${ACCOUNT_ID}:role/ecsTaskExecutionRole",
                 "arn:aws:iam::${ACCOUNT_ID}:role/ecsInstanceRole",
                 "arn:aws:iam::${ACCOUNT_ID}:role/finefinds-*-ecs-task-role",
-                "arn:aws:iam::${ACCOUNT_ID}:role/finefinds-*-ecs-execution-role"
+                "arn:aws:iam::${ACCOUNT_ID}:role/finefinds-*-ecs-execution-role",
+                "arn:aws:iam::${ACCOUNT_ID}:role/github-actions-*"
             ]
         },
         {
