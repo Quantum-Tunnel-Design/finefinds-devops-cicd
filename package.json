@@ -8,5 +8,8 @@
     "deploy": "cdk deploy",
     "destroy": "cdk destroy",
     "synth": "cdk synth"
+  },
+  "dependencies": {
+    "typescript": "^5.8.3"
   }
 }

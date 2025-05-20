@@ -33,57 +33,44 @@ export class AmplifyConstruct extends Construct {
         NEXT_PUBLIC_COGNITO_CLIENT_ID: props.config.cognito.clientUsers.userPoolName,
         NEXT_PUBLIC_AWS_REGION: props.config.region || 'us-east-1',
         NODE_ENV: props.environment,
+        _LIVE_UPDATES: '[{"name":"next","pkg":"@aws-amplify/cli"}]',
       },
       buildSpec: codebuild.BuildSpec.fromObject({
         version: '1.0',
-        frontend: {
-          phases: {
-            preBuild: {
-              commands: [
-                'npm ci',
-                'npm install -g aws-amplify'
-              ],
-            },
-            build: {
-              commands: [
-                'npm run build'
-              ],
-            },
-            postBuild: {
-              commands: [
-                'echo "Amplify build completed successfully"'
-              ],
-            },
-          },
-          artifacts: {
-            baseDirectory: '.next',
-            files: [
-              '**/*',
-              'public/**/*',
-              'package.json',
-              'next.config.js'
-            ],
-          },
-          cache: {
-            paths: [
-              'node_modules/**/*',
-              '.next/cache/**/*'
-            ],
-          },
-          customHeaders: [
-            {
-              pattern: '**/*',
-              headers: [
-                {
-                  key: 'Cache-Control',
-                  value: 'public, max-age=0, must-revalidate'
-                }
-              ]
+        applications: [
+          {
+            appRoot: '.',
+            frontend: {
+              phases: {
+                preBuild: {
+                  commands: [
+                    'npm ci'
+                  ],
+                },
+                build: {
+                  commands: [
+                    'npm run build'
+                  ],
+                },
+              },
+              artifacts: {
+                baseDirectory: '.next',
+                files: [
+                  '**/*'
+                ],
+              },
+              cache: {
+                paths: [
+                  'node_modules/**/*',
+                  '.next/cache/**/*'
+                ],
+              },
+              buildPath: '/'
             }
-          ],
-        },
-        appRoot: '.',
+          }
+        ]
       }),
+      platform: amplify.Platform.WEB_COMPUTE,
     });
 
     // Create admin app
@@ -103,57 +90,44 @@ export class AmplifyConstruct extends Construct {
         NEXT_PUBLIC_COGNITO_CLIENT_ID: props.config.cognito.adminUsers.userPoolName,
         NEXT_PUBLIC_AWS_REGION: props.config.region || 'us-east-1',
         NODE_ENV: props.environment,
+        _LIVE_UPDATES: '[{"name":"next","pkg":"@aws-amplify/cli"}]',
       },
       buildSpec: codebuild.BuildSpec.fromObject({
         version: '1.0',
-        frontend: {
-          phases: {
-            preBuild: {
-              commands: [
-                'npm ci',
-                'npm install -g aws-amplify'
-              ],
-            },
-            build: {
-              commands: [
-                'npm run build'
-              ],
-            },
-            postBuild: {
-              commands: [
-                'echo "Amplify build completed successfully"'
-              ],
-            },
-          },
-          artifacts: {
-            baseDirectory: '.next',
-            files: [
-              '**/*',
-              'public/**/*',
-              'package.json',
-              'next.config.js'
-            ],
-          },
-          cache: {
-            paths: [
-              'node_modules/**/*',
-              '.next/cache/**/*'
-            ],
-          },
-          customHeaders: [
-            {
-              pattern: '**/*',
-              headers: [
-                {
-                  key: 'Cache-Control',
-                  value: 'public, max-age=0, must-revalidate'
-                }
-              ]
+        applications: [
+          {
+            appRoot: '.',
+            frontend: {
+              phases: {
+                preBuild: {
+                  commands: [
+                    'npm ci'
+                  ],
+                },
+                build: {
+                  commands: [
+                    'npm run build'
+                  ],
+                },
+              },
+              artifacts: {
+                baseDirectory: '.next',
+                files: [
+                  '**/*'
+                ],
+              },
+              cache: {
+                paths: [
+                  'node_modules/**/*',
+                  '.next/cache/**/*'
+                ],
+              },
+              buildPath: '/'
             }
-          ],
-        },
-        appRoot: '.',
+          }
+        ]
       }),
+      platform: amplify.Platform.WEB_COMPUTE,
     });
 
     // Add branches for each environment
