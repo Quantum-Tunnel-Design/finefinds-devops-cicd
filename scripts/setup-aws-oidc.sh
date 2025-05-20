@@ -75,6 +75,14 @@ create_role_policy() {
         {
             "Effect": "Allow",
             "Action": [
+                "ecr-public:GetAuthorizationToken",
+                "sts:GetServiceBearerToken"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
                 "ecr:BatchCheckLayerAvailability",
                 "ecr:GetDownloadUrlForLayer",
                 "ecr:GetRepositoryPolicy",
@@ -90,6 +98,8 @@ create_role_policy() {
             "Resource": [
                 "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/${repo}-${env}",
                 "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/${repo}-${env}/*",
+                "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/finefinds-base/aws-envoy",
+                "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/finefinds-base/aws-envoy/*",
                 "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/cdk-ff${env}-container-assets-*-*",
                 "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/finefinds-services-${env}",
                 "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/finefinds-services-${env}/*"
