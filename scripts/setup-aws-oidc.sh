@@ -133,7 +133,8 @@ create_role_policy() {
                 "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-db-connection*",
                 "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:FineFinds*RdsDatabaseSecr-*",
                 "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:github-token-*",
-                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-jwt*"
+                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-jwt*",
+                "arn:aws:iam::***:role/github-actions-*"
             ]
         },
         {
@@ -207,13 +208,11 @@ create_role_policy() {
             "Action": [
                 "ecs:UpdateService",
                 "ecs:DescribeServices",
-                "ecs:DescribeTaskDefinition",
-                "ecs:RegisterTaskDefinition",
-                "ecs:CreateService",
-                "ecs:DeleteService",
-                "ecs:ListServices",
                 "ecs:ListTaskDefinitions",
-                "ecs:ListClusters"
+                "ecs:DeregisterTaskDefinition",
+                "iam:PassRole",
+                "secretsmanager:GetSecretValue",
+                "secretsmanager:DescribeSecret"
             ],
             "Resource": [
                 "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:cluster/finefinds-${env}",
