@@ -68,9 +68,26 @@ create_role_policy() {
         {
             "Effect": "Allow",
             "Action": [
-                "ecr:GetAuthorizationToken"
+                "ecr:GetAuthorizationToken",
+                "ecr:BatchCheckLayerAvailability",
+                "ecr:GetDownloadUrlForLayer",
+                "ecr:GetRepositoryPolicy",
+                "ecr:DescribeRepositories",
+                "ecr:ListImages",
+                "ecr:DescribeImages",
+                "ecr:BatchGetImage",
+                "ecr:InitiateLayerUpload",
+                "ecr:UploadLayerPart",
+                "ecr:CompleteLayerUpload",
+                "ecr:PutImage"
             ],
-            "Resource": "*"
+            "Resource": [
+                "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/${repo}-${env}",
+                "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/${repo}-${env}/*",
+                "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/cdk-ff${env}-container-assets-*-*",
+                "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/finefinds-services-${env}",
+                "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/finefinds-services-${env}/*"
+            ]
         },
         {
             "Effect": "Allow",
@@ -283,7 +300,11 @@ create_role_policy() {
                 "iam:UntagRole",
                 "iam:ListRoleTags",
                 "iam:SimulatePrincipalPolicy",
-                "iam:ListRoles"
+                "iam:ListRoles",
+                "iam:CreateOpenIDConnectProvider",
+                "iam:DeleteOpenIDConnectProvider",
+                "iam:GetOpenIDConnectProvider",
+                "iam:ListOpenIDConnectProviders"
             ],
             "Resource": [
                 "arn:aws:iam::${ACCOUNT_ID}:role/cdk-*",
@@ -291,7 +312,8 @@ create_role_policy() {
                 "arn:aws:iam::${ACCOUNT_ID}:role/ecsInstanceRole",
                 "arn:aws:iam::${ACCOUNT_ID}:role/finefinds-*-ecs-task-role",
                 "arn:aws:iam::${ACCOUNT_ID}:role/finefinds-*-ecs-execution-role",
-                "arn:aws:iam::${ACCOUNT_ID}:role/github-actions-*"
+                "arn:aws:iam::${ACCOUNT_ID}:role/github-actions-*",
+                "arn:aws:iam::${ACCOUNT_ID}:oidc-provider/token.actions.githubusercontent.com"
             ]
         },
         {
