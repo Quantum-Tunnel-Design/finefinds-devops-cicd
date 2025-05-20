@@ -208,6 +208,7 @@ create_role_policy() {
             "Action": [
                 "ecs:UpdateService",
                 "ecs:DescribeServices",
+                "ecs:RegisterTaskDefinition",
                 "ecs:ListTaskDefinitions",
                 "ecs:DeregisterTaskDefinition",
                 "iam:PassRole",
@@ -219,7 +220,7 @@ create_role_policy() {
                 "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:service/finefinds-${env}-cluster/*",
                 "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:service/FineFinds${env}EcsService*",
                 "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:task-definition/*",
-                "arn:aws:iam::${ACCOUNT_ID}:role/github-actions-*"
+                "arn:aws:iam::${ACCOUNT_ID}:role/github-actions-*",
             ]
         },
         {
