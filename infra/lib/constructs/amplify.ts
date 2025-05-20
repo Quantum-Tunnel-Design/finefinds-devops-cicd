@@ -49,6 +49,11 @@ export class AmplifyConstruct extends Construct {
                 'npm run build'
               ],
             },
+            postBuild: {
+              commands: [
+                'echo "Amplify build completed successfully"'
+              ],
+            },
           },
           artifacts: {
             baseDirectory: '.next',
@@ -65,7 +70,19 @@ export class AmplifyConstruct extends Construct {
               '.next/cache/**/*'
             ],
           },
+          customHeaders: [
+            {
+              pattern: '**/*',
+              headers: [
+                {
+                  key: 'Cache-Control',
+                  value: 'public, max-age=0, must-revalidate'
+                }
+              ]
+            }
+          ],
         },
+        appRoot: '.',
       }),
     });
 
@@ -102,6 +119,11 @@ export class AmplifyConstruct extends Construct {
                 'npm run build'
               ],
             },
+            postBuild: {
+              commands: [
+                'echo "Amplify build completed successfully"'
+              ],
+            },
           },
           artifacts: {
             baseDirectory: '.next',
@@ -118,7 +140,19 @@ export class AmplifyConstruct extends Construct {
               '.next/cache/**/*'
             ],
           },
+          customHeaders: [
+            {
+              pattern: '**/*',
+              headers: [
+                {
+                  key: 'Cache-Control',
+                  value: 'public, max-age=0, must-revalidate'
+                }
+              ]
+            }
+          ],
         },
+        appRoot: '.',
       }),
     });
 
