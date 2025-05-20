@@ -253,13 +253,15 @@ create_role_policy() {
         {
             "Effect": "Allow",
             "Action": [
+                "logs:DescribeLogGroups",
                 "logs:CreateLogGroup",
-                "logs:CreateLogStream",
                 "logs:PutLogEvents",
+                "logs:CreateLogStream",
                 "logs:DescribeLogStreams"
             ],
             "Resource": [
-                "arn:aws:logs:${AWS_REGION}:${ACCOUNT_ID}:log-group:/ecs/finefinds-backend:*"
+                "arn:aws:logs:${AWS_REGION}:${ACCOUNT_ID}:log-group:/finefinds/*/*:*",
+                "arn:aws:logs:${AWS_REGION}:${ACCOUNT_ID}:log-group:/finefinds/*/*:log-stream:*"
             ]
         },
         {
