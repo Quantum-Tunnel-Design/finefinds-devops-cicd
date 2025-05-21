@@ -29,6 +29,7 @@ class SecretsBootstrapStack extends cdk.Stack {
     const githubSecretName = `finefinds-${environment}-github-token`;
     const jwtSecretName = `finefinds-${environment}-jwt-secret`;
     const smtpSecretName = `finefinds-${environment}-smtp-secret`;
+    const cognitoSecretName = `finefinds-${environment}-cognito-config`;
 
     // Create or import GitHub token secret
     const githubSecret = new cr.AwsCustomResource(this, 'GitHubToken', {
@@ -192,17 +193,63 @@ class SecretsBootstrapStack extends cdk.Stack {
       })
     });
 
+    // Create or import Cognito config secret
+    const cognitoSecret = new cr.AwsCustomResource(this, 'CognitoConfig', {
+      onCreate: {
+        service: 'SecretsManager',
+        action: 'createSecret',
+        parameters: {
+          Name: cognitoSecretName,
+          Description: 'Cognito configuration for the application',
+          SecretString: JSON.stringify({
+            clientUserPoolId: 'placeholder-will-be-updated',
+            clientUserPoolClientId: 'placeholder-will-be-updated',
+            adminUserPoolId: 'placeholder-will-be-updated',
+            adminUserPoolClientId: 'placeholder-will-be-updated'
+          })
+        },
+        physicalResourceId: cr.PhysicalResourceId.of(cognitoSecretName)
+      },
+      onUpdate: {
+        service: 'SecretsManager',
+        action: 'updateSecret',
+        parameters: {
+          SecretId: cognitoSecretName,
+          SecretString: JSON.stringify({
+            clientUserPoolId: 'placeholder-will-be-updated',
+            clientUserPoolClientId: 'placeholder-will-be-updated',
+            adminUserPoolId: 'placeholder-will-be-updated',
+            adminUserPoolClientId: 'placeholder-will-be-updated'
+          })
+        },
+        physicalResourceId: cr.PhysicalResourceId.of(cognitoSecretName)
+      },
+      onDelete: {
+        service: 'SecretsManager',
+        action: 'deleteSecret',
+        parameters: {
+          SecretId: cognitoSecretName,
+          ForceDeleteWithoutRecovery: true
+        }
+      },
+      policy: cr.AwsCustomResourcePolicy.fromSdkCalls({
+        resources: cr.AwsCustomResourcePolicy.ANY_RESOURCE
+      })
+    });
+
     // Import the secrets for reference
     const redisConnectionSecret = secretsmanager.Secret.fromSecretNameV2(this, 'ImportedRedisConnectionString', redisSecretName);
     const jwtSecretRef = secretsmanager.Secret.fromSecretNameV2(this, 'ImportedJwtSecret', jwtSecretName);
     const smtpSecretRef = secretsmanager.Secret.fromSecretNameV2(this, 'ImportedSmtpSecret', smtpSecretName);
     const githubSecretRef = secretsmanager.Secret.fromSecretNameV2(this, 'ImportedGitHubToken', githubSecretName);
+    const cognitoSecretRef = secretsmanager.Secret.fromSecretNameV2(this, 'ImportedCognitoConfig', cognitoSecretName);
 
     // Apply RETAIN removal policy to the custom resources
     redisSecret.node.addDependency(redisConnectionSecret);
     jwtSecret.node.addDependency(jwtSecretRef);
     smtpSecret.node.addDependency(smtpSecretRef);
     githubSecret.node.addDependency(githubSecretRef);
+    cognitoSecret.node.addDependency(cognitoSecretRef);
 
     // Output secret ARNs
     new cdk.CfnOutput(this, 'RedisSecretArn', {
@@ -227,6 +274,12 @@ class SecretsBootstrapStack extends cdk.Stack {
       value: githubSecretRef.secretArn,
       description: 'GitHub Token secret ARN',
       exportName: `finefinds-${environment}-github-token-secret-arn`,
+    });
+
+    new cdk.CfnOutput(this, 'CognitoConfigArn', {
+      value: cognitoSecretRef.secretArn,
+      description: 'Cognito configuration secret ARN',
+      exportName: `finefinds-${environment}-cognito-config-arn`,
     });
   }
 }

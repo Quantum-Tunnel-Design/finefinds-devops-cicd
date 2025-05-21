@@ -164,7 +164,8 @@ create_role_policy() {
                 "arn:aws:secretsmanager:${AWS_REGION}:${ACCOUNT_ID}:secret:finefinds-${env}-jwt-secret*",
                 "arn:aws:secretsmanager:${AWS_REGION}:${ACCOUNT_ID}:secret:finefinds-${env}-smtp-secret*",
                 "arn:aws:secretsmanager:${AWS_REGION}:${ACCOUNT_ID}:secret:finefinds-${env}-opensearch-admin-password*",
-                "arn:aws:secretsmanager:${AWS_REGION}:${ACCOUNT_ID}:secret:finefinds-${env}-github-token*"
+                "arn:aws:secretsmanager:${AWS_REGION}:${ACCOUNT_ID}:secret:finefinds-${env}-github-token*",
+                "arn:aws:secretsmanager:${AWS_REGION}:${ACCOUNT_ID}:secret:finefinds-${env}-cognito-config*"
             ]
         },
         {
