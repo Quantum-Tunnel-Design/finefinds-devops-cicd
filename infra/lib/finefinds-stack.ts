@@ -20,6 +20,7 @@ import { AmplifyConstruct } from './constructs/amplify';
 import { BastionConstruct } from './constructs/bastion';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as iamcdk from 'aws-cdk-lib/aws-iam';
 
 /**
  * Creates a secret if it doesn't exist, or imports it if it does
@@ -111,22 +112,15 @@ export class FineFindsStack extends cdk.Stack {
       `finefinds-${props.config.environment}-redis-connection`
     );
 
-    // Import the database connection secret created by RDS
-    const dbConnectionStringSecret = secretsmanager.Secret.fromSecretNameV2(
-      this,
-      'DbConnectionString',
-      `finefinds-${props.config.environment}-rds-connection`
-    );
-
     // Update the database connection secret once the RDS instance is available
-    if (props.config.environment === 'prod' && rds.cluster) {
+    if (props.config.environment === 'prod' && rds.cluster && rds.cluster.secret) {
       // For production, use the Aurora cluster
-      const updateDbSecret = new cdk.custom_resources.AwsCustomResource(this, 'UpdateDbConnectionSecret', {
+      const updateDbSecret = new cdk.custom_resources.AwsCustomResource(this, 'UpdateDbConnectionSecretProd', {
         onCreate: {
           service: 'SecretsManager',
           action: 'updateSecret',
           parameters: {
-            SecretId: dbConnectionStringSecret.secretArn,
+            SecretId: rds.cluster.secret.secretArn,
             SecretString: cdk.Lazy.string({
               produce: () => {
                 const password = rds.cluster?.secret?.secretValueFromJson('password').unsafeUnwrap() || '';
@@ -141,13 +135,13 @@ export class FineFindsStack extends cdk.Stack {
               }
             }),
           },
-          physicalResourceId: cdk.custom_resources.PhysicalResourceId.of('DbSecretUpdate-' + Date.now().toString()),
+          physicalResourceId: cdk.custom_resources.PhysicalResourceId.of('DbSecretUpdateProd-' + Date.now().toString()),
         },
         onUpdate: {
           service: 'SecretsManager',
           action: 'updateSecret',
           parameters: {
-            SecretId: dbConnectionStringSecret.secretArn,
+            SecretId: rds.cluster.secret.secretArn,
             SecretString: cdk.Lazy.string({
               produce: () => {
                 const password = rds.cluster?.secret?.secretValueFromJson('password').unsafeUnwrap() || '';
@@ -162,24 +156,29 @@ export class FineFindsStack extends cdk.Stack {
               }
             }),
           },
-          physicalResourceId: cdk.custom_resources.PhysicalResourceId.of('DbSecretUpdate-' + Date.now().toString()),
+          physicalResourceId: cdk.custom_resources.PhysicalResourceId.of('DbSecretUpdateProd-' + Date.now().toString()),
         },
-        policy: cdk.custom_resources.AwsCustomResourcePolicy.fromSdkCalls({
-          resources: cdk.custom_resources.AwsCustomResourcePolicy.ANY_RESOURCE,
-        }),
+        policy: cdk.custom_resources.AwsCustomResourcePolicy.fromStatements([
+          new iamcdk.PolicyStatement({
+            actions: ['secretsmanager:UpdateSecret'],
+            resources: [rds.cluster.secret.secretArn],
+          }),
+        ]),
       });
       
-      // Ensure the custom resource runs after RDS is created
       updateDbSecret.node.addDependency(rds.cluster);
+      if (rds.cluster.secret) {
+          updateDbSecret.node.addDependency(rds.cluster.secret);
+      }
       
-    } else if (rds.instance) {
+    } else if (rds.instance && rds.instance.secret) {
       // For non-production, use single instance
-      const updateDbSecret = new cdk.custom_resources.AwsCustomResource(this, 'UpdateDbConnectionSecret', {
+      const updateDbSecret = new cdk.custom_resources.AwsCustomResource(this, 'UpdateDbConnectionSecretNonProd', {
         onCreate: {
           service: 'SecretsManager',
           action: 'updateSecret',
           parameters: {
-            SecretId: dbConnectionStringSecret.secretArn,
+            SecretId: rds.instance.secret.secretArn,
             SecretString: cdk.Lazy.string({
               produce: () => {
                 const password = rds.instance?.secret?.secretValueFromJson('password').unsafeUnwrap() || '';
@@ -194,13 +193,13 @@ export class FineFindsStack extends cdk.Stack {
               }
             }),
           },
-          physicalResourceId: cdk.custom_resources.PhysicalResourceId.of('DbSecretUpdate-' + Date.now().toString()),
+          physicalResourceId: cdk.custom_resources.PhysicalResourceId.of('DbSecretUpdateNonProd-' + Date.now().toString()),
         },
         onUpdate: {
           service: 'SecretsManager',
           action: 'updateSecret',
           parameters: {
-            SecretId: dbConnectionStringSecret.secretArn,
+            SecretId: rds.instance.secret.secretArn,
             SecretString: cdk.Lazy.string({
               produce: () => {
                 const password = rds.instance?.secret?.secretValueFromJson('password').unsafeUnwrap() || '';
@@ -215,15 +214,20 @@ export class FineFindsStack extends cdk.Stack {
               }
             }),
           },
-          physicalResourceId: cdk.custom_resources.PhysicalResourceId.of('DbSecretUpdate-' + Date.now().toString()),
+          physicalResourceId: cdk.custom_resources.PhysicalResourceId.of('DbSecretUpdateNonProd-' + Date.now().toString()),
         },
-        policy: cdk.custom_resources.AwsCustomResourcePolicy.fromSdkCalls({
-          resources: cdk.custom_resources.AwsCustomResourcePolicy.ANY_RESOURCE,
-        }),
+        policy: cdk.custom_resources.AwsCustomResourcePolicy.fromStatements([
+          new iamcdk.PolicyStatement({
+            actions: ['secretsmanager:UpdateSecret'],
+            resources: [rds.instance.secret.secretArn],
+          }),
+        ]),
       });
       
-      // Ensure the custom resource runs after RDS is created
       updateDbSecret.node.addDependency(rds.instance);
+      if (rds.instance.secret) {
+          updateDbSecret.node.addDependency(rds.instance.secret);
+      }
     }
 
     // Create ECS Cluster and Services
@@ -252,9 +256,8 @@ export class FineFindsStack extends cdk.Stack {
       ecs.service.node.addDependency(rds.instance);
       migrationTask.taskDefinition.node.addDependency(rds.instance);
     }
-    ecs.service.node.addDependency(dbConnectionStringSecret);
-    migrationTask.taskDefinition.node.addDependency(dbConnectionStringSecret);
     ecs.service.node.addDependency(redisConnectionSecret);
+    migrationTask.taskDefinition.node.addDependency(redisConnectionSecret);
 
     // Output subnet IDs for migration task
     const privateSubnets = vpc.vpc.selectSubnets({
