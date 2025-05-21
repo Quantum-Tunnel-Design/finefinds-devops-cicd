@@ -24,17 +24,13 @@ export class VpcConstruct extends Construct {
           name: 'Public',
           subnetType: ec2.SubnetType.PUBLIC,
           cidrMask: 24,
+          mapPublicIpOnLaunch: true,
         },
         {
           name: 'Private',
           subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
           cidrMask: 24,
-        },
-        {
-          name: 'Isolated',
-          subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
-          cidrMask: 24,
-        },
+        }
       ],
       enableDnsHostnames: true,
       enableDnsSupport: true,

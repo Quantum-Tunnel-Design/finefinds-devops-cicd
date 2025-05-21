@@ -100,6 +100,13 @@ export class EcsConstruct extends Construct {
       allowAllOutbound: true,
     });
 
+    // Allow inbound access from the load balancer
+    securityGroup.addIngressRule(
+      ec2.Peer.ipv4(props.vpc.vpcCidrBlock),
+      ec2.Port.tcp(props.config.ecs.containerPort),
+      'Allow inbound access from within VPC'
+    );
+
     // Create load balancer
     this.loadBalancer = new elbv2.ApplicationLoadBalancer(this, 'LoadBalancer', {
       vpc: props.vpc,
