@@ -224,7 +224,7 @@ class SecretsBootstrapStack extends cdk.Stack {
     });
 
     new cdk.CfnOutput(this, 'GitHubTokenArn', {
-      value: smtpSecretRef.secretArn,
+      value: githubSecretRef.secretArn,
       description: 'GitHub Token secret ARN',
       exportName: `finefinds-${environment}-github-token-secret-arn`,
     });
