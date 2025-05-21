@@ -8,94 +8,33 @@ import { BaseConfig } from '../../env/base-config';
 export interface SecretsConstructProps {
   environment: string;
   config: BaseConfig;
-  kmsKey: kms.IKey;
+  kmsKey: kms.Key;
 }
 
 export class SecretsConstruct extends Construct {
-  public readonly databaseSecret: secretsmanager.Secret;
-  public readonly redisSecret: secretsmanager.Secret;
-  public readonly opensearchSecret: secretsmanager.Secret;
-  public readonly jwtSecret: secretsmanager.Secret;
-  public readonly smtpSecret: secretsmanager.Secret;
+  public readonly databaseSecret: secretsmanager.ISecret;
+  public readonly redisSecret: secretsmanager.ISecret;
+  public readonly opensearchSecret: secretsmanager.ISecret;
+  public readonly jwtSecret: secretsmanager.ISecret;
+  public readonly smtpSecret: secretsmanager.ISecret;
 
   constructor(scope: Construct, id: string, props: SecretsConstructProps) {
     super(scope, id);
 
     // Create database secret
-    this.databaseSecret = new secretsmanager.Secret(this, 'DatabaseSecret', {
-      secretName: `finefinds-${props.environment}-rds-connection`,
-      description: 'Database credentials',
-      encryptionKey: props.kmsKey,
-      generateSecretString: {
-        secretStringTemplate: JSON.stringify({
-          username: 'admin',
-        }),
-        generateStringKey: 'password',
-        excludePunctuation: false,
-        passwordLength: 16,
-      },
-    });
+    this.databaseSecret = secretsmanager.Secret.fromSecretNameV2(this, 'DatabaseSecret', `finefinds-${props.environment}-rds-connection`);
 
     // Create Redis secret
-    this.redisSecret = new secretsmanager.Secret(this, 'RedisSecret', {
-      secretName: `finefinds-${props.environment}-redis-connection`,
-      description: 'Redis connection details',
-      encryptionKey: props.kmsKey,
-      generateSecretString: {
-        secretStringTemplate: JSON.stringify({
-          host: 'localhost', // This will be updated after Redis cluster creation
-          port: 6379,
-          username: 'default',
-        }),
-        generateStringKey: 'password',
-        excludePunctuation: false,
-        passwordLength: 16,
-      },
-    });
+    this.redisSecret = secretsmanager.Secret.fromSecretNameV2(this, 'RedisSecret', `finefinds-${props.environment}-redis-connection`);
 
     // Create OpenSearch secret
-    this.opensearchSecret = new secretsmanager.Secret(this, 'OpenSearchSecret', {
-      secretName: `finefinds-${props.environment}-opensearch-admin-password`,
-      description: 'OpenSearch admin password for FineFinds application',
-      encryptionKey: props.kmsKey,
-      generateSecretString: {
-        secretStringTemplate: JSON.stringify({}),
-        generateStringKey: 'password',
-        excludePunctuation: false,
-        passwordLength: 32,
-      },
-    });
+    this.opensearchSecret = secretsmanager.Secret.fromSecretNameV2(this, 'OpenSearchSecret', `finefinds-${props.environment}-opensearch-admin-password`);
 
     // Create JWT secret
-    this.jwtSecret = new secretsmanager.Secret(this, 'JwtSecret', {
-      secretName: `finefinds-${props.environment}-jwt-secret`,
-      description: 'JWT secret for application authentication',
-      encryptionKey: props.kmsKey,
-      generateSecretString: {
-        secretStringTemplate: JSON.stringify({ secret: '' }),
-        generateStringKey: 'secret',
-        excludePunctuation: true,
-        passwordLength: 32,
-      },
-    });
+    this.jwtSecret = secretsmanager.Secret.fromSecretNameV2(this, 'JwtSecret', `finefinds-${props.environment}-jwt-secret`);
 
     // Create SMTP secret
-    this.smtpSecret = new secretsmanager.Secret(this, 'SmtpSecret', {
-      secretName: `finefinds-${props.environment}-smtp-secret`,
-      description: 'SMTP credentials for email sending',
-      encryptionKey: props.kmsKey,
-      generateSecretString: {
-        secretStringTemplate: JSON.stringify({
-          host: '',
-          port: 587,
-          username: '',
-          password: '',
-        }),
-        generateStringKey: 'password',
-        excludePunctuation: true,
-        passwordLength: 16,
-      },
-    });
+    this.smtpSecret = secretsmanager.Secret.fromSecretNameV2(this, 'SmtpSecret', `finefinds-${props.environment}-smtp-secret`);
 
     // Create IAM policy for ECS tasks to access secrets
     const secretsPolicy = new iam.PolicyStatement({

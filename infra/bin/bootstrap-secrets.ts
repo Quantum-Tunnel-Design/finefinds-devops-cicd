@@ -72,18 +72,9 @@ class SecretsBootstrapStack extends cdk.Stack {
     const dbSecret = new cr.AwsCustomResource(this, 'DbConnectionString', {
       onCreate: {
         service: 'SecretsManager',
-        action: 'createSecret',
+        action: 'describeSecret',
         parameters: {
-          Name: dbSecretName,
-          Description: 'Database connection string for the application',
-          SecretString: JSON.stringify({
-            dbName: 'finefinds',
-            engine: 'postgres',
-            host: 'placeholder-will-be-updated',
-            port: 5432,
-            username: 'postgres',
-            password: 'placeholder-will-be-updated'
-          })
+          SecretId: dbSecretName
         },
         physicalResourceId: cr.PhysicalResourceId.of(dbSecretName)
       },
@@ -120,13 +111,9 @@ class SecretsBootstrapStack extends cdk.Stack {
     const githubSecret = new cr.AwsCustomResource(this, 'GitHubToken', {
       onCreate: {
         service: 'SecretsManager',
-        action: 'createSecret',
+        action: 'describeSecret',
         parameters: {
-          Name: githubSecretName,
-          Description: 'GitHub token for Amplify apps',
-          SecretString: JSON.stringify({
-            token: 'placeholder-will-be-updated'
-          })
+          SecretId: githubSecretName
         },
         physicalResourceId: cr.PhysicalResourceId.of(githubSecretName)
       },
@@ -158,15 +145,9 @@ class SecretsBootstrapStack extends cdk.Stack {
     const redisSecret = new cr.AwsCustomResource(this, 'RedisConnectionString', {
       onCreate: {
         service: 'SecretsManager',
-        action: 'createSecret',
+        action: 'describeSecret',
         parameters: {
-          Name: redisSecretName,
-          Description: 'Redis connection details for the application',
-          SecretString: JSON.stringify({
-            host: 'placeholder-will-be-updated',
-            port: 6379,
-            password: 'placeholder-will-be-updated'
-          })
+          SecretId: redisSecretName
         },
         physicalResourceId: cr.PhysicalResourceId.of(redisSecretName)
       },
@@ -200,13 +181,9 @@ class SecretsBootstrapStack extends cdk.Stack {
     const jwtSecret = new cr.AwsCustomResource(this, 'JwtSecret', {
       onCreate: {
         service: 'SecretsManager',
-        action: 'createSecret',
+        action: 'describeSecret',
         parameters: {
-          Name: jwtSecretName,
-          Description: 'JWT secret for application authentication',
-          SecretString: JSON.stringify({
-            secret: 'placeholder-will-be-updated'
-          })
+          SecretId: jwtSecretName
         },
         physicalResourceId: cr.PhysicalResourceId.of(jwtSecretName)
       },
@@ -238,16 +215,9 @@ class SecretsBootstrapStack extends cdk.Stack {
     const smtpSecret = new cr.AwsCustomResource(this, 'SmtpSecret', {
       onCreate: {
         service: 'SecretsManager',
-        action: 'createSecret',
+        action: 'describeSecret',
         parameters: {
-          Name: smtpSecretName,
-          Description: 'SMTP credentials for email sending',
-          SecretString: JSON.stringify({
-            host: 'placeholder-will-be-updated',
-            port: 587,
-            username: 'placeholder-will-be-updated',
-            password: 'placeholder-will-be-updated'
-          })
+          SecretId: smtpSecretName
         },
         physicalResourceId: cr.PhysicalResourceId.of(smtpSecretName)
       },
