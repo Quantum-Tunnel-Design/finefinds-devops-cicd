@@ -21,7 +21,7 @@ export class AmplifyConstruct extends Construct {
       appName: `finefinds-${props.environment}-client-web`,
       sourceCodeProvider: new amplify.GitHubSourceCodeProvider({
         owner: 'Quantum-Tunnel-Design',
-        repository: 'finefinds-client-web',
+        repository: 'finefinds-client-web-app',
         oauthToken: cdk.SecretValue.secretsManager(`finefinds-${props.environment}-github-token`, {
           jsonField: 'token',
         }),
