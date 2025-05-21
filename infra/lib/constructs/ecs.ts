@@ -33,30 +33,12 @@ export class EcsConstruct extends Construct {
       containerInsightsV2: props.environment === 'prod' ? ecs.ContainerInsights.ENABLED : ecs.ContainerInsights.DISABLED,
     });
 
-    // Import the existing private DNS namespace using its attributes
-    const namespaceName = `finefinds.${props.environment}.local`;
-    // The Hosted Zone ID from the error message for "finefinds.dev.local" was Z089901220NSHST8RR1JY
-    // IMPORTANT: This ID is specific to the 'dev' environment and the VPC mentioned in the error.
-    // If deploying to other environments, this ID will be different.
-    // A more robust long-term solution might involve a conditional lookup or passing IDs via context.
-    const namespaceId = props.environment === 'dev' ? 'Z089901220NSHST8RR1JY' : ' REPLACE_WITH_CORRECT_NAMESPACE_ID_FOR_OTHER_ENVIRONMENTS ';
-    
-    if (props.environment === 'dev' && namespaceId === ' REPLACE_WITH_CORRECT_NAMESPACE_ID_FOR_OTHER_ENVIRONMENTS ') {
-        throw new Error("Namespace ID for dev environment is hardcoded but seems to be the placeholder. Update it!");
-    }
-    if (props.environment !== 'dev' && namespaceId === 'Z089901220NSHST8RR1JY'){
-        //This is a placeholder. If you have other environments, you need to get their specific Namespace IDs.
-        console.warn(`Using dev Namespace ID for ${props.environment} environment. This is likely incorrect. Please find the correct Namespace ID for ${namespaceName} in this VPC.`);
-    }
-    if (namespaceId.startsWith('REPLACE_WITH')){
-        throw new Error(`Namespace ID for ${namespaceName} in environment ${props.environment} is a placeholder. You must provide the actual Hosted Zone ID for this namespace and VPC combination. You can find this in the AWS Route 53 console under Private Hosted Zones.`);
-    }
-
-
-    const cloudMapNamespace = servicediscovery.PrivateDnsNamespace.fromPrivateDnsNamespaceAttributes(this, 'ServiceDiscoveryNamespace', {
-      namespaceName: namespaceName,
-      namespaceArn: `arn:aws:servicediscovery:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:namespace/${namespaceId}`,
-      namespaceId: namespaceId,
+    // Create a new CloudMap namespace for service discovery
+    // This will also create an associated Route 53 private hosted zone.
+    const cloudMapNamespace = this.cluster.addDefaultCloudMapNamespace({
+        name: `finefinds.${props.environment}.local`,
+        vpc: props.vpc,
+        useForServiceConnect: false, // Not using AppMesh/ServiceConnect
     });
 
     // Create task definition
