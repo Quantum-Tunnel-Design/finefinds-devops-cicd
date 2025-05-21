@@ -40,7 +40,7 @@ export class RdsConstruct extends Construct {
       // For production, use Aurora PostgreSQL cluster
       this.parameterGroup = new rds.ParameterGroup(this, 'ParameterGroup', {
         engine: rds.DatabaseClusterEngine.auroraPostgres({
-          version: rds.AuroraPostgresEngineVersion.VER_13_4,
+          version: rds.AuroraPostgresEngineVersion.VER_17_4,
         }),
         parameters: {
           'rds.force_ssl': '1',
