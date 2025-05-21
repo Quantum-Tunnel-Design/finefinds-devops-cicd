@@ -5,6 +5,7 @@ import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
+import * as servicediscovery from 'aws-cdk-lib/aws-servicediscovery';
 import { Construct } from 'constructs';
 import { BaseConfig } from '../../env/base-config';
 
@@ -148,7 +149,17 @@ export class EcsConstruct extends Construct {
         subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
       },
       assignPublicIp: false,
-      serviceName: `finefinds-${props.environment}-service`
+      serviceName: `finefinds-${props.environment}-service`,
+      cloudMapOptions: {
+        name: 'app',
+        dnsRecordType: servicediscovery.DnsRecordType.A,
+        dnsTtl: cdk.Duration.seconds(60),
+        cloudMapNamespace: this.cluster.addDefaultCloudMapNamespace({
+            name: `finefinds.${props.environment}.local`,
+            vpc: props.vpc,
+            useForServiceConnect: false,
+        }),
+      }
     });
 
     // Add service to target group
