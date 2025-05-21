@@ -196,11 +196,13 @@ class SecretsBootstrapStack extends cdk.Stack {
     const redisConnectionSecret = secretsmanager.Secret.fromSecretNameV2(this, 'ImportedRedisConnectionString', redisSecretName);
     const jwtSecretRef = secretsmanager.Secret.fromSecretNameV2(this, 'ImportedJwtSecret', jwtSecretName);
     const smtpSecretRef = secretsmanager.Secret.fromSecretNameV2(this, 'ImportedSmtpSecret', smtpSecretName);
+    const githubSecretRef = secretsmanager.Secret.fromSecretNameV2(this, 'ImportedGitHubToken', githubSecretName);
 
     // Apply RETAIN removal policy to the custom resources
     redisSecret.node.addDependency(redisConnectionSecret);
     jwtSecret.node.addDependency(jwtSecretRef);
     smtpSecret.node.addDependency(smtpSecretRef);
+    githubSecret.node.addDependency(githubSecretRef);
 
     // Output secret ARNs
     new cdk.CfnOutput(this, 'RedisSecretArn', {
@@ -219,6 +221,12 @@ class SecretsBootstrapStack extends cdk.Stack {
       value: smtpSecretRef.secretArn,
       description: 'SMTP secret ARN',
       exportName: `finefinds-${environment}-smtp-secret-arn`,
+    });
+
+    new cdk.CfnOutput(this, 'GitHubTokenArn', {
+      value: smtpSecretRef.secretArn,
+      description: 'GitHub Token secret ARN',
+      exportName: `finefinds-${environment}-github-token-secret-arn`,
     });
   }
 }
