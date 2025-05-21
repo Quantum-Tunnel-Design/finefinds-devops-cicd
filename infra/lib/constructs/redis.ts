@@ -81,7 +81,7 @@ export class RedisConstruct extends Construct {
     new cdk.CfnOutput(this, 'RedisEndpoint', {
       value: this.cluster.attrRedisEndpointAddress,
       description: 'Redis ElastiCache endpoint',
-      exportName: `finefinds-${props.environment}-redis-endpoint`,
+      exportName: `finefinds-${props.environment}-redis-cache-endpoint`,
     });
   }
 } 

@@ -350,7 +350,7 @@ export class FineFindsStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'RedisEndpoint', {
       value: redis.cluster.attrRedisEndpointAddress,
       description: 'Redis endpoint',
-      exportName: `finefinds-${props.config.environment}-redis-endpoint`,
+      exportName: `finefinds-${props.config.environment}-redis-cache-endpoint`,
     });
 
     // Create Cognito User Pools

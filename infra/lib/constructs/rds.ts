@@ -116,19 +116,6 @@ export class RdsConstruct extends Construct {
         copyTagsToSnapshot: true,
         preferredMaintenanceWindow: 'sun:04:00-sun:05:00',
       });
-
-      // Output Aurora cluster endpoint and secret
-      new cdk.CfnOutput(this, 'ClusterEndpoint', {
-        value: this.cluster.clusterEndpoint.hostname,
-        description: 'RDS Cluster Endpoint',
-        exportName: `finefinds-${props.environment}-db-endpoint`,
-      });
-
-      new cdk.CfnOutput(this, 'ClusterSecretArn', {
-        value: this.cluster.secret!.secretArn,
-        description: 'RDS Cluster Secret ARN',
-        exportName: `finefinds-${props.environment}-db-secret-arn`,
-      });
     } else {
       // For non-production environments, use single-instance PostgreSQL
       this.parameterGroup = new rds.ParameterGroup(this, 'ParameterGroup', {
@@ -178,32 +165,24 @@ export class RdsConstruct extends Construct {
           ? cdk.RemovalPolicy.RETAIN 
           : cdk.RemovalPolicy.DESTROY,
       });
-
-      // Output single instance endpoint and secret
-      new cdk.CfnOutput(this, 'InstanceEndpoint', {
-        value: this.instance.dbInstanceEndpointAddress,
-        description: 'RDS Instance Endpoint',
-        exportName: `finefinds-${props.environment}-db-endpoint`,
-      });
-
-      new cdk.CfnOutput(this, 'InstanceSecretArn', {
-        value: this.instance.secret!.secretArn,
-        description: 'RDS Instance Secret ARN',
-        exportName: `finefinds-${props.environment}-db-secret-arn`,
-      });
     }
 
     // Add tags
     cdk.Tags.of(this.instance).add('Environment', props.environment);
 
-    // Output the database endpoint
+    // Consolidated outputs
     new cdk.CfnOutput(this, 'DatabaseEndpoint', {
       value: this.instance?.instanceEndpoint.hostname || this.cluster?.clusterEndpoint.hostname || 'No database endpoint available',
       description: 'Database endpoint',
       exportName: `finefinds-${props.environment}-rds-endpoint`,
     });
 
-    // Output the database port
+    new cdk.CfnOutput(this, 'DatabaseSecretArn', {
+      value: this.instance?.secret?.secretArn || this.cluster?.secret?.secretArn || 'No secret available',
+      description: 'Database credentials secret ARN',
+      exportName: `finefinds-${props.environment}-rds-secret-arn`,
+    });
+
     new cdk.CfnOutput(this, 'DatabasePort', {
       value: '5432',
       description: 'Database port',
