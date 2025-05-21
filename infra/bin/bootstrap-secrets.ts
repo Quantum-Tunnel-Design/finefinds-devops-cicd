@@ -291,31 +291,6 @@ class SecretsBootstrapStack extends cdk.Stack {
     redisSecret.node.addDependency(redisConnectionSecret);
     jwtSecret.node.addDependency(jwtSecretRef);
     smtpSecret.node.addDependency(smtpSecretRef);
-
-    // Output the secret ARNs for reference
-    new cdk.CfnOutput(this, 'DbConnectionSecretArn', {
-      value: dbConnectionStringSecret.secretArn,
-      description: 'ARN of the database connection secret',
-      exportName: `finefinds-${environment}-rds-secret-arn`,
-    });
-
-    new cdk.CfnOutput(this, 'RedisConnectionSecretArn', {
-      value: redisConnectionSecret.secretArn,
-      description: 'ARN of the Redis connection secret',
-      exportName: `finefinds-${environment}-redis-secret-arn`,
-    });
-
-    new cdk.CfnOutput(this, 'JwtSecretArn', {
-      value: jwtSecretRef.secretArn,
-      description: 'ARN of the JWT secret',
-      exportName: `finefinds-${environment}-jwt-secret-arn`,
-    });
-
-    new cdk.CfnOutput(this, 'SmtpSecretArn', {
-      value: smtpSecretRef.secretArn,
-      description: 'ARN of the SMTP secret',
-      exportName: `finefinds-${environment}-smtp-secret-arn`,
-    });
   }
 }
 

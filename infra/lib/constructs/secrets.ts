@@ -114,12 +114,6 @@ export class SecretsConstruct extends Construct {
     });
 
     // Output secret ARNs
-    new cdk.CfnOutput(this, 'DatabaseSecretArn', {
-      value: this.databaseSecret.secretArn,
-      description: 'Database secret ARN',
-      exportName: `finefinds-${props.environment}-rds-secret-arn`,
-    });
-
     new cdk.CfnOutput(this, 'RedisSecretArn', {
       value: this.redisSecret.secretArn,
       description: 'Redis secret ARN',
