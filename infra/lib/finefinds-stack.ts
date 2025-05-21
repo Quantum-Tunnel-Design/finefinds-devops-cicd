@@ -446,7 +446,7 @@ export class FineFindsStack extends cdk.Stack {
 
     // Add tags to all resources
     cdk.Tags.of(this).add('Environment', props.config.environment);
-    cdk.Tags.of(this).add('Project', 'FineFinds');
+    cdk.Tags.of(this).add('Project', 'finefinds');
     cdk.Tags.of(this).add('ManagedBy', 'CDK');
     
     // Add auto-shutdown for non-production environments
