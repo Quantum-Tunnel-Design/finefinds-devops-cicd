@@ -135,7 +135,7 @@ export class RdsConstruct extends Construct {
       // Create single-instance RDS PostgreSQL for dev/test
       this.instance = new rds.DatabaseInstance(this, 'Database', {
         engine: rds.DatabaseInstanceEngine.postgres({
-          version: rds.PostgresEngineVersion.VER_15_3,
+          version: rds.PostgresEngineVersion.VER_13_7,
         }),
         vpc: props.vpc,
         vpcSubnets: {
