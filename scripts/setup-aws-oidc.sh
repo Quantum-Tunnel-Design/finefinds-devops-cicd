@@ -159,10 +159,11 @@ create_role_policy() {
             "Resource": [
                 "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-cognito-config*",
                 "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-redis-connection*",
-                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-db-connection*",
+                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-rds-connection*",
                 "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:FineFinds*RdsDatabaseSecr-*",
-                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:github-token-*",
-                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-jwt*",
+                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-github-token*",
+                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-jwt-secret*",
+                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-smtp-secret*",
                 "arn:aws:iam::***:role/github-actions-*"
             ]
         },

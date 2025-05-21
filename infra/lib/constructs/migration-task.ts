@@ -60,7 +60,7 @@ export class MigrationTaskConstruct extends Construct {
           cdk.aws_secretsmanager.Secret.fromSecretNameV2(
             this,
             'DbConnectionSecret',
-            `finefinds-${props.environment}-db-connection`
+            `finefinds-${props.environment}-rds-connection`
           )
         ),
       },

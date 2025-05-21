@@ -26,9 +26,11 @@ class SecretsBootstrapStack extends cdk.Stack {
     });
 
     // Define secret names
-    const dbSecretName = `finefinds-${environment}-db-connection`;
+    const dbSecretName = `finefinds-${environment}-rds-connection`;
     const redisSecretName = `finefinds-${environment}-redis-connection`;
-    const githubSecretName = 'github-token';
+    const githubSecretName = `finefinds-${environment}-github-token`;
+    const jwtSecretName = `finefinds-${environment}-jwt-secret`;
+    const smtpSecretName = `finefinds-${environment}-smtp-secret`;
 
     // Create a custom resource provider for handling secret creation/import
     const secretProvider = new cr.Provider(this, 'SecretProvider', {
@@ -194,27 +196,125 @@ class SecretsBootstrapStack extends cdk.Stack {
       })
     });
 
+    // Create or import JWT secret
+    const jwtSecret = new cr.AwsCustomResource(this, 'JwtSecret', {
+      onCreate: {
+        service: 'SecretsManager',
+        action: 'createSecret',
+        parameters: {
+          Name: jwtSecretName,
+          Description: 'JWT secret for application authentication',
+          SecretString: JSON.stringify({
+            secret: 'placeholder-will-be-updated'
+          })
+        },
+        physicalResourceId: cr.PhysicalResourceId.of(jwtSecretName)
+      },
+      onUpdate: {
+        service: 'SecretsManager',
+        action: 'updateSecret',
+        parameters: {
+          SecretId: jwtSecretName,
+          SecretString: JSON.stringify({
+            secret: 'placeholder-will-be-updated'
+          })
+        },
+        physicalResourceId: cr.PhysicalResourceId.of(jwtSecretName)
+      },
+      onDelete: {
+        service: 'SecretsManager',
+        action: 'deleteSecret',
+        parameters: {
+          SecretId: jwtSecretName,
+          ForceDeleteWithoutRecovery: true
+        }
+      },
+      policy: cr.AwsCustomResourcePolicy.fromSdkCalls({
+        resources: cr.AwsCustomResourcePolicy.ANY_RESOURCE
+      })
+    });
+
+    // Create or import SMTP secret
+    const smtpSecret = new cr.AwsCustomResource(this, 'SmtpSecret', {
+      onCreate: {
+        service: 'SecretsManager',
+        action: 'createSecret',
+        parameters: {
+          Name: smtpSecretName,
+          Description: 'SMTP credentials for email sending',
+          SecretString: JSON.stringify({
+            host: 'placeholder-will-be-updated',
+            port: 587,
+            username: 'placeholder-will-be-updated',
+            password: 'placeholder-will-be-updated'
+          })
+        },
+        physicalResourceId: cr.PhysicalResourceId.of(smtpSecretName)
+      },
+      onUpdate: {
+        service: 'SecretsManager',
+        action: 'updateSecret',
+        parameters: {
+          SecretId: smtpSecretName,
+          SecretString: JSON.stringify({
+            host: 'placeholder-will-be-updated',
+            port: 587,
+            username: 'placeholder-will-be-updated',
+            password: 'placeholder-will-be-updated'
+          })
+        },
+        physicalResourceId: cr.PhysicalResourceId.of(smtpSecretName)
+      },
+      onDelete: {
+        service: 'SecretsManager',
+        action: 'deleteSecret',
+        parameters: {
+          SecretId: smtpSecretName,
+          ForceDeleteWithoutRecovery: true
+        }
+      },
+      policy: cr.AwsCustomResourcePolicy.fromSdkCalls({
+        resources: cr.AwsCustomResourcePolicy.ANY_RESOURCE
+      })
+    });
+
     // Import the secrets for reference
     const dbConnectionStringSecret = secretsmanager.Secret.fromSecretNameV2(this, 'ImportedDbConnectionString', dbSecretName);
     const githubTokenSecret = secretsmanager.Secret.fromSecretNameV2(this, 'ImportedGitHubToken', githubSecretName);
     const redisConnectionSecret = secretsmanager.Secret.fromSecretNameV2(this, 'ImportedRedisConnectionString', redisSecretName);
+    const jwtSecretRef = secretsmanager.Secret.fromSecretNameV2(this, 'ImportedJwtSecret', jwtSecretName);
+    const smtpSecretRef = secretsmanager.Secret.fromSecretNameV2(this, 'ImportedSmtpSecret', smtpSecretName);
 
     // Apply RETAIN removal policy to the custom resources
     dbSecret.node.addDependency(dbConnectionStringSecret);
     githubSecret.node.addDependency(githubTokenSecret);
     redisSecret.node.addDependency(redisConnectionSecret);
+    jwtSecret.node.addDependency(jwtSecretRef);
+    smtpSecret.node.addDependency(smtpSecretRef);
 
     // Output the secret ARNs for reference
     new cdk.CfnOutput(this, 'DbConnectionSecretArn', {
       value: dbConnectionStringSecret.secretArn,
       description: 'ARN of the database connection secret',
-      exportName: `finefinds-${environment}-bootstrap-db-secret-arn`,
+      exportName: `finefinds-${environment}-rds-secret-arn`,
     });
 
     new cdk.CfnOutput(this, 'RedisConnectionSecretArn', {
       value: redisConnectionSecret.secretArn,
       description: 'ARN of the Redis connection secret',
-      exportName: `finefinds-${environment}-bootstrap-redis-secret-arn`,
+      exportName: `finefinds-${environment}-redis-secret-arn`,
+    });
+
+    new cdk.CfnOutput(this, 'JwtSecretArn', {
+      value: jwtSecretRef.secretArn,
+      description: 'ARN of the JWT secret',
+      exportName: `finefinds-${environment}-jwt-secret-arn`,
+    });
+
+    new cdk.CfnOutput(this, 'SmtpSecretArn', {
+      value: smtpSecretRef.secretArn,
+      description: 'ARN of the SMTP secret',
+      exportName: `finefinds-${environment}-smtp-secret-arn`,
     });
   }
 }

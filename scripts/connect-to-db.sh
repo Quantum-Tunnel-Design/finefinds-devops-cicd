@@ -31,7 +31,7 @@ if [ -z "$DB_ENDPOINT" ]; then
 fi
 
 # Get the database credentials
-DB_SECRET=$(aws secretsmanager get-secret-value --secret-id finefinds-${ENVIRONMENT}-db-connection --query 'SecretString' --output text)
+DB_SECRET=$(aws secretsmanager get-secret-value --secret-id finefinds-${ENVIRONMENT}-rds-connection --query 'SecretString' --output text)
 DB_USERNAME=$(echo $DB_SECRET | jq -r '.username')
 DB_PASSWORD=$(echo $DB_SECRET | jq -r '.password')
 

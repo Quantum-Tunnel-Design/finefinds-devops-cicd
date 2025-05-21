@@ -58,7 +58,7 @@ export class RdsConstruct extends Construct {
       // Create Aurora RDS cluster for production
       this.cluster = new rds.DatabaseCluster(this, 'Database', {
         engine: rds.DatabaseClusterEngine.auroraPostgres({
-          version: rds.AuroraPostgresEngineVersion.VER_13_4,
+          version: rds.AuroraPostgresEngineVersion.VER_17_4,
         }),
         instanceProps: {
           instanceType: ec2.InstanceType.of(
