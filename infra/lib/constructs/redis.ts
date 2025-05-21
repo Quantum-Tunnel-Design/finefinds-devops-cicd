@@ -41,7 +41,7 @@ export class RedisConstruct extends Construct {
       description: 'Subnet group for Redis ElastiCache cluster',
       subnetIds: props.environment === 'prod'
         ? props.vpc.selectSubnets({ subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS }).subnetIds
-        : props.vpc.selectSubnets({ subnetType: ec2.SubnetType.PRIVATE_ISOLATED }).subnetIds,
+        : props.vpc.selectSubnets({ subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS }).subnetIds,
     });
 
     // Create Redis cluster

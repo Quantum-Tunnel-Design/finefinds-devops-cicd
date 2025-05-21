@@ -255,7 +255,7 @@ export class FineFindsStack extends cdk.Stack {
 
     // Output subnet IDs for migration task
     const privateSubnets = vpc.vpc.selectSubnets({
-      subnetType: ec2.SubnetType.PRIVATE_ISOLATED
+      subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS
     }).subnetIds;
     const subnetIdsOutput = new cdk.CfnOutput(this, 'MigrationSubnetIds', {
       value: privateSubnets.length > 0 ? privateSubnets.join(',') : 'No private subnets available',
