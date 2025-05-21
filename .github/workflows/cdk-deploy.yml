@@ -2,7 +2,11 @@ name: CDK Deploy
 
 on:
   push:
-    branches: [main, qa, staging, dev]
+    branches: [main, qa, uat, dev]
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   check_skip:
@@ -31,15 +35,21 @@ jobs:
     environment: >-
       ${{ 
         github.ref == 'refs/heads/main' && 'prod' || 
-        github.ref == 'refs/heads/staging' && 'staging' || 
+        github.ref == 'refs/heads/uat' && 'uat' || 
         github.ref == 'refs/heads/qa' && 'qa' || 
         'dev' 
       }}
     permissions:
       id-token: write
       contents: read
-
     env:
+      QUALIFIER: >-
+        ${{ 
+          github.ref == 'refs/heads/main' && 'ffprod' || 
+          github.ref == 'refs/heads/uat' && 'ffuat' || 
+          github.ref == 'refs/heads/qa' && 'ffqa' || 
+          'ffdev'
+        }}
       AWS_REGION: us-east-1
       CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
       CDK_DEFAULT_REGION: us-east-1
@@ -47,9 +57,15 @@ jobs:
       CDK_ENV: >-
         ${{ 
           github.ref == 'refs/heads/main' && 'prod' || 
-          github.ref == 'refs/heads/staging' && 'staging' || 
+          github.ref == 'refs/heads/uat' && 'uat' || 
           github.ref == 'refs/heads/qa' && 'qa' || 
           'dev' 
+        }}
+      # Add version environment variable
+      STACK_VERSION: >-
+        ${{ 
+          github.ref == 'refs/tags/*' && github.ref_name || 
+          format('{0}-{1}', github.run_number, github.sha)
         }}
 
     steps:
@@ -59,7 +75,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-${{ github.ref_name == 'main' && 'prod' || github.ref_name }}
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-devops-${{ env.CDK_ENV }}
           aws-region: us-east-1
           role-duration-seconds: 3600  # Increase session duration to 1 hour
 
@@ -67,8 +83,14 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: infra/package-lock.json
+
+      - name: Install CDK CLI
+        run: |
+          npm install -g aws-cdk@latest
+  
+      - name: Verify CDK Version
+        run: |
+          cdk --version 
 
       - name: Install Dependencies
         run: |
@@ -104,33 +126,69 @@ jobs:
             echo "IS_NEW_ENVIRONMENT=false" >> $GITHUB_ENV
           fi
 
-      - name: CDK Bootstrap
+      - name: Clean CDK Context and Cache
+        run: |
+          cd infra
+          echo "Cleaning .cdk.context.json and cached context..."
+          rm -f .cdk.context.json || true
+          npx cdk context --clear
+  
+      - name: CDK Bootstrap (Initial Setup)
         if: github.event_name == 'push'
         run: |
           cd infra
-          npm run cdk bootstrap -- --qualifier finefinds-${{ env.CDK_ENV }} aws://${{ secrets.AWS_ACCOUNT_ID }}/${{ secrets.AWS_REGION }}
+          echo "Bootstrapping CDK for environment: ${{ env.CDK_ENV }}, qualifier: ${{ env.QUALIFIER }}"
+          # First, ensure we're using the custom qualifier for all operations
+          export CDK_QUALIFIER=${{ env.QUALIFIER }}
+          
+          # Bootstrap with explicit lookup role creation
+          npx cdk bootstrap aws://${{ secrets.AWS_ACCOUNT_ID }}/${{ env.CDK_DEFAULT_REGION }} \
+            --qualifier ${{ env.QUALIFIER }} \
+            --context qualifier=${{ env.QUALIFIER }} \
+            --context environment=${{ env.CDK_ENV }} \
+            --context version=${{ env.STACK_VERSION }} \
+            --context aws-cdk:qualifier=${{ env.QUALIFIER }} \
+            --context aws-cdk:lookup-role-name=cdk-${{ env.QUALIFIER }}-lookup-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --context aws-cdk:deploy-role-name=cdk-${{ env.QUALIFIER }}-deploy-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --context aws-cdk:file-asset-role-name=cdk-${{ env.QUALIFIER }}-file-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --context aws-cdk:image-asset-role-name=cdk-${{ env.QUALIFIER }}-image-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --context aws-cdk:image-asset-publishing-role-name=cdk-${{ env.QUALIFIER }}-image-publishing-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --context aws-cdk:asset-publishing-role-name=cdk-${{ env.QUALIFIER }}-publishing-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --require-approval never
       
       - name: Bootstrap Secrets
         if: github.event_name == 'push' && env.IS_NEW_ENVIRONMENT == 'true'
         run: |
           cd infra
-          echo "This appears to be a new environment. Bootstrapping secrets first..."
-          npm run bootstrap-secrets -- -c environment=${{ env.CDK_ENV }}
-      
+          echo "Bootstrapping secrets for new environment: ${{ env.CDK_ENV }}, qualifier: ${{ env.QUALIFIER }}"
+          npx cdk --app 'npx ts-node --prefer-ts-exts bin/bootstrap-secrets.ts' deploy \
+            --qualifier ${{ env.QUALIFIER }} \
+            --context qualifier=${{ env.QUALIFIER }} \
+            --context environment=${{ env.CDK_ENV }} \
+            --context version=${{ env.STACK_VERSION }} \
+            --context aws-cdk:qualifier=${{ env.QUALIFIER }} \
+            --context aws-cdk:lookup-role-name=cdk-${{ env.QUALIFIER }}-lookup-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --context aws-cdk:deploy-role-name=cdk-${{ env.QUALIFIER }}-deploy-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --context aws-cdk:file-asset-role-name=cdk-${{ env.QUALIFIER }}-file-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --context aws-cdk:image-asset-role-name=cdk-${{ env.QUALIFIER }}-image-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --context aws-cdk:image-asset-publishing-role-name=cdk-${{ env.QUALIFIER }}-image-publishing-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --context aws-cdk:asset-publishing-role-name=cdk-${{ env.QUALIFIER }}-publishing-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
+            --require-approval never
+        
       - name: CDK Diff
         if: github.event_name == 'pull_request'
         run: |
           cd infra
-          npm run cdk diff ${{ env.CDK_ENV }}
+          npm run cdk diff -- FineFinds-${{ env.CDK_ENV }} --context env=${{ env.CDK_ENV }} --context version=${{ env.STACK_VERSION }} --context aws-cdk:qualifier=${{ env.QUALIFIER }}
 
       - name: CDK Deploy
         if: github.event_name == 'push' 
         run: |
           cd infra
-          npm run cdk deploy -- --require-approval never
+          npm run cdk deploy -- FineFinds-${{ env.CDK_ENV }} --context env=${{ env.CDK_ENV }} --context version=${{ env.STACK_VERSION }} --context aws-cdk:qualifier=${{ env.QUALIFIER }} --require-approval never
         env:
           CDK_DEPLOY_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
-          CDK_DEPLOY_REGION: ${{ secrets.AWS_REGION }} 
+          CDK_DEPLOY_REGION: ${{ secrets.AWS_REGION }}
 
       - name: Slack Notification (Success)
         if: success()
@@ -147,6 +205,7 @@ jobs:
                   "pretext": ":white_check_mark: *CDK Deploy Succeeded*",
                   "fields": [
                     { "title": "Environment", "value": "${{ env.CDK_ENV }}", "short": true },
+                    { "title": "Version", "value": "${{ env.STACK_VERSION }}", "short": true },
                     { "title": "Branch", "value": "${{ github.ref_name }}", "short": true },
                     { "title": "Actor", "value": "${{ github.actor }}", "short": true },
                     { "title": "Commit", "value": "${{ github.sha }}", "short": false }
@@ -179,6 +238,7 @@ jobs:
                   "pretext": ":x: *CDK Deploy Failed*",
                   "fields": [
                     { "title": "Environment", "value": "${{ env.CDK_ENV }}", "short": true },
+                    { "title": "Version", "value": "${{ env.STACK_VERSION }}", "short": true },
                     { "title": "Branch", "value": "${{ github.ref_name }}", "short": true },
                     { "title": "Actor", "value": "${{ github.actor }}", "short": true },
                     { "title": "Commit", "value": "${{ github.sha }}", "short": false }
@@ -194,4 +254,4 @@ jobs:
               ]
             }
         env:
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }} 
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}

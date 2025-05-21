@@ -6,7 +6,7 @@ This process is designed to create the necessary secrets for a new FineFinds env
 
 Use the secrets bootstrap process when:
 
-1. Setting up a brand new environment (dev, qa, staging, prod)
+1. Setting up a brand new environment (dev, qa, uat, prod)
 2. Recovering from a situation where secrets were accidentally deleted
 3. Migrating to a new AWS account
 
@@ -28,8 +28,8 @@ To bootstrap secrets for a new environment:
 # For dev environment (default)
 npm run bootstrap-secrets
 
-# For a specific environment (e.g., staging)
-npm run bootstrap-secrets -- -c environment=staging
+# For a specific environment (e.g., uat)
+npm run bootstrap-secrets -- -c environment=uat
 
 # For production
 npm run bootstrap-secrets -- -c environment=prod
