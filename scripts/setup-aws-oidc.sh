@@ -203,7 +203,8 @@ create_role_policy() {
                 "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:service/finefinds-${env}-cluster/*",
                 "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:service/finefinds-${env}-ecs-service*",
                 "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:task-definition/*",
-                "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:task/finefinds-${env}-cluster/*"
+                "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:task/finefinds-${env}-cluster/*",
+                "*"
             ]
         },
         {
