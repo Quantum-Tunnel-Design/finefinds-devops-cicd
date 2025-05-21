@@ -28,7 +28,7 @@ export class AmplifyConstruct extends Construct {
       }),
       environmentVariables: {
         ...props.config.amplify.clientWebApp.buildSettings.environmentVariables,
-        NEXT_PUBLIC_API_URL: `https://api.${props.config.environment === 'prod' ? 'finefindslk.com' : `${props.config.environment}.finefindslk.com`}`,
+        NEXT_PUBLIC_API_URL: `https://api-${props.config.environment}.finefindslk.com`,
         NEXT_PUBLIC_COGNITO_USER_POOL_ID: props.config.cognito.clientUsers.userPoolName,
         NEXT_PUBLIC_COGNITO_CLIENT_ID: props.config.cognito.clientUsers.userPoolName,
         NEXT_PUBLIC_AWS_REGION: props.config.region || 'us-east-1',

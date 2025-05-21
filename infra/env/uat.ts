@@ -1,6 +1,6 @@
 import { BaseConfig } from './base-config';
 
-export const stagingConfig: BaseConfig = {
+export const uatConfig: BaseConfig = {
   environment: 'uat',
   region: 'us-east-1',
   account: process.env.CDK_DEFAULT_ACCOUNT || '',
@@ -136,7 +136,7 @@ export const stagingConfig: BaseConfig = {
     username: 'noreply@finefindslk.com',
   },
   opensearch: {
-    endpoint: 'https://search-finefinds-uat-xxxxx.us-east-1.es.amazonaws.com',
+    endpoint: 'https://search-finefinds-uat.us-east-1.es.amazonaws.com',
   },
   redis: {
     nodeType: 'cache.t3.medium',

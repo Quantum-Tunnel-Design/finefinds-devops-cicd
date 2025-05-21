@@ -136,7 +136,7 @@ export const prodConfig: BaseConfig = {
     username: 'noreply@finefindslk.com',
   },
   opensearch: {
-    endpoint: 'https://search-finefinds-prod-xxxxx.us-east-1.es.amazonaws.com',
+    endpoint: 'https://search-finefinds-prod.us-east-1.es.amazonaws.com',
   },
   redis: {
     nodeType: 'cache.t3.large',
@@ -155,7 +155,7 @@ export const prodConfig: BaseConfig = {
         buildCommand: 'npm run build',
         startCommand: 'npm start',
         environmentVariables: {
-          REACT_APP_API_URL: 'https://api-finefindslk.com',
+          REACT_APP_API_URL: 'https://api-prod.finefindslk.com',
           REACT_APP_ENV: 'production',
           NEXT_PUBLIC_ENV: 'production',
         },
@@ -169,7 +169,7 @@ export const prodConfig: BaseConfig = {
         buildCommand: 'npm run build',
         startCommand: 'npm start',
         environmentVariables: {
-          REACT_APP_API_URL: 'https://api-finefindslk.com',
+          REACT_APP_API_URL: 'https://api-prod.finefindslk.com',
           REACT_APP_ENV: 'production',
           NEXT_PUBLIC_ENV: 'production',
         },

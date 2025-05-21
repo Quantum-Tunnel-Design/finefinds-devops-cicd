@@ -23,7 +23,7 @@ export class LambdaConstruct extends Construct {
     // Create API Gateway
     this.api = new apigateway.RestApi(this, 'Api', {
       restApiName: `finefinds-${props.environment}-api`,
-      description: 'FineFinds API Gateway',
+      description: 'finefinds api gateway',
       deployOptions: {
         stageName: props.environment,
         loggingLevel: apigateway.MethodLoggingLevel.INFO,

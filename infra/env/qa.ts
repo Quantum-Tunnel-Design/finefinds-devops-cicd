@@ -136,7 +136,7 @@ export const qaConfig: BaseConfig = {
     username: 'noreply@finefindslk.com',
   },
   opensearch: {
-    endpoint: 'https://search-finefinds-qa-xxxxx.us-east-1.es.amazonaws.com',
+    endpoint: 'https://search-finefinds-qa.us-east-1.es.amazonaws.com',
   },
   redis: {
     nodeType: 'cache.t3.medium',

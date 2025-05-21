@@ -20,8 +20,8 @@ export class RedisMonitoring extends Construct {
     // CPU Utilization Alarm
     new cloudwatch.Alarm(this, 'RedisCPUUtilizationAlarm', {
       metric: new cloudwatch.Metric({
-        namespace: 'AWS/ElastiCache',
         metricName: 'CPUUtilization',
+        namespace: 'finefinds-elasticache',
         dimensionsMap: {
           CacheClusterId: props.clusterId,
         },
@@ -40,8 +40,8 @@ export class RedisMonitoring extends Construct {
     // Memory Alarm
     new cloudwatch.Alarm(this, 'RedisMemoryAlarm', {
       metric: new cloudwatch.Metric({
-        namespace: 'AWS/ElastiCache',
         metricName: 'DatabaseMemoryUsagePercentage',
+        namespace: 'finefinds-elasticache',
         dimensionsMap: {
           CacheClusterId: props.clusterId,
         },
@@ -60,8 +60,8 @@ export class RedisMonitoring extends Construct {
     // Connection Count Alarm
     new cloudwatch.Alarm(this, 'RedisConnectionsAlarm', {
       metric: new cloudwatch.Metric({
-        namespace: 'AWS/ElastiCache',
         metricName: 'CurrConnections',
+        namespace: 'finefinds-elasticache',
         dimensionsMap: {
           CacheClusterId: props.clusterId,
         },
@@ -80,8 +80,8 @@ export class RedisMonitoring extends Construct {
     // Cache Hit Rate Alarm
     new cloudwatch.Alarm(this, 'RedisCacheHitRateAlarm', {
       metric: new cloudwatch.Metric({
-        namespace: 'AWS/ElastiCache',
         metricName: 'CacheHitRate',
+        namespace: 'finefinds-elasticache',
         dimensionsMap: {
           CacheClusterId: props.clusterId,
         },
@@ -100,8 +100,8 @@ export class RedisMonitoring extends Construct {
     // Evictions Alarm
     new cloudwatch.Alarm(this, 'RedisEvictionsAlarm', {
       metric: new cloudwatch.Metric({
-        namespace: 'AWS/ElastiCache',
         metricName: 'Evictions',
+        namespace: 'finefinds-elasticache',
         dimensionsMap: {
           CacheClusterId: props.clusterId,
         },
