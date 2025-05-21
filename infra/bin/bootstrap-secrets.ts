@@ -3,7 +3,6 @@ import * as cdk from 'aws-cdk-lib';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as kms from 'aws-cdk-lib/aws-kms';
 import * as cr from 'aws-cdk-lib/custom-resources';
-import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
 
 /**
@@ -26,94 +25,22 @@ class SecretsBootstrapStack extends cdk.Stack {
     });
 
     // Define secret names
-    const dbSecretName = `finefinds-${environment}-rds-connection`;
     const redisSecretName = `finefinds-${environment}-redis-connection`;
     const githubSecretName = `finefinds-${environment}-github-token`;
     const jwtSecretName = `finefinds-${environment}-jwt-secret`;
     const smtpSecretName = `finefinds-${environment}-smtp-secret`;
 
-    // Create a custom resource provider for handling secret creation/import
-    const secretProvider = new cr.Provider(this, 'SecretProvider', {
-      onEventHandler: new lambda.Function(this, 'SecretHandler', {
-        runtime: lambda.Runtime.NODEJS_18_X,
-        handler: 'index.handler',
-        code: lambda.Code.fromInline(`
-          const AWS = require('aws-sdk');
-          const secretsManager = new AWS.SecretsManager();
-          
-          exports.handler = async (event) => {
-            const { secretName, secretValue, description } = event.ResourceProperties;
-            
-            try {
-              // Try to get the secret first
-              await secretsManager.describeSecret({ SecretId: secretName }).promise();
-              console.log('Secret already exists:', secretName);
-              return { PhysicalResourceId: secretName };
-            } catch (error) {
-              if (error.code === 'ResourceNotFoundException') {
-                // Create the secret if it doesn't exist
-                const response = await secretsManager.createSecret({
-                  Name: secretName,
-                  Description: description,
-                  SecretString: JSON.stringify(secretValue)
-                }).promise();
-                console.log('Created new secret:', secretName);
-                return { PhysicalResourceId: response.Name };
-              }
-              throw error;
-            }
-          }
-        `),
-        timeout: cdk.Duration.seconds(30),
-      }),
-    });
-
-    // Create or import database connection secret
-    const dbSecret = new cr.AwsCustomResource(this, 'DbConnectionString', {
-      onCreate: {
-        service: 'SecretsManager',
-        action: 'describeSecret',
-        parameters: {
-          SecretId: dbSecretName
-        },
-        physicalResourceId: cr.PhysicalResourceId.of(dbSecretName)
-      },
-      onUpdate: {
-        service: 'SecretsManager',
-        action: 'updateSecret',
-        parameters: {
-          SecretId: dbSecretName,
-          SecretString: JSON.stringify({
-            dbName: 'finefinds',
-            engine: 'postgres',
-            host: 'placeholder-will-be-updated',
-            port: 5432,
-            username: 'postgres',
-            password: 'placeholder-will-be-updated'
-          })
-        },
-        physicalResourceId: cr.PhysicalResourceId.of(dbSecretName)
-      },
-      onDelete: {
-        service: 'SecretsManager',
-        action: 'deleteSecret',
-        parameters: {
-          SecretId: dbSecretName,
-          ForceDeleteWithoutRecovery: true
-        }
-      },
-      policy: cr.AwsCustomResourcePolicy.fromSdkCalls({
-        resources: cr.AwsCustomResourcePolicy.ANY_RESOURCE
-      })
-    });
-
     // Create or import GitHub token secret
     const githubSecret = new cr.AwsCustomResource(this, 'GitHubToken', {
       onCreate: {
         service: 'SecretsManager',
-        action: 'describeSecret',
+        action: 'createSecret',
         parameters: {
-          SecretId: githubSecretName
+          Name: githubSecretName,
+          Description: 'GitHub token for Amplify apps',
+          SecretString: JSON.stringify({
+            token: 'placeholder-will-be-updated'
+          })
         },
         physicalResourceId: cr.PhysicalResourceId.of(githubSecretName)
       },
@@ -145,9 +72,15 @@ class SecretsBootstrapStack extends cdk.Stack {
     const redisSecret = new cr.AwsCustomResource(this, 'RedisConnectionString', {
       onCreate: {
         service: 'SecretsManager',
-        action: 'describeSecret',
+        action: 'createSecret',
         parameters: {
-          SecretId: redisSecretName
+          Name: redisSecretName,
+          Description: 'Redis connection details for the application',
+          SecretString: JSON.stringify({
+            host: 'placeholder-will-be-updated',
+            port: 6379,
+            password: 'placeholder-will-be-updated'
+          })
         },
         physicalResourceId: cr.PhysicalResourceId.of(redisSecretName)
       },
@@ -181,9 +114,13 @@ class SecretsBootstrapStack extends cdk.Stack {
     const jwtSecret = new cr.AwsCustomResource(this, 'JwtSecret', {
       onCreate: {
         service: 'SecretsManager',
-        action: 'describeSecret',
+        action: 'createSecret',
         parameters: {
-          SecretId: jwtSecretName
+          Name: jwtSecretName,
+          Description: 'JWT secret for application authentication',
+          SecretString: JSON.stringify({
+            secret: 'placeholder-will-be-updated'
+          })
         },
         physicalResourceId: cr.PhysicalResourceId.of(jwtSecretName)
       },
@@ -215,9 +152,16 @@ class SecretsBootstrapStack extends cdk.Stack {
     const smtpSecret = new cr.AwsCustomResource(this, 'SmtpSecret', {
       onCreate: {
         service: 'SecretsManager',
-        action: 'describeSecret',
+        action: 'createSecret',
         parameters: {
-          SecretId: smtpSecretName
+          Name: smtpSecretName,
+          Description: 'SMTP credentials for email sending',
+          SecretString: JSON.stringify({
+            host: 'placeholder-will-be-updated',
+            port: 587,
+            username: 'placeholder-will-be-updated',
+            password: 'placeholder-will-be-updated'
+          })
         },
         physicalResourceId: cr.PhysicalResourceId.of(smtpSecretName)
       },
@@ -249,18 +193,33 @@ class SecretsBootstrapStack extends cdk.Stack {
     });
 
     // Import the secrets for reference
-    const dbConnectionStringSecret = secretsmanager.Secret.fromSecretNameV2(this, 'ImportedDbConnectionString', dbSecretName);
-    const githubTokenSecret = secretsmanager.Secret.fromSecretNameV2(this, 'ImportedGitHubToken', githubSecretName);
     const redisConnectionSecret = secretsmanager.Secret.fromSecretNameV2(this, 'ImportedRedisConnectionString', redisSecretName);
     const jwtSecretRef = secretsmanager.Secret.fromSecretNameV2(this, 'ImportedJwtSecret', jwtSecretName);
     const smtpSecretRef = secretsmanager.Secret.fromSecretNameV2(this, 'ImportedSmtpSecret', smtpSecretName);
 
     // Apply RETAIN removal policy to the custom resources
-    dbSecret.node.addDependency(dbConnectionStringSecret);
-    githubSecret.node.addDependency(githubTokenSecret);
     redisSecret.node.addDependency(redisConnectionSecret);
     jwtSecret.node.addDependency(jwtSecretRef);
     smtpSecret.node.addDependency(smtpSecretRef);
+
+    // Output secret ARNs
+    new cdk.CfnOutput(this, 'RedisSecretArn', {
+      value: redisConnectionSecret.secretArn,
+      description: 'Redis secret ARN',
+      exportName: `finefinds-${environment}-redis-secret-arn`,
+    });
+
+    new cdk.CfnOutput(this, 'JwtSecretArn', {
+      value: jwtSecretRef.secretArn,
+      description: 'JWT secret ARN',
+      exportName: `finefinds-${environment}-jwt-secret-arn`,
+    });
+
+    new cdk.CfnOutput(this, 'SmtpSecretArn', {
+      value: smtpSecretRef.secretArn,
+      description: 'SMTP secret ARN',
+      exportName: `finefinds-${environment}-smtp-secret-arn`,
+    });
   }
 }
 
