@@ -1,4 +1,4 @@
-name: CDK Deploy v2 - Manual Triggers
+name: CDK Deploy
 
 on:
   push:
