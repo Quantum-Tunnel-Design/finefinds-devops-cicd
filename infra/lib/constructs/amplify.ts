@@ -135,7 +135,7 @@ export class AmplifyConstruct extends Construct {
     
     // Client Web App branches
     this.clientApp.addBranch(branchName, {
-      stage: props.environment === 'prod' ? 'production' : 'development',
+      stage: props.environment === 'prod' ? 'PRODUCTION' : 'DEVELOPMENT',
       autoBuild: true,
       environmentVariables: {
         ...props.config.amplify.clientWebApp.buildSettings.environmentVariables,
@@ -149,7 +149,7 @@ export class AmplifyConstruct extends Construct {
 
     // Admin App branches
     this.adminApp.addBranch(branchName, {
-      stage: props.environment === 'prod' ? 'production' : 'development',
+      stage: props.environment === 'prod' ? 'PRODUCTION' : 'DEVELOPMENT',
       autoBuild: true,
       environmentVariables: {
         ...props.config.amplify.adminApp.buildSettings.environmentVariables,
