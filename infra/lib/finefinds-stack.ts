@@ -105,32 +105,18 @@ export class FineFindsStack extends cdk.Stack {
       alarmTopic,
     });
     
-    // Create or import the database connection secret
-    const dbConnectionStringSecret = getOrCreateSecret(
-      this,
-      'DbConnectionString',
-      `finefinds-${props.config.environment}-rds-connection`,
-      {
-        description: 'Database connection string for FineFinds application',
-        generateSecretString: {
-          secretStringTemplate: JSON.stringify({
-            dbName: 'finefinds',
-            engine: 'postgres',
-            port: 5432,
-            username: 'postgres',
-          }),
-          generateStringKey: 'password',
-          excludePunctuation: true,
-          passwordLength: 16,
-        },
-      }
-    );
-
     // Import the existing Redis connection secret
     const redisConnectionSecret = secretsmanager.Secret.fromSecretNameV2(
       this,
       'RedisConnectionString',
       `finefinds-${props.config.environment}-redis-connection`
+    );
+
+    // Import the database connection secret created by RDS
+    const dbConnectionStringSecret = secretsmanager.Secret.fromSecretNameV2(
+      this,
+      'DbConnectionString',
+      `finefinds-${props.config.environment}-rds-connection`
     );
 
     // Update the database connection secret once the RDS instance is available
