@@ -33,12 +33,11 @@ export class EcsConstruct extends Construct {
       containerInsightsV2: props.environment === 'prod' ? ecs.ContainerInsights.ENABLED : ecs.ContainerInsights.DISABLED,
     });
 
-    // Create a new CloudMap namespace for service discovery
-    // This will also create an associated Route 53 private hosted zone.
-    const cloudMapNamespace = this.cluster.addDefaultCloudMapNamespace({
+    // Explicitly create the PrivateDnsNamespace for service discovery
+    const cloudMapNamespace = new servicediscovery.PrivateDnsNamespace(this, 'ServiceDiscoveryNamespace', {
         name: `finefinds.${props.environment}.local`,
         vpc: props.vpc,
-        useForServiceConnect: false, // Not using AppMesh/ServiceConnect
+        description: `Private DNS namespace for ${props.environment} environment of FineFinds`,
     });
 
     // Create task definition
