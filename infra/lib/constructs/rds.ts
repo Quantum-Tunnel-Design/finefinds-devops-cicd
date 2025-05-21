@@ -50,6 +50,8 @@ export class RdsConstruct extends Construct {
           'log_min_duration_statement': '1000',
           'log_rotation_age': '1440',
           'log_rotation_size': '102400',
+          'password_encryption': 'scram-sha-256',
+          'ssl': '1',
         },
       });
 
@@ -128,17 +130,18 @@ export class RdsConstruct extends Construct {
         exportName: `finefinds-${props.environment}-db-secret-arn`,
       });
     } else {
-      // For non-production environments, use single-instance PostgreSQL with t3.micro
+      // For non-production environments, use single-instance PostgreSQL
       this.parameterGroup = new rds.ParameterGroup(this, 'ParameterGroup', {
         engine: rds.DatabaseInstanceEngine.postgres({
           version: rds.PostgresEngineVersion.VER_13,
         }),
         parameters: {
-          'ssl': '1', // Force SSL connections
+          'ssl': '1',
           'log_connections': '1',
           'log_disconnections': '1',
           'log_statement': 'ddl',
           'log_min_duration_statement': '1000',
+          'password_encryption': 'scram-sha-256',
         },
       });
 
@@ -150,7 +153,7 @@ export class RdsConstruct extends Construct {
         instanceType: ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MICRO),
         vpc: props.vpc,
         vpcSubnets: {
-          subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
+          subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
         },
         securityGroups: [this.securityGroup],
         parameterGroup: this.parameterGroup,

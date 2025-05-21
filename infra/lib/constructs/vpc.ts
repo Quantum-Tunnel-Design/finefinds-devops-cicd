@@ -17,39 +17,25 @@ export class VpcConstruct extends Construct {
     // Create VPC with public and private subnets
     this.vpc = new ec2.Vpc(this, 'Vpc', {
       maxAzs: props.environment === 'prod' ? props.config.vpc.maxAzs : 2,
-      natGateways: props.environment === 'prod' ? props.config.vpc.natGateways : 0,
+      natGateways: 1, // Always have at least one NAT Gateway
       ipAddresses: ec2.IpAddresses.cidr(props.config.vpc.cidr),
-      subnetConfiguration: props.environment === 'prod' 
-        ? [
-            {
-              name: 'Public',
-              subnetType: ec2.SubnetType.PUBLIC,
-              cidrMask: 24,
-            },
-            {
-              name: 'Private',
-              subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
-              cidrMask: 24,
-            },
-            {
-              name: 'Isolated',
-              subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
-              cidrMask: 24,
-            },
-          ] 
-        : [
-            // Simplified subnet configuration for non-prod
-            {
-              name: 'Public',
-              subnetType: ec2.SubnetType.PUBLIC,
-              cidrMask: 24,
-            },
-            {
-              name: 'Private',
-              subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
-              cidrMask: 24,
-            },
-          ],
+      subnetConfiguration: [
+        {
+          name: 'Public',
+          subnetType: ec2.SubnetType.PUBLIC,
+          cidrMask: 24,
+        },
+        {
+          name: 'Private',
+          subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+          cidrMask: 24,
+        },
+        {
+          name: 'Isolated',
+          subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
+          cidrMask: 24,
+        },
+      ],
       enableDnsHostnames: true,
       enableDnsSupport: true,
     });
@@ -141,6 +127,24 @@ export class VpcConstruct extends Construct {
         securityGroups: [endpointSecurityGroup],
       });
     }
+
+    // Add VPC endpoints for RDS
+    new ec2.InterfaceVpcEndpoint(this, 'RdsEndpoint', {
+      vpc: this.vpc,
+      service: ec2.InterfaceVpcEndpointAwsService.RDS,
+      subnets: { subnets: privateSubnets.subnets },
+      privateDnsEnabled: true,
+      securityGroups: [endpointSecurityGroup],
+    });
+
+    // Add VPC endpoints for RDS Data API
+    new ec2.InterfaceVpcEndpoint(this, 'RdsDataEndpoint', {
+      vpc: this.vpc,
+      service: ec2.InterfaceVpcEndpointAwsService.RDS_DATA,
+      subnets: { subnets: privateSubnets.subnets },
+      privateDnsEnabled: true,
+      securityGroups: [endpointSecurityGroup],
+    });
 
     // Add tags
     cdk.Tags.of(this.vpc).add('Environment', props.environment);

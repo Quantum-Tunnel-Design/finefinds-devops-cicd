@@ -153,9 +153,7 @@ export class EcsConstruct extends Construct {
       minHealthyPercent: 50,
       securityGroups: [securityGroup],
       vpcSubnets: {
-        subnetType: props.environment === 'prod' 
-          ? ec2.SubnetType.PRIVATE_WITH_EGRESS 
-          : ec2.SubnetType.PRIVATE_ISOLATED,
+        subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
       },
       assignPublicIp: false,
     });
@@ -195,6 +193,23 @@ export class EcsConstruct extends Construct {
         scaleOutCooldown: cdk.Duration.seconds(300),
       });
     }
+
+    // Add CloudWatch alarms for monitoring
+    const cpuAlarm = new cdk.aws_cloudwatch.Alarm(this, 'CpuUtilizationAlarm', {
+      metric: this.service.metricCpuUtilization(),
+      threshold: 80,
+      evaluationPeriods: 3,
+      datapointsToAlarm: 2,
+      alarmDescription: 'Alarm if CPU utilization exceeds 80%',
+    });
+
+    const memoryAlarm = new cdk.aws_cloudwatch.Alarm(this, 'MemoryUtilizationAlarm', {
+      metric: this.service.metricMemoryUtilization(),
+      threshold: 80,
+      evaluationPeriods: 3,
+      datapointsToAlarm: 2,
+      alarmDescription: 'Alarm if memory utilization exceeds 80%',
+    });
 
     // Output load balancer DNS
     new cdk.CfnOutput(this, 'LoadBalancerDns', {
