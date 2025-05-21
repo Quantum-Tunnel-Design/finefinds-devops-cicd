@@ -156,8 +156,9 @@ export const prodConfig: BaseConfig = {
         startCommand: 'npm start',
         environmentVariables: {
           REACT_APP_API_URL: 'https://api-prod.finefindslk.com',
-          REACT_APP_ENV: 'production',
-          NEXT_PUBLIC_ENV: 'production',
+          REACT_APP_ENV: 'prod',
+          NEXT_PUBLIC_ENV: 'prod',
+          REACT_APP_AWS_REGION: 'us-east-1',
         },
       },
     },
@@ -170,8 +171,9 @@ export const prodConfig: BaseConfig = {
         startCommand: 'npm start',
         environmentVariables: {
           REACT_APP_API_URL: 'https://api-prod.finefindslk.com',
-          REACT_APP_ENV: 'production',
-          NEXT_PUBLIC_ENV: 'production',
+          REACT_APP_ENV: 'prod',
+          NEXT_PUBLIC_ENV: 'prod',
+          REACT_APP_AWS_REGION: 'us-east-1',
         },
       },
     },
