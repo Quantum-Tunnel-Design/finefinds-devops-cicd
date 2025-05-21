@@ -43,9 +43,6 @@ export class VpcConstruct extends Construct {
     // Add VPC Flow Logs
     this.vpc.addFlowLog('FlowLog');
 
-    // Add VPC endpoints for private subnets to access AWS services
-    // These are necessary for private subnets to communicate with AWS services without NAT gateways
-    
     // Create security group for VPC endpoints
     const endpointSecurityGroup = new ec2.SecurityGroup(this, 'EndpointSecurityGroup', {
       vpc: this.vpc,
@@ -60,7 +57,7 @@ export class VpcConstruct extends Construct {
       'Allow HTTPS from within VPC'
     );
     
-    // Gateway endpoints (S3 & DynamoDB) - these are free
+    // Gateway endpoints (S3 & DynamoDB) - these are free and don't count towards the quota
     new ec2.GatewayVpcEndpoint(this, 'S3Endpoint', {
       vpc: this.vpc,
       service: ec2.GatewayVpcEndpointAwsService.S3,
@@ -71,80 +68,56 @@ export class VpcConstruct extends Construct {
       service: ec2.GatewayVpcEndpointAwsService.DYNAMODB,
     });
     
-    // Interface endpoints (not free, but needed for services like ECR)
     // Get private subnets to deploy the endpoints in
     const privateSubnets = this.vpc.selectSubnets({
-      subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
+      subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
     });
-    
-    // ECR endpoints - critical for pulling images (deploy these first)
-    // ECR API endpoint
-    new ec2.InterfaceVpcEndpoint(this, 'EcrEndpoint', {
-      vpc: this.vpc,
-      service: ec2.InterfaceVpcEndpointAwsService.ECR,
-      subnets: { subnets: privateSubnets.subnets },
-      privateDnsEnabled: true,
-      securityGroups: [endpointSecurityGroup],
-    });
-    
-    // ECR Docker API endpoint
-    new ec2.InterfaceVpcEndpoint(this, 'EcrDockerEndpoint', {
-      vpc: this.vpc,
-      service: ec2.InterfaceVpcEndpointAwsService.ECR_DOCKER,
-      subnets: { subnets: privateSubnets.subnets },
-      privateDnsEnabled: true,
-      securityGroups: [endpointSecurityGroup],
-    });
-    
-    // CloudWatch Logs endpoint - for container logging (required for all environments)
-    new ec2.InterfaceVpcEndpoint(this, 'LogsEndpoint', {
-      vpc: this.vpc,
-      service: ec2.InterfaceVpcEndpointAwsService.CLOUDWATCH_LOGS,
-      subnets: { subnets: privateSubnets.subnets },
-      privateDnsEnabled: true,
-      securityGroups: [endpointSecurityGroup],
-    });
-    
-    // Secrets Manager endpoint - for retrieving secrets (required for all environments)
-    new ec2.InterfaceVpcEndpoint(this, 'SecretsManagerEndpoint', {
-      vpc: this.vpc,
-      service: ec2.InterfaceVpcEndpointAwsService.SECRETS_MANAGER,
-      subnets: { subnets: privateSubnets.subnets },
-      privateDnsEnabled: true,
-      securityGroups: [endpointSecurityGroup],
-    });
-    
-    // Add additional required endpoints based on environment type to avoid quota issues
-    if (props.environment === 'prod') {
-      // Additional endpoints for production
-      
-      // SSM endpoint - for parameter store if needed
-      new ec2.InterfaceVpcEndpoint(this, 'SsmEndpoint', {
+
+    // Essential interface endpoints only
+    const essentialEndpoints = [
+      {
+        id: 'EcrEndpoint',
+        service: ec2.InterfaceVpcEndpointAwsService.ECR,
+        required: true,
+      },
+      {
+        id: 'EcrDockerEndpoint',
+        service: ec2.InterfaceVpcEndpointAwsService.ECR_DOCKER,
+        required: true,
+      },
+      {
+        id: 'LogsEndpoint',
+        service: ec2.InterfaceVpcEndpointAwsService.CLOUDWATCH_LOGS,
+        required: true,
+      },
+      {
+        id: 'SecretsManagerEndpoint',
+        service: ec2.InterfaceVpcEndpointAwsService.SECRETS_MANAGER,
+        required: true,
+      },
+    ];
+
+    // Add only essential endpoints
+    essentialEndpoints.forEach(endpoint => {
+      new ec2.InterfaceVpcEndpoint(this, endpoint.id, {
         vpc: this.vpc,
-        service: ec2.InterfaceVpcEndpointAwsService.SSM,
+        service: endpoint.service,
+        subnets: { subnets: privateSubnets.subnets },
+        privateDnsEnabled: true,
+        securityGroups: [endpointSecurityGroup],
+      });
+    });
+
+    // Add RDS endpoint only if in production
+    if (props.environment === 'prod') {
+      new ec2.InterfaceVpcEndpoint(this, 'RdsEndpoint', {
+        vpc: this.vpc,
+        service: ec2.InterfaceVpcEndpointAwsService.RDS,
         subnets: { subnets: privateSubnets.subnets },
         privateDnsEnabled: true,
         securityGroups: [endpointSecurityGroup],
       });
     }
-
-    // Add VPC endpoints for RDS
-    new ec2.InterfaceVpcEndpoint(this, 'RdsEndpoint', {
-      vpc: this.vpc,
-      service: ec2.InterfaceVpcEndpointAwsService.RDS,
-      subnets: { subnets: privateSubnets.subnets },
-      privateDnsEnabled: true,
-      securityGroups: [endpointSecurityGroup],
-    });
-
-    // Add VPC endpoints for RDS Data API
-    new ec2.InterfaceVpcEndpoint(this, 'RdsDataEndpoint', {
-      vpc: this.vpc,
-      service: ec2.InterfaceVpcEndpointAwsService.RDS_DATA,
-      subnets: { subnets: privateSubnets.subnets },
-      privateDnsEnabled: true,
-      securityGroups: [endpointSecurityGroup],
-    });
 
     // Add tags
     cdk.Tags.of(this.vpc).add('Environment', props.environment);
