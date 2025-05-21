@@ -3,6 +3,24 @@ name: CDK Deploy v2
 on:
   push:
     branches: [main, qa, uat, dev]
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        type: choice
+        options:
+          - deploy
+          - destroy
+      environment:
+        description: 'Environment to target'
+        required: true
+        type: choice
+        options:
+          - prod
+          - uat
+          - qa
+          - dev
 
 permissions:
   id-token: write
@@ -29,11 +47,14 @@ jobs:
 
   deploy:
     needs: check_skip
-    if: needs.check_skip.outputs.should_skip != 'true'
+    if: |
+      (needs.check_skip.outputs.should_skip != 'true' && github.event_name == 'push') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy')
     runs-on: ubuntu-latest
     # Map branches to environments for GitHub Actions
     environment: >-
       ${{ 
+        github.event_name == 'workflow_dispatch' && github.event.inputs.environment ||
         github.ref == 'refs/heads/main' && 'prod' || 
         github.ref == 'refs/heads/uat' && 'uat' || 
         github.ref == 'refs/heads/qa' && 'qa' || 
@@ -45,6 +66,7 @@ jobs:
     env:
       QUALIFIER: >-
         ${{ 
+          github.event_name == 'workflow_dispatch' && format('ff{0}', github.event.inputs.environment) ||
           github.ref == 'refs/heads/main' && 'ffprod' || 
           github.ref == 'refs/heads/uat' && 'ffuat' || 
           github.ref == 'refs/heads/qa' && 'ffqa' || 
@@ -56,6 +78,7 @@ jobs:
       # Define environment for CDK deployment
       CDK_ENV: >-
         ${{ 
+          github.event_name == 'workflow_dispatch' && github.event.inputs.environment ||
           github.ref == 'refs/heads/main' && 'prod' || 
           github.ref == 'refs/heads/uat' && 'uat' || 
           github.ref == 'refs/heads/qa' && 'qa' || 
@@ -134,7 +157,7 @@ jobs:
           npx cdk context --clear
   
       - name: CDK Bootstrap (Initial Setup)
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy')
         run: |
           cd infra
           echo "Bootstrapping CDK for environment: ${{ env.CDK_ENV }}, qualifier: ${{ env.QUALIFIER }}"
@@ -157,7 +180,7 @@ jobs:
             --require-approval never
       
       - name: Bootstrap Secrets
-        if: github.event_name == 'push' && env.IS_NEW_ENVIRONMENT == 'true'
+        if: (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy')) && env.IS_NEW_ENVIRONMENT == 'true'
         run: |
           cd infra
           echo "Bootstrapping secrets for new environment: ${{ env.CDK_ENV }}, qualifier: ${{ env.QUALIFIER }}"
@@ -182,10 +205,19 @@ jobs:
           npm run cdk diff -- FineFinds-${{ env.CDK_ENV }} --context env=${{ env.CDK_ENV }} --context version=${{ env.STACK_VERSION }} --context aws-cdk:qualifier=${{ env.QUALIFIER }}
 
       - name: CDK Deploy
-        if: github.event_name == 'push' 
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy')
         run: |
           cd infra
           npm run cdk deploy -- FineFinds-${{ env.CDK_ENV }} --context env=${{ env.CDK_ENV }} --context version=${{ env.STACK_VERSION }} --context aws-cdk:qualifier=${{ env.QUALIFIER }} --require-approval never
+        env:
+          CDK_DEPLOY_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+          CDK_DEPLOY_REGION: ${{ secrets.AWS_REGION }}
+
+      - name: CDK Destroy
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
+        run: |
+          cd infra
+          npm run cdk destroy -- FineFinds-${{ env.CDK_ENV }} --context env=${{ env.CDK_ENV }} --context version=${{ env.STACK_VERSION }} --context aws-cdk:qualifier=${{ env.QUALIFIER }} --force
         env:
           CDK_DEPLOY_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
           CDK_DEPLOY_REGION: ${{ secrets.AWS_REGION }}
@@ -202,7 +234,7 @@ jobs:
               "attachments": [
                 {
                   "color": "#36a64f",
-                  "pretext": ":white_check_mark: *CDK Deploy Succeeded*",
+                  "pretext": ":white_check_mark: *CDK ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy' && 'Destroy' || 'Deploy' }} Succeeded*",
                   "fields": [
                     { "title": "Environment", "value": "${{ env.CDK_ENV }}", "short": true },
                     { "title": "Version", "value": "${{ env.STACK_VERSION }}", "short": true },
@@ -235,7 +267,7 @@ jobs:
               "attachments": [
                 {
                   "color": "#ff0000",
-                  "pretext": ":x: *CDK Deploy Failed*",
+                  "pretext": ":x: *CDK ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy' && 'Destroy' || 'Deploy' }} Failed*",
                   "fields": [
                     { "title": "Environment", "value": "${{ env.CDK_ENV }}", "short": true },
                     { "title": "Version", "value": "${{ env.STACK_VERSION }}", "short": true },
@@ -254,4 +286,4 @@ jobs:
               ]
             }
         env:
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_DEVOPS_TOKEN }}
