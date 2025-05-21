@@ -124,7 +124,7 @@ export const prodConfig: BaseConfig = {
   },
   tags: {
     Environment: 'prod',
-    Project: 'FineFinds',
+    Project: 'finefinds',
     ManagedBy: 'CDK',
   },
   cloudfront: {

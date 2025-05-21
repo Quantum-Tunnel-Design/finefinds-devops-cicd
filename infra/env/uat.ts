@@ -124,7 +124,7 @@ export const stagingConfig: BaseConfig = {
   },
   tags: {
     Environment: 'uat',
-    Project: 'FineFinds',
+    Project: 'finefinds',
     ManagedBy: 'CDK',
   },
   cloudfront: {

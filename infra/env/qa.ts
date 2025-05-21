@@ -124,7 +124,7 @@ export const qaConfig: BaseConfig = {
   },
   tags: {
     Environment: 'qa',
-    Project: 'FineFinds',
+    Project: 'finefinds',
     ManagedBy: 'CDK',
   },
   cloudfront: {
