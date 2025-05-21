@@ -198,16 +198,22 @@ export class RdsConstruct extends Construct {
 
     // Output the database endpoint
     new cdk.CfnOutput(this, 'DatabaseEndpoint', {
-      value: this.instance.dbInstanceEndpointAddress,
+      value: this.instance?.instanceEndpoint.hostname || this.cluster?.clusterEndpoint.hostname || 'No database endpoint available',
       description: 'Database endpoint',
-      exportName: `finefinds-${props.environment}-db-endpoint`,
+      exportName: `finefinds-${props.environment}-rds-endpoint`,
     });
 
     // Output the database port
     new cdk.CfnOutput(this, 'DatabasePort', {
-      value: this.instance.dbInstanceEndpointPort,
+      value: '5432',
       description: 'Database port',
-      exportName: `finefinds-${props.environment}-db-port`,
+      exportName: `finefinds-${props.environment}-rds-port`,
+    });
+
+    new cdk.CfnOutput(this, 'DatabaseName', {
+      value: 'finefinds',
+      description: 'Database name',
+      exportName: `finefinds-${props.environment}-rds-name`,
     });
   }
 } 
