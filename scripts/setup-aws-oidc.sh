@@ -226,13 +226,14 @@ create_role_policy() {
                 "logs:CreateLogStream",
                 "logs:PutLogEvents",
                 "logs:DescribeLogStreams",
-                "logs:DescribeLogGroups",
                 "logs:FilterLogEvents",
-                "logs:PutRetentionPolicy"
+                "logs:PutRetentionPolicy",
+                "logs:DescribeLogGroups"
             ],
             "Resource": [
                 "arn:aws:logs:${AWS_REGION}:${ACCOUNT_ID}:log-group:/finefinds/${env}/*",
-                "arn:aws:logs:${AWS_REGION}:${ACCOUNT_ID}:log-group:/finefinds/${env}/*:log-stream:*"
+                "arn:aws:logs:${AWS_REGION}:${ACCOUNT_ID}:log-group:/finefinds/${env}/*:log-stream:*",
+                "arn:aws:logs:${AWS_REGION}:${ACCOUNT_ID}:log-group:*"
             ]
         },
         {
