@@ -18,6 +18,7 @@ import { RdsConstruct } from './constructs/rds';
 import { MigrationTaskConstruct } from './constructs/migration-task';
 import { AmplifyConstruct } from './constructs/amplify';
 import { BastionConstruct } from './constructs/bastion';
+import { AppMeshConstruct } from './constructs/app-mesh';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 
@@ -247,22 +248,14 @@ export class FineFindsStack extends cdk.Stack {
       vpc: vpc.vpc,
       taskRole: iam.ecsTaskRole,
       executionRole: iam.ecsExecutionRole,
-      secrets: {
-        DATABASE_URL: ecs.Secret.fromSecretsManager(
-          cdk.aws_secretsmanager.Secret.fromSecretNameV2(
-            this,
-            'DbConnectionSecret',
-            `finefinds-${props.config.environment}-rds-connection`
-          )
-        ),
-        REDIS_URL: ecs.Secret.fromSecretsManager(
-          cdk.aws_secretsmanager.Secret.fromSecretNameV2(
-            this,
-            'RedisConnectionSecret',
-            `finefinds-${props.config.environment}-redis-connection`
-          )
-        ),
-      },
+    });
+
+    // Create App Mesh
+    const appMesh = new AppMeshConstruct(this, 'AppMesh', {
+      environment: props.config.environment,
+      config: props.config,
+      vpc: vpc.vpc,
+      cluster: ecs.cluster,
     });
     
     // Create migration task definition

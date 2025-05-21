@@ -14,6 +14,7 @@ export interface EcsConstructProps {
   vpc: ec2.Vpc;
   taskRole?: iam.IRole;
   executionRole?: iam.IRole;
+  secrets?: { [key: string]: ecs.Secret };
 }
 
 export class EcsConstruct extends Construct {
@@ -68,22 +69,7 @@ export class EcsConstruct extends Construct {
         NODE_ENV: props.environment,
         PORT: props.config.ecs.containerPort.toString(),
       },
-      secrets: {
-        DATABASE_URL: ecs.Secret.fromSecretsManager(
-          cdk.aws_secretsmanager.Secret.fromSecretNameV2(
-            this,
-            'DbConnectionSecret',
-            `finefinds-${props.environment}-rds-connection`
-          )
-        ),
-        REDIS_URL: ecs.Secret.fromSecretsManager(
-          cdk.aws_secretsmanager.Secret.fromSecretNameV2(
-            this,
-            'RedisConnectionSecret',
-            `finefinds-${props.environment}-redis-connection`
-          )
-        ),
-      },
+      secrets: props.secrets,
       portMappings: [
         {
           containerPort: props.config.ecs.containerPort,
