@@ -36,7 +36,7 @@ export class VpcConstruct extends Construct {
       enableDnsSupport: true,
     });
 
-    // For non-production environments, create a NAT Instance instead of using NAT Gateway
+    // For non-prod environments, create a NAT Instance instead of using NAT Gateway
     if (props.environment !== 'prod') {
       // Create security group for NAT Instance
       const natSecurityGroup = new ec2.SecurityGroup(this, 'NatSecurityGroup', {
@@ -157,7 +157,7 @@ export class VpcConstruct extends Construct {
       });
     });
 
-    // Add RDS endpoint only if in production
+    // Add RDS endpoint only if in prod
     if (props.environment === 'prod') {
       new ec2.InterfaceVpcEndpoint(this, 'RdsEndpoint', {
         vpc: this.vpc,

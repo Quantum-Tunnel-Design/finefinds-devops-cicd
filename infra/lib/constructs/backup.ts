@@ -17,7 +17,7 @@ export class BackupConstruct extends Construct {
   constructor(scope: Construct, id: string, props: BackupConstructProps) {
     super(scope, id);
 
-    // Only create backup resources in production
+    // Only create backup resources in prod
     if (props.environment === 'prod') {
       // Create backup vault
       this.vault = new backup.BackupVault(this, 'Vault', {
@@ -32,7 +32,7 @@ export class BackupConstruct extends Construct {
         backupVault: this.vault,
       });
 
-      // Add backup rules for production
+      // Add backup rules for prod
       // Daily backups for 30 days
       this.plan.addRule(new backup.BackupPlanRule({
         completionWindow: cdk.Duration.hours(2),

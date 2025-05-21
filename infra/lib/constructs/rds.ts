@@ -37,7 +37,7 @@ export class RdsConstruct extends Construct {
     );
 
     if (props.environment === 'prod') {
-      // For production, use Aurora PostgreSQL cluster
+      // For prod, use Aurora PostgreSQL cluster
       this.parameterGroup = new rds.ParameterGroup(this, 'ParameterGroup', {
         engine: rds.DatabaseClusterEngine.auroraPostgres({
           version: rds.AuroraPostgresEngineVersion.VER_17_4,
@@ -55,7 +55,7 @@ export class RdsConstruct extends Construct {
         },
       });
 
-      // Create Aurora RDS cluster for production
+      // Create Aurora RDS cluster for prod
       this.cluster = new rds.DatabaseCluster(this, 'Database', {
         engine: rds.DatabaseClusterEngine.auroraPostgres({
           version: rds.AuroraPostgresEngineVersion.VER_17_4,
@@ -117,7 +117,7 @@ export class RdsConstruct extends Construct {
         preferredMaintenanceWindow: 'sun:04:00-sun:05:00',
       });
     } else {
-      // For non-production environments, use single-instance PostgreSQL
+      // For non-prod environments, use single-instance PostgreSQL
       this.parameterGroup = new rds.ParameterGroup(this, 'ParameterGroup', {
         engine: rds.DatabaseInstanceEngine.postgres({
           version: rds.PostgresEngineVersion.VER_13,

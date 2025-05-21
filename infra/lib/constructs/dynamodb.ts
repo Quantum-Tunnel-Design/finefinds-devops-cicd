@@ -23,14 +23,14 @@ export class DynamoDBConstruct extends Construct {
       partitionKey: { name: 'sessionId', type: dynamodb.AttributeType.STRING },
       sortKey: { name: 'userId', type: dynamodb.AttributeType.STRING },
       timeToLiveAttribute: 'expiresAt',
-      // Use on-demand billing for non-production environments to save costs
+      // Use on-demand billing for non-prod environments to save costs
       billingMode: props.environment === 'prod'
         ? dynamodb.BillingMode.PROVISIONED
         : dynamodb.BillingMode.PAY_PER_REQUEST,
-      // Only set provisioned capacity for production
+      // Only set provisioned capacity for prod
       readCapacity: props.environment === 'prod' ? 5 : undefined,
       writeCapacity: props.environment === 'prod' ? 5 : undefined,
-      // Enable point-in-time recovery only in production
+      // Enable point-in-time recovery only in prod
       pointInTimeRecovery: props.environment === 'prod',
       // Enable server-side encryption with KMS
       encryption: dynamodb.TableEncryption.CUSTOMER_MANAGED,
@@ -43,7 +43,7 @@ export class DynamoDBConstruct extends Construct {
     
     // Add TTL for sessions to automatically clean up old data
     if (props.environment !== 'prod') {
-      // Add auto scaling only in production 
+      // Add auto scaling only in prod 
       // (on-demand is used in other environments)
       this.sessionsTable.autoScaleReadCapacity({
         minCapacity: 5,
@@ -65,7 +65,7 @@ export class DynamoDBConstruct extends Construct {
       // This is more cost-effective for unpredictable cache access patterns
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       // No auto-scaling needed with on-demand billing
-      // Enable point-in-time recovery only in production
+      // Enable point-in-time recovery only in prod
       pointInTimeRecovery: false, // No need for this on a cache table
       // Enable server-side encryption with KMS
       encryption: dynamodb.TableEncryption.CUSTOMER_MANAGED,

@@ -18,7 +18,7 @@ export class BastionConstruct extends Construct {
   constructor(scope: Construct, id: string, props: BastionConstructProps) {
     super(scope, id);
 
-    // Only create bastion host for non-production environments
+    // Only create bastion host for non-prod environments
     if (props.environment === 'prod') {
       return;
     }
