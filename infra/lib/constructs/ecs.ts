@@ -148,6 +148,7 @@ export class EcsConstruct extends Construct {
         subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
       },
       assignPublicIp: false,
+      serviceName: `finefinds-${props.environment}-service`
     });
 
     // Add service to target group
