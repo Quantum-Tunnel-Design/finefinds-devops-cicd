@@ -104,22 +104,35 @@ export class FineFindsStack extends cdk.Stack {
       alarmTopic,
     });
     
-    // Import the existing database connection secret (don't try to create it)
-    const dbConnectionStringSecret = secretsmanager.Secret.fromSecretNameV2(
-      this, 
+    // Create or import the database connection secret
+    const dbConnectionStringSecret = getOrCreateSecret(
+      this,
       'DbConnectionString',
-      `finefinds-${props.config.environment}-db-connection`
+      `finefinds-${props.config.environment}-rds-connection`,
+      {
+        description: 'Database connection string for FineFinds application',
+        generateSecretString: {
+          secretStringTemplate: JSON.stringify({
+            dbName: 'finefinds',
+            engine: 'postgres',
+            port: 5432,
+            username: 'postgres',
+          }),
+          generateStringKey: 'password',
+          excludePunctuation: true,
+          passwordLength: 16,
+        },
+      }
     );
 
-    // Import the existing Redis connection secret (don't try to create it)
+    // Import the existing Redis connection secret
     const redisConnectionSecret = secretsmanager.Secret.fromSecretNameV2(
       this,
       'RedisConnectionString',
       `finefinds-${props.config.environment}-redis-connection`
     );
-    
+
     // Update the database connection secret once the RDS instance is available
-    // Use a custom resource to avoid circular dependencies
     if (props.config.environment === 'prod' && rds.cluster) {
       // For production, use the Aurora cluster
       const updateDbSecret = new cdk.custom_resources.AwsCustomResource(this, 'UpdateDbConnectionSecret', {
@@ -135,8 +148,8 @@ export class FineFindsStack extends cdk.Stack {
                   engine: 'postgres',
                   host: rds.cluster?.clusterEndpoint.hostname,
                   port: 5432,
-                  username: 'postgres', // This should match RDS credentials
-                  password: '{{resolve:secretsmanager:' + dbConnectionStringSecret.secretArn + ':SecretString:password}}',
+                  username: 'postgres',
+                  password: rds.cluster?.secret?.secretValueFromJson('password').toString() || '',
                 });
               }
             }),
@@ -156,7 +169,7 @@ export class FineFindsStack extends cdk.Stack {
                   host: rds.cluster?.clusterEndpoint.hostname,
                   port: 5432,
                   username: 'postgres',
-                  password: '{{resolve:secretsmanager:' + dbConnectionStringSecret.secretArn + ':SecretString:password}}',
+                  password: rds.cluster?.secret?.secretValueFromJson('password').toString() || '',
                 });
               }
             }),
@@ -184,10 +197,10 @@ export class FineFindsStack extends cdk.Stack {
                 return JSON.stringify({
                   dbName: 'finefinds',
                   engine: 'postgres',
-                  host: rds.instance.instanceEndpoint.hostname,
+                  host: rds.instance?.instanceEndpoint.hostname,
                   port: 5432,
-                  username: 'postgres', // This should match RDS credentials
-                  password: '{{resolve:secretsmanager:' + dbConnectionStringSecret.secretArn + ':SecretString:password}}',
+                  username: 'postgres',
+                  password: rds.instance?.secret?.secretValueFromJson('password').toString() || '',
                 });
               }
             }),
@@ -204,10 +217,10 @@ export class FineFindsStack extends cdk.Stack {
                 return JSON.stringify({
                   dbName: 'finefinds',
                   engine: 'postgres',
-                  host: rds.instance.instanceEndpoint.hostname,
+                  host: rds.instance?.instanceEndpoint.hostname,
                   port: 5432,
                   username: 'postgres',
-                  password: '{{resolve:secretsmanager:' + dbConnectionStringSecret.secretArn + ':SecretString:password}}',
+                  password: rds.instance?.secret?.secretValueFromJson('password').toString() || '',
                 });
               }
             }),
