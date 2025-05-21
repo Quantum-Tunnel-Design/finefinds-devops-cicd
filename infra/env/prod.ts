@@ -2,23 +2,44 @@ import { BaseConfig } from './base-config';
 
 export const prodConfig: BaseConfig = {
   environment: 'prod',
-  dns: {
-    domainName: '', // Using AWS default domains
-    hostedZoneId: '', // No Route53 hosted zone needed
-    certificateValidation: false, // No custom domain validation needed
-  },
+  region: 'us-east-1',
+  account: process.env.CDK_DEFAULT_ACCOUNT || '',
   vpc: {
+    cidr: '10.2.0.0/16',
     maxAzs: 3,
     natGateways: 3,
-    cidr: '10.3.0.0/16',
   },
   ecs: {
     containerPort: 3000,
-    cpu: 2048,
-    memoryLimitMiB: 4096,
+    cpu: 1024,
+    memoryLimitMiB: 2048,
     desiredCount: 3,
     minCapacity: 3,
     maxCapacity: 10,
+    healthCheckPath: '/health',
+    healthCheckInterval: 30,
+    healthCheckTimeout: 5,
+    healthCheckHealthyThresholdCount: 2,
+    healthCheckUnhealthyThresholdCount: 3,
+  },
+  ecr: {
+    repositoryName: 'finefinds-prod',
+  },
+  monitoring: {
+    alarmEmail: 'devops@finefindslk.com',
+    slackChannel: '#devops-alerts',
+  },
+  s3: {
+    versioned: true,
+    lifecycleRules: true,
+  },
+  rds: {
+    instanceType: 't3.large',
+    allocatedStorage: 200,
+    maxAllocatedStorage: 400,
+    backupRetention: 35,
+    multiAz: true,
+    deletionProtection: true,
   },
   cognito: {
     clientUsers: {
@@ -33,20 +54,20 @@ export const prodConfig: BaseConfig = {
       },
       userGroups: {
         parents: {
-          name: 'Parents',
-          description: 'Parent users group',
+          name: 'parents',
+          description: 'Parent users who can browse and purchase items',
         },
         students: {
-          name: 'Students',
-          description: 'Student users group',
+          name: 'students',
+          description: 'Student users who can browse items',
         },
         vendors: {
-          name: 'Vendors',
-          description: 'Vendor users group',
+          name: 'vendors',
+          description: 'Vendor users who can list items for sale',
         },
         guests: {
-          name: 'Guests',
-          description: 'Guest users group',
+          name: 'guests',
+          description: 'Guest users with limited access',
         },
       },
     },
@@ -62,47 +83,36 @@ export const prodConfig: BaseConfig = {
       },
       userGroups: {
         superAdmins: {
-          name: 'SuperAdmins',
-          description: 'Super admin users group',
+          name: 'super-admins',
+          description: 'Super administrators with full system access',
         },
         admins: {
-          name: 'Admins',
-          description: 'Admin users group',
+          name: 'admins',
+          description: 'Administrators with elevated privileges',
         },
         support: {
-          name: 'Support',
-          description: 'Support users group',
+          name: 'support',
+          description: 'Support staff with limited administrative access',
         },
       },
     },
-    identityProviders: {},
-  },
-  monitoring: {
-    alarmEmail: 'prod-alerts@finefinds.com',
-    slackChannel: '#prod-alerts',
-  },
-  s3: {
-    versioned: true,
-    lifecycleRules: true,
-  },
-  redis: {
-    nodeType: 'cache.t3.medium',  // Medium instance for prod
-    numNodes: 2,                  // Multi-node for prod
-    engineVersion: '7.0',         // Latest stable Redis version
-    snapshotRetentionLimit: 7,    // Keep 7 snapshots for prod
-    snapshotWindow: '03:00-04:00', // UTC time
-    maintenanceWindow: 'sun:04:00-sun:05:00', // UTC time
-  },
-  rds: {
-    instanceType: 'db.t3.medium',
-    instanceClass: 'db.t3',
-    instanceSize: 'medium',
-    multiAz: true,
-    backupRetentionDays: 30,
-    performanceInsights: true,
+    identityProviders: {
+      google: {
+        clientId: 'your-google-client-id',
+        clientSecret: 'your-google-client-secret',
+      },
+      facebook: {
+        clientId: 'your-facebook-client-id',
+        clientSecret: 'your-facebook-client-secret',
+      },
+      amazon: {
+        clientId: 'your-amazon-client-id',
+        clientSecret: 'your-amazon-client-secret',
+      },
+    },
   },
   waf: {
-    rateLimit: 5000,
+    rateLimit: 8000,
     enableManagedRules: true,
     enableRateLimit: true,
   },
@@ -112,20 +122,62 @@ export const prodConfig: BaseConfig = {
     monthlyRetention: 12,
     yearlyRetention: 5,
   },
-  cloudfront: {
-    allowedCountries: ['US', 'CA'],
-  },
-  smtp: {
-    host: 'email-smtp.us-east-1.amazonaws.com',
-    port: 587,
-    username: 'AKIAXXXXXXXXXXXXXXXX', // Replace with your SMTP username
-  },
-  opensearch: {
-    endpoint: 'https://search-finefinds-prod-xxxxxxxxxxxx.us-east-1.es.amazonaws.com', // Replace with your OpenSearch endpoint
-  },
   tags: {
     Environment: 'prod',
     Project: 'FineFinds',
     ManagedBy: 'CDK',
+  },
+  cloudfront: {
+    allowedCountries: ['US', 'CA', 'GB', 'AU', 'NZ'],
+  },
+  smtp: {
+    host: 'smtp.gmail.com',
+    port: 587,
+    username: 'noreply@finefindslk.com',
+  },
+  opensearch: {
+    endpoint: 'https://search-finefinds-prod-xxxxx.us-east-1.es.amazonaws.com',
+  },
+  redis: {
+    nodeType: 'cache.t3.large',
+    numNodes: 3,
+    engineVersion: '7.0',
+    snapshotRetentionLimit: 7,
+    snapshotWindow: '03:00-04:00',
+    maintenanceWindow: 'sun:04:00-sun:05:00',
+  },
+  amplify: {
+    clientWebApp: {
+      repository: 'finefinds-client-web',
+      owner: 'amalgamage',
+      branch: 'main',
+      buildSettings: {
+        buildCommand: 'npm run build',
+        startCommand: 'npm start',
+        environmentVariables: {
+          REACT_APP_API_URL: 'https://api-finefindslk.com',
+          REACT_APP_ENV: 'production',
+          NEXT_PUBLIC_ENV: 'production',
+        },
+      },
+    },
+    adminApp: {
+      repository: 'finefinds-admin',
+      owner: 'amalgamage',
+      branch: 'main',
+      buildSettings: {
+        buildCommand: 'npm run build',
+        startCommand: 'npm start',
+        environmentVariables: {
+          REACT_APP_API_URL: 'https://api-finefindslk.com',
+          REACT_APP_ENV: 'production',
+          NEXT_PUBLIC_ENV: 'production',
+        },
+      },
+    },
+  },
+  dynamodb: {
+    billingMode: 'PAY_PER_REQUEST',
+    pointInTimeRecovery: true,
   },
 }; 

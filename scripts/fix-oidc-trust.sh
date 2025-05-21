@@ -48,9 +48,8 @@ EOF
 # Update trust policies for all environments
 echo "Updating trust policies for all roles..."
 update_trust_policy "prod"
-update_trust_policy "staging"
+update_trust_policy "uat"
 update_trust_policy "dev"
 update_trust_policy "qa"
-update_trust_policy "sandbox"
 
 echo "✅ All trust policies have been updated!" 

@@ -16,19 +16,21 @@ export interface RdsConstructProps {
 export class RdsConstruct extends Construct {
   public readonly instance: rds.DatabaseInstance;
   public readonly cluster?: rds.DatabaseCluster;
+  public readonly securityGroup: ec2.SecurityGroup;
+  public readonly parameterGroup: rds.ParameterGroup;
 
   constructor(scope: Construct, id: string, props: RdsConstructProps) {
     super(scope, id);
 
     // Create security group for RDS
-    const securityGroup = new ec2.SecurityGroup(this, 'DbSecurityGroup', {
+    this.securityGroup = new ec2.SecurityGroup(this, 'DbSecurityGroup', {
       vpc: props.vpc,
       description: 'Security group for RDS',
       allowAllOutbound: true,
     });
 
     // Allow inbound PostgreSQL access from ECS tasks
-    securityGroup.addIngressRule(
+    this.securityGroup.addIngressRule(
       ec2.Peer.ipv4(props.vpc.vpcCidrBlock),
       ec2.Port.tcp(5432),
       'Allow PostgreSQL access from within VPC'
@@ -36,7 +38,7 @@ export class RdsConstruct extends Construct {
 
     if (props.environment === 'prod') {
       // For production, use Aurora PostgreSQL cluster
-      const parameterGroup = new rds.ParameterGroup(this, 'ParameterGroup', {
+      this.parameterGroup = new rds.ParameterGroup(this, 'ParameterGroup', {
         engine: rds.DatabaseClusterEngine.auroraPostgres({
           version: rds.AuroraPostgresEngineVersion.VER_13_4,
         }),
@@ -48,6 +50,8 @@ export class RdsConstruct extends Construct {
           'log_min_duration_statement': '1000',
           'log_rotation_age': '1440',
           'log_rotation_size': '102400',
+          'password_encryption': 'scram-sha-256',
+          'ssl': '1',
         },
       });
 
@@ -58,26 +62,24 @@ export class RdsConstruct extends Construct {
         }),
         instanceProps: {
           instanceType: ec2.InstanceType.of(
-            ec2.InstanceClass[props.config.rds.instanceClass as keyof typeof ec2.InstanceClass],
-            ec2.InstanceSize[props.config.rds.instanceSize as keyof typeof ec2.InstanceSize]
+            ec2.InstanceClass.T3,
+            ec2.InstanceSize.MICRO
           ),
           vpc: props.vpc,
           vpcSubnets: {
             subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
           },
-          securityGroups: [securityGroup],
-          parameterGroup,
-          performanceInsightRetention: props.config.rds.performanceInsights
-            ? rds.PerformanceInsightRetention.DEFAULT
-            : undefined,
-          enablePerformanceInsights: props.config.rds.performanceInsights,
+          securityGroups: [this.securityGroup],
+          parameterGroup: this.parameterGroup,
+          enablePerformanceInsights: true,
+          performanceInsightRetention: rds.PerformanceInsightRetention.DEFAULT,
         },
         instances: 2,
         defaultDatabaseName: 'finefinds',
         storageEncrypted: true,
         storageEncryptionKey: props.kmsKey,
         backup: {
-          retention: cdk.Duration.days(props.config.rds.backupRetentionDays),
+          retention: cdk.Duration.days(props.config.rds.backupRetention),
           preferredWindow: '03:00-04:00',
         },
         monitoringInterval: cdk.Duration.seconds(60),
@@ -110,10 +112,9 @@ export class RdsConstruct extends Construct {
         cloudwatchLogsExports: ['postgresql'],
         cloudwatchLogsRetention: logs.RetentionDays.ONE_MONTH,
         removalPolicy: cdk.RemovalPolicy.RETAIN,
-        deletionProtection: true,
+        deletionProtection: props.config.rds.deletionProtection,
         copyTagsToSnapshot: true,
         preferredMaintenanceWindow: 'sun:04:00-sun:05:00',
-        vpc: props.vpc,
       });
 
       // Output Aurora cluster endpoint and secret
@@ -129,17 +130,18 @@ export class RdsConstruct extends Construct {
         exportName: `finefinds-${props.environment}-db-secret-arn`,
       });
     } else {
-      // For non-production environments, use single-instance PostgreSQL with t3.micro
-      const parameterGroup = new rds.ParameterGroup(this, 'ParameterGroup', {
+      // For non-production environments, use single-instance PostgreSQL
+      this.parameterGroup = new rds.ParameterGroup(this, 'ParameterGroup', {
         engine: rds.DatabaseInstanceEngine.postgres({
           version: rds.PostgresEngineVersion.VER_13,
         }),
         parameters: {
-          'ssl': '1', // Force SSL connections
+          'ssl': '1',
           'log_connections': '1',
           'log_disconnections': '1',
           'log_statement': 'ddl',
           'log_min_duration_statement': '1000',
+          'password_encryption': 'scram-sha-256',
         },
       });
 
@@ -151,26 +153,26 @@ export class RdsConstruct extends Construct {
         instanceType: ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MICRO),
         vpc: props.vpc,
         vpcSubnets: {
-          subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
+          subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
         },
-        securityGroups: [securityGroup],
-        parameterGroup,
+        securityGroups: [this.securityGroup],
+        parameterGroup: this.parameterGroup,
         databaseName: 'finefinds',
         storageEncrypted: true,
         storageEncryptionKey: props.kmsKey,
-        allocatedStorage: 10, // Reduced storage for dev environments
-        maxAllocatedStorage: 50, // Lower autoscaling limit for cost savings
-        storageType: rds.StorageType.GP2, // Standard storage for cost savings
-        backupRetention: cdk.Duration.days(1),
+        allocatedStorage: props.config.rds.allocatedStorage,
+        maxAllocatedStorage: props.config.rds.maxAllocatedStorage,
+        storageType: rds.StorageType.GP2,
+        backupRetention: cdk.Duration.days(props.config.rds.backupRetention),
         cloudwatchLogsExports: ['postgresql'],
-        cloudwatchLogsRetention: logs.RetentionDays.ONE_DAY, // Reduced to 1 day for cost savings
-        removalPolicy: cdk.RemovalPolicy.DESTROY, // For dev environments, allow deletion
-        deletionProtection: false,
+        cloudwatchLogsRetention: logs.RetentionDays.ONE_DAY,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+        deletionProtection: props.config.rds.deletionProtection,
         copyTagsToSnapshot: true,
         preferredMaintenanceWindow: 'sun:04:00-sun:05:00',
-        credentials: rds.Credentials.fromGeneratedSecret('postgres'), // Auto-generate credentials
-        monitoringInterval: cdk.Duration.seconds(0), // Disable enhanced monitoring
-        autoMinorVersionUpgrade: true, // Allow auto minor version upgrades
+        credentials: rds.Credentials.fromGeneratedSecret('postgres'),
+        monitoringInterval: cdk.Duration.seconds(0),
+        autoMinorVersionUpgrade: true,
       });
 
       // Output single instance endpoint and secret

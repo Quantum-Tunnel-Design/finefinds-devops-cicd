@@ -85,7 +85,7 @@ The infrastructure is managed using AWS CDK. See the [Infrastructure README](inf
 Our project follows a branch-to-environment mapping strategy:
 
 - `main` branch → Production environment
-- `staging` branch → Staging environment
+- `uat` branch → Staging environment
 - `qa` branch → QA environment
 - `dev` branch → Development environment
 - `sonarqube` branch → SonarQube setup and configuration
@@ -111,7 +111,7 @@ All feature development should be done in feature branches:
    Then create a PR against:
    - `dev` branch for development testing
    - `qa` branch for quality assurance
-   - `staging` branch for pre-production verification
+   - `uat` branch for pre-production verification
    - `main` branch for production deployment
 
 4. The CI/CD pipeline will:

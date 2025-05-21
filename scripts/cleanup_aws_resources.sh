@@ -134,7 +134,7 @@ PROJECT="finefindslk"
 
 # Get environment from command line argument
 if [ -z "$1" ]; then
-    echo -e "${RED}Error: Please specify an environment (sandbox|dev|staging|qa|prod)${NC}"
+    echo -e "${RED}Error: Please specify an environment (dev|uat|qa|prod)${NC}"
     exit 1
 fi
 
@@ -142,10 +142,10 @@ ENV=$1
 
 # Validate environment
 case $ENV in
-    "sandbox"|"dev"|"staging"|"qa"|"prod")
+    "dev"|"uat"|"qa"|"prod")
         ;;
     *)
-        echo -e "${RED}Error: Invalid environment. Use: sandbox, dev, staging, qa, or prod${NC}"
+        echo -e "${RED}Error: Invalid environment. Use: dev, uat, qa, or prod${NC}"
         exit 1
         ;;
 esac

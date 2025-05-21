@@ -4,50 +4,67 @@ import * as cdk from 'aws-cdk-lib';
 import { FineFindsStack } from '../lib/finefinds-stack';
 import { FineFindsSonarQubeStack } from '../lib/sonarqube-stack';
 import { devConfig } from '../env/dev';
-import { prodConfig } from '../env/prod';
-import { stagingConfig } from '../env/staging';
+import { stagingConfig } from '../env/uat';
 import { qaConfig } from '../env/qa';
+import { prodConfig } from '../env/prod';
 
 const app = new cdk.App();
 
-// Get environment from context or default to dev
-const env = app.node.tryGetContext('env') || 'dev';
-
-// Select configuration based on environment
-let config;
-switch (env) {
-  case 'prod':
-    config = prodConfig;
-    break;
-  case 'staging':
-    config = stagingConfig;
-    break;
-  case 'qa':
-    config = qaConfig;
-    break;
-  default:
-    config = devConfig;
-}
-
-// Create the main infrastructure stack
-new FineFindsStack(app, `FineFinds-${env}`, {
-  env: {
-    account: process.env.CDK_DEPLOY_ACCOUNT || app.node.tryGetContext(env)?.account || process.env.CDK_DEFAULT_ACCOUNT || '123456789012',
-    region: process.env.CDK_DEPLOY_REGION || app.node.tryGetContext(env)?.region || process.env.CDK_DEFAULT_REGION || 'us-east-1',
-  },
-  config,
-  description: `FineFinds Infrastructure Stack for ${env} environment`,
+// Create custom synthesizer with our qualifier
+const customSynthesizer = new cdk.DefaultStackSynthesizer({
+  qualifier: app.node.tryGetContext('qualifier') || 'ffdev',
 });
 
-// Create the SonarQube stack if requested
-// This is only created explicitly through the SonarQube workflow
-if (app.node.tryGetContext('includeSonarQube') === 'true') {
-  new FineFindsSonarQubeStack(app, `FineFindsSonarQubeStack-${env}`, {
+// Check if SonarQube should be included
+const includeSonarQube = app.node.tryGetContext('includeSonarQube') === 'true';
+
+// Get environment from context or default to dev
+const environment = app.node.tryGetContext('env') || 'dev';
+
+// If SonarQube is explicitly requested, create only the shared SonarQube stack
+if (includeSonarQube) {
+  console.log('Creating SonarQube stack as requested via includeSonarQube context variable');
+  
+  // Use dev config for SonarQube shared instance
+  new FineFindsSonarQubeStack(app, 'FineFindsSonarQubeStack', {
     env: {
-      account: process.env.CDK_DEPLOY_ACCOUNT || app.node.tryGetContext(env)?.account || process.env.CDK_DEFAULT_ACCOUNT || '123456789012',
-      region: process.env.CDK_DEPLOY_REGION || app.node.tryGetContext(env)?.region || process.env.CDK_DEFAULT_REGION || 'us-east-1',
+      account: process.env.CDK_DEFAULT_ACCOUNT,
+      region: process.env.CDK_DEFAULT_REGION || 'us-east-1',
+    },
+    config: devConfig,
+    synthesizer: customSynthesizer,
+  });
+  
+  console.log('SonarQube stack created. No other stacks will be deployed in this run.');
+} else {
+  // Otherwise, create only the stack for the specified environment
+  console.log(`Creating stack for ${environment} environment`);
+  
+  // Select configuration based on environment
+  let config;
+  switch (environment) {
+    case 'prod':
+      config = prodConfig;
+      break;
+    case 'uat':
+      config = stagingConfig;
+      break;
+    case 'qa':
+      config = qaConfig;
+      break;
+    default:
+      config = devConfig;
+  }
+  
+  // Create the stack for the specified environment
+  new FineFindsStack(app, `FineFinds-${environment}`, {
+    env: {
+      account: process.env.CDK_DEFAULT_ACCOUNT,
+      region: process.env.CDK_DEFAULT_REGION || 'us-east-1',
     },
     config,
-    description: `FineFinds SonarQube Stack for ${env} environment`,
+    synthesizer: customSynthesizer,
   });
+  
+  console.log(`Stack FineFinds-${environment} created.`);
 } 

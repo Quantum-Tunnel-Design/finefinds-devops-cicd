@@ -198,7 +198,7 @@ export class S3Construct extends Construct {
             s3.HttpMethods.HEAD,
           ],
           allowedOrigins: [
-            `https://*.${props.config.dns.domainName}`,
+            `https://*.${props.config.environment === 'prod' ? 'finefindslk.com' : `${props.config.environment}.finefindslk.com`}`,
           ],
           allowedHeaders: ['*'],
           maxAge: 3000,
@@ -209,7 +209,7 @@ export class S3Construct extends Construct {
     // Create CloudFront distribution
     this.distribution = new cloudfront.Distribution(this, 'MediaDistribution', {
       defaultBehavior: {
-        origin: new origins.S3Origin(this.mediaBucket),
+        origin: new origins.HttpOrigin(`${this.mediaBucket.bucketName}.s3.amazonaws.com`),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
         cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,

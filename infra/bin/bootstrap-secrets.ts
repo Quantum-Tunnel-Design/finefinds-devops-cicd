@@ -2,6 +2,8 @@
 import * as cdk from 'aws-cdk-lib';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as kms from 'aws-cdk-lib/aws-kms';
+import * as cr from 'aws-cdk-lib/custom-resources';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
 
 /**
@@ -23,46 +25,184 @@ class SecretsBootstrapStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.RETAIN, // Important: Never delete this key
     });
 
-    // Create the database connection secret with initial placeholder values
-    const dbConnectionStringSecret = new secretsmanager.Secret(this, 'DbConnectionString', {
-      secretName: `finefinds-${environment}-db-connection`,
-      description: 'Database connection string for the application',
-      encryptionKey: key,
-      generateSecretString: {
-        secretStringTemplate: JSON.stringify({
-          dbName: 'finefinds',
-          engine: 'postgres',
-          host: 'placeholder-will-be-updated', // This will be updated by the main stack
-          port: 5432,
-          username: 'postgres',
-        }),
-        generateStringKey: 'password',
-        excludePunctuation: false,
-        passwordLength: 32,
-      },
-    });
-    
-    // Apply a RETAIN removal policy so the secret is not deleted if this stack is destroyed
-    dbConnectionStringSecret.applyRemovalPolicy(cdk.RemovalPolicy.RETAIN);
+    // Define secret names
+    const dbSecretName = `finefinds-${environment}-db-connection`;
+    const redisSecretName = `finefinds-${environment}-redis-connection`;
+    const githubSecretName = 'github-token';
 
-    // Create a Redis connection secret with initial placeholder values
-    const redisConnectionSecret = new secretsmanager.Secret(this, 'RedisConnectionString', {
-      secretName: `finefinds-${environment}-redis-connection`,
-      description: 'Redis connection details for the application',
-      encryptionKey: key,
-      generateSecretString: {
-        secretStringTemplate: JSON.stringify({
-          host: 'placeholder-will-be-updated', // This will be updated by the main stack
-          port: 6379,
-        }),
-        generateStringKey: 'password',
-        excludePunctuation: false,
-        passwordLength: 32,
-      },
+    // Create a custom resource provider for handling secret creation/import
+    const secretProvider = new cr.Provider(this, 'SecretProvider', {
+      onEventHandler: new lambda.Function(this, 'SecretHandler', {
+        runtime: lambda.Runtime.NODEJS_18_X,
+        handler: 'index.handler',
+        code: lambda.Code.fromInline(`
+          const AWS = require('aws-sdk');
+          const secretsManager = new AWS.SecretsManager();
+          
+          exports.handler = async (event) => {
+            const { secretName, secretValue, description } = event.ResourceProperties;
+            
+            try {
+              // Try to get the secret first
+              await secretsManager.describeSecret({ SecretId: secretName }).promise();
+              console.log('Secret already exists:', secretName);
+              return { PhysicalResourceId: secretName };
+            } catch (error) {
+              if (error.code === 'ResourceNotFoundException') {
+                // Create the secret if it doesn't exist
+                const response = await secretsManager.createSecret({
+                  Name: secretName,
+                  Description: description,
+                  SecretString: JSON.stringify(secretValue)
+                }).promise();
+                console.log('Created new secret:', secretName);
+                return { PhysicalResourceId: response.Name };
+              }
+              throw error;
+            }
+          }
+        `),
+        timeout: cdk.Duration.seconds(30),
+      }),
     });
-    
-    // Apply a RETAIN removal policy so the secret is not deleted if this stack is destroyed
-    redisConnectionSecret.applyRemovalPolicy(cdk.RemovalPolicy.RETAIN);
+
+    // Create or import database connection secret
+    const dbSecret = new cr.AwsCustomResource(this, 'DbConnectionString', {
+      onCreate: {
+        service: 'SecretsManager',
+        action: 'createSecret',
+        parameters: {
+          Name: dbSecretName,
+          Description: 'Database connection string for the application',
+          SecretString: JSON.stringify({
+            dbName: 'finefinds',
+            engine: 'postgres',
+            host: 'placeholder-will-be-updated',
+            port: 5432,
+            username: 'postgres',
+            password: 'placeholder-will-be-updated'
+          })
+        },
+        physicalResourceId: cr.PhysicalResourceId.of(dbSecretName)
+      },
+      onUpdate: {
+        service: 'SecretsManager',
+        action: 'updateSecret',
+        parameters: {
+          SecretId: dbSecretName,
+          SecretString: JSON.stringify({
+            dbName: 'finefinds',
+            engine: 'postgres',
+            host: 'placeholder-will-be-updated',
+            port: 5432,
+            username: 'postgres',
+            password: 'placeholder-will-be-updated'
+          })
+        },
+        physicalResourceId: cr.PhysicalResourceId.of(dbSecretName)
+      },
+      onDelete: {
+        service: 'SecretsManager',
+        action: 'deleteSecret',
+        parameters: {
+          SecretId: dbSecretName,
+          ForceDeleteWithoutRecovery: true
+        }
+      },
+      policy: cr.AwsCustomResourcePolicy.fromSdkCalls({
+        resources: cr.AwsCustomResourcePolicy.ANY_RESOURCE
+      })
+    });
+
+    // Create or import GitHub token secret
+    const githubSecret = new cr.AwsCustomResource(this, 'GitHubToken', {
+      onCreate: {
+        service: 'SecretsManager',
+        action: 'createSecret',
+        parameters: {
+          Name: githubSecretName,
+          Description: 'GitHub token for Amplify apps',
+          SecretString: JSON.stringify({
+            token: 'placeholder-will-be-updated'
+          })
+        },
+        physicalResourceId: cr.PhysicalResourceId.of(githubSecretName)
+      },
+      onUpdate: {
+        service: 'SecretsManager',
+        action: 'updateSecret',
+        parameters: {
+          SecretId: githubSecretName,
+          SecretString: JSON.stringify({
+            token: 'placeholder-will-be-updated'
+          })
+        },
+        physicalResourceId: cr.PhysicalResourceId.of(githubSecretName)
+      },
+      onDelete: {
+        service: 'SecretsManager',
+        action: 'deleteSecret',
+        parameters: {
+          SecretId: githubSecretName,
+          ForceDeleteWithoutRecovery: true
+        }
+      },
+      policy: cr.AwsCustomResourcePolicy.fromSdkCalls({
+        resources: cr.AwsCustomResourcePolicy.ANY_RESOURCE
+      })
+    });
+
+    // Create or import Redis connection secret
+    const redisSecret = new cr.AwsCustomResource(this, 'RedisConnectionString', {
+      onCreate: {
+        service: 'SecretsManager',
+        action: 'createSecret',
+        parameters: {
+          Name: redisSecretName,
+          Description: 'Redis connection details for the application',
+          SecretString: JSON.stringify({
+            host: 'placeholder-will-be-updated',
+            port: 6379,
+            password: 'placeholder-will-be-updated'
+          })
+        },
+        physicalResourceId: cr.PhysicalResourceId.of(redisSecretName)
+      },
+      onUpdate: {
+        service: 'SecretsManager',
+        action: 'updateSecret',
+        parameters: {
+          SecretId: redisSecretName,
+          SecretString: JSON.stringify({
+            host: 'placeholder-will-be-updated',
+            port: 6379,
+            password: 'placeholder-will-be-updated'
+          })
+        },
+        physicalResourceId: cr.PhysicalResourceId.of(redisSecretName)
+      },
+      onDelete: {
+        service: 'SecretsManager',
+        action: 'deleteSecret',
+        parameters: {
+          SecretId: redisSecretName,
+          ForceDeleteWithoutRecovery: true
+        }
+      },
+      policy: cr.AwsCustomResourcePolicy.fromSdkCalls({
+        resources: cr.AwsCustomResourcePolicy.ANY_RESOURCE
+      })
+    });
+
+    // Import the secrets for reference
+    const dbConnectionStringSecret = secretsmanager.Secret.fromSecretNameV2(this, 'ImportedDbConnectionString', dbSecretName);
+    const githubTokenSecret = secretsmanager.Secret.fromSecretNameV2(this, 'ImportedGitHubToken', githubSecretName);
+    const redisConnectionSecret = secretsmanager.Secret.fromSecretNameV2(this, 'ImportedRedisConnectionString', redisSecretName);
+
+    // Apply RETAIN removal policy to the custom resources
+    dbSecret.node.addDependency(dbConnectionStringSecret);
+    githubSecret.node.addDependency(githubTokenSecret);
+    redisSecret.node.addDependency(redisConnectionSecret);
 
     // Output the secret ARNs for reference
     new cdk.CfnOutput(this, 'DbConnectionSecretArn', {
@@ -81,10 +221,21 @@ class SecretsBootstrapStack extends cdk.Stack {
 
 // Create app and instantiate stack
 const app = new cdk.App();
-new SecretsBootstrapStack(app, 'FineFinds-Secrets-Bootstrap', {
+
+// Get environment and qualifier from context
+const environment = app.node.tryGetContext('environment') || 'dev';
+const qualifier = app.node.tryGetContext('qualifier') || 'ffdev';
+
+// Create custom synthesizer with our qualifier
+const customSynthesizer = new cdk.DefaultStackSynthesizer({
+  qualifier: qualifier,
+});
+
+new SecretsBootstrapStack(app, `FineFinds-Secrets-Bootstrap-${environment}`, {
   env: {
     account: process.env.CDK_DEFAULT_ACCOUNT,
     region: process.env.CDK_DEFAULT_REGION
   },
-  description: 'Stack for bootstrapping secrets required by FineFinds infrastructure'
+  description: 'Stack for bootstrapping secrets required by FineFinds infrastructure',
+  synthesizer: customSynthesizer,
 }); 

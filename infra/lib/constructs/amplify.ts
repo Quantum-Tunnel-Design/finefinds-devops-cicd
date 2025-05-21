@@ -16,98 +16,162 @@ export class AmplifyConstruct extends Construct {
   constructor(scope: Construct, id: string, props: AmplifyConstructProps) {
     super(scope, id);
 
-    // Create client portal app
-    this.clientApp = new amplify.App(this, 'ClientPortal', {
-      appName: `finefinds-${props.environment}-client-portal`,
+    // Create client web app
+    this.clientApp = new amplify.App(this, 'ClientWebApp', {
+      appName: `finefinds-${props.environment}-client-web`,
       sourceCodeProvider: new amplify.GitHubSourceCodeProvider({
-        owner: 'your-org',
-        repository: 'finefinds-client-portal',
-        oauthToken: cdk.SecretValue.secretsManager('github-token'),
+        owner: 'Quantum-Tunnel-Design',
+        repository: 'finefinds-client-web-app',
+        oauthToken: cdk.SecretValue.secretsManager('github-token', {
+          jsonField: 'token',
+        }),
       }),
       environmentVariables: {
-        REACT_APP_API_URL: `https://api.${props.config.dns.domainName}`,
-        REACT_APP_COGNITO_USER_POOL_ID: props.config.cognito.clientUsers.userPoolName,
-        REACT_APP_COGNITO_CLIENT_ID: props.config.cognito.clientUsers.userPoolName,
+        ...props.config.amplify.clientWebApp.buildSettings.environmentVariables,
+        NEXT_PUBLIC_API_URL: `https://api.${props.config.environment === 'prod' ? 'finefindslk.com' : `${props.config.environment}.finefindslk.com`}`,
+        NEXT_PUBLIC_COGNITO_USER_POOL_ID: props.config.cognito.clientUsers.userPoolName,
+        NEXT_PUBLIC_COGNITO_CLIENT_ID: props.config.cognito.clientUsers.userPoolName,
+        NEXT_PUBLIC_AWS_REGION: props.config.region || 'us-east-1',
+        NODE_ENV: props.environment,
+        _LIVE_UPDATES: '[{"name":"next","pkg":"@aws-amplify/cli"}]',
       },
       buildSpec: codebuild.BuildSpec.fromObject({
         version: '1.0',
-        frontend: {
-          phases: {
-            preBuild: {
-              commands: ['npm ci'],
-            },
-            build: {
-              commands: ['npm run build'],
-            },
-          },
-          artifacts: {
-            baseDirectory: 'build',
-            files: ['**/*'],
-          },
-          cache: {
-            paths: ['node_modules/**/*'],
-          },
-        },
+        applications: [
+          {
+            appRoot: '.',
+            frontend: {
+              phases: {
+                preBuild: {
+                  commands: [
+                    'npm ci'
+                  ],
+                },
+                build: {
+                  commands: [
+                    'npm run build'
+                  ],
+                },
+              },
+              artifacts: {
+                baseDirectory: '.next',
+                files: [
+                  '**/*'
+                ],
+              },
+              cache: {
+                paths: [
+                  'node_modules/**/*',
+                  '.next/cache/**/*'
+                ],
+              },
+              buildPath: '/'
+            }
+          }
+        ]
       }),
+      platform: amplify.Platform.WEB_COMPUTE,
     });
 
-    // Create admin portal app
-    this.adminApp = new amplify.App(this, 'AdminPortal', {
-      appName: `finefinds-${props.environment}-admin-portal`,
+    // Create admin app
+    this.adminApp = new amplify.App(this, 'AdminApp', {
+      appName: `finefinds-${props.environment}-admin`,
       sourceCodeProvider: new amplify.GitHubSourceCodeProvider({
-        owner: 'your-org',
-        repository: 'finefinds-admin-portal',
-        oauthToken: cdk.SecretValue.secretsManager('github-token'),
+        owner: 'Quantum-Tunnel-Design',
+        repository: 'finefinds-admin',
+        oauthToken: cdk.SecretValue.secretsManager('github-token', {
+          jsonField: 'token',
+        }),
       }),
       environmentVariables: {
-        REACT_APP_API_URL: `https://api.${props.config.dns.domainName}`,
-        REACT_APP_COGNITO_USER_POOL_ID: props.config.cognito.adminUsers.userPoolName,
-        REACT_APP_COGNITO_CLIENT_ID: props.config.cognito.adminUsers.userPoolName,
+        ...props.config.amplify.adminApp.buildSettings.environmentVariables,
+        NEXT_PUBLIC_API_URL: `https://api.${props.config.environment === 'prod' ? 'finefindslk.com' : `${props.config.environment}.finefindslk.com`}`,
+        NEXT_PUBLIC_COGNITO_USER_POOL_ID: props.config.cognito.adminUsers.userPoolName,
+        NEXT_PUBLIC_COGNITO_CLIENT_ID: props.config.cognito.adminUsers.userPoolName,
+        NEXT_PUBLIC_AWS_REGION: props.config.region || 'us-east-1',
+        NODE_ENV: props.environment,
+        _LIVE_UPDATES: '[{"name":"next","pkg":"@aws-amplify/cli"}]',
       },
       buildSpec: codebuild.BuildSpec.fromObject({
         version: '1.0',
-        frontend: {
-          phases: {
-            preBuild: {
-              commands: ['npm ci'],
-            },
-            build: {
-              commands: ['npm run build'],
-            },
-          },
-          artifacts: {
-            baseDirectory: 'build',
-            files: ['**/*'],
-          },
-          cache: {
-            paths: ['node_modules/**/*'],
-          },
-        },
+        applications: [
+          {
+            appRoot: '.',
+            frontend: {
+              phases: {
+                preBuild: {
+                  commands: [
+                    'npm ci'
+                  ],
+                },
+                build: {
+                  commands: [
+                    'npm run build'
+                  ],
+                },
+              },
+              artifacts: {
+                baseDirectory: '.next',
+                files: [
+                  '**/*'
+                ],
+              },
+              cache: {
+                paths: [
+                  'node_modules/**/*',
+                  '.next/cache/**/*'
+                ],
+              },
+              buildPath: '/'
+            }
+          }
+        ]
       }),
+      platform: amplify.Platform.WEB_COMPUTE,
     });
 
     // Add branches for each environment
-    this.clientApp.addBranch('main', {
+    const branchName = props.environment === 'prod' ? 'main' : props.environment;
+    
+    // Client Web App branches
+    this.clientApp.addBranch(branchName, {
       stage: props.environment === 'prod' ? 'PRODUCTION' : 'DEVELOPMENT',
       autoBuild: true,
+      environmentVariables: {
+        ...props.config.amplify.clientWebApp.buildSettings.environmentVariables,
+        NEXT_PUBLIC_API_URL: `https://api.${props.config.environment === 'prod' ? 'finefindslk.com' : `${props.config.environment}.finefindslk.com`}`,
+        NEXT_PUBLIC_COGNITO_USER_POOL_ID: props.config.cognito.clientUsers.userPoolName,
+        NEXT_PUBLIC_COGNITO_CLIENT_ID: props.config.cognito.clientUsers.userPoolName,
+        NEXT_PUBLIC_AWS_REGION: props.config.region || 'us-east-1',
+        NODE_ENV: props.environment,
+      },
     });
 
-    this.adminApp.addBranch('main', {
+    // Admin App branches
+    this.adminApp.addBranch(branchName, {
       stage: props.environment === 'prod' ? 'PRODUCTION' : 'DEVELOPMENT',
       autoBuild: true,
+      environmentVariables: {
+        ...props.config.amplify.adminApp.buildSettings.environmentVariables,
+        NEXT_PUBLIC_API_URL: `https://api.${props.config.environment === 'prod' ? 'finefindslk.com' : `${props.config.environment}.finefindslk.com`}`,
+        NEXT_PUBLIC_COGNITO_USER_POOL_ID: props.config.cognito.adminUsers.userPoolName,
+        NEXT_PUBLIC_COGNITO_CLIENT_ID: props.config.cognito.adminUsers.userPoolName,
+        NEXT_PUBLIC_AWS_REGION: props.config.region || 'us-east-1',
+        NODE_ENV: props.environment,
+      },
     });
 
     // Output app URLs
-    new cdk.CfnOutput(this, 'ClientPortalUrl', {
+    new cdk.CfnOutput(this, 'ClientWebAppUrl', {
       value: this.clientApp.defaultDomain,
-      description: 'Client Portal URL',
-      exportName: `finefinds-${props.environment}-client-portal-url`,
+      description: 'Client Web App URL',
+      exportName: `finefinds-${props.environment}-client-web-url`,
     });
 
-    new cdk.CfnOutput(this, 'AdminPortalUrl', {
+    new cdk.CfnOutput(this, 'AdminAppUrl', {
       value: this.adminApp.defaultDomain,
-      description: 'Admin Portal URL',
-      exportName: `finefinds-${props.environment}-admin-portal-url`,
+      description: 'Admin App URL',
+      exportName: `finefinds-${props.environment}-admin-url`,
     });
   }
 } 
