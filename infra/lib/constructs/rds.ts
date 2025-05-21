@@ -23,17 +23,17 @@ export class RdsConstruct extends Construct {
     super(scope, id);
 
     // Create security group for RDS
-    this.securityGroup = new ec2.SecurityGroup(this, 'DbSecurityGroup', {
+    this.securityGroup = new ec2.SecurityGroup(this, 'RdsSecurityGroup', {
       vpc: props.vpc,
-      description: 'Security group for RDS',
+      description: 'Security group for RDS instance',
       allowAllOutbound: true,
     });
 
-    // Allow inbound PostgreSQL access from ECS tasks
+    // Allow inbound PostgreSQL traffic from within the VPC
     this.securityGroup.addIngressRule(
       ec2.Peer.ipv4(props.vpc.vpcCidrBlock),
       ec2.Port.tcp(5432),
-      'Allow PostgreSQL access from within VPC'
+      'Allow PostgreSQL traffic from within VPC'
     );
 
     if (props.environment === 'prod') {
@@ -148,36 +148,40 @@ export class RdsConstruct extends Construct {
       // Create single-instance RDS PostgreSQL for dev/test
       this.instance = new rds.DatabaseInstance(this, 'Database', {
         engine: rds.DatabaseInstanceEngine.postgres({
-          version: rds.PostgresEngineVersion.VER_13,
+          version: rds.PostgresEngineVersion.VER_15_3,
         }),
-        instanceType: ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MICRO),
         vpc: props.vpc,
         vpcSubnets: {
           subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
         },
+        instanceType: ec2.InstanceType.of(
+          ec2.InstanceClass.T3,
+          ec2.InstanceSize.MICRO
+        ),
+        allocatedStorage: 20,
+        maxAllocatedStorage: 100,
         securityGroups: [this.securityGroup],
-        parameterGroup: this.parameterGroup,
         databaseName: 'finefinds',
-        storageEncrypted: true,
-        storageEncryptionKey: props.kmsKey,
-        allocatedStorage: props.config.rds.allocatedStorage,
-        maxAllocatedStorage: props.config.rds.maxAllocatedStorage,
-        storageType: rds.StorageType.GP2,
-        backupRetention: cdk.Duration.days(props.config.rds.backupRetention),
-        cloudwatchLogsExports: ['postgresql'],
-        cloudwatchLogsRetention: logs.RetentionDays.ONE_DAY,
-        removalPolicy: cdk.RemovalPolicy.DESTROY,
-        deletionProtection: props.config.rds.deletionProtection,
-        copyTagsToSnapshot: true,
-        preferredMaintenanceWindow: 'sun:04:00-sun:05:00',
         credentials: rds.Credentials.fromGeneratedSecret('postgres'),
-        monitoringInterval: cdk.Duration.seconds(0),
-        autoMinorVersionUpgrade: true,
+        backupRetention: cdk.Duration.days(7),
+        preferredBackupWindow: '03:00-04:00',
+        preferredMaintenanceWindow: 'Mon:04:00-Mon:05:00',
+        multiAz: props.environment === 'prod',
+        storageEncrypted: true,
+        monitoringInterval: cdk.Duration.seconds(60),
+        enablePerformanceInsights: true,
+        performanceInsightRetention: rds.PerformanceInsightRetention.DEFAULT,
+        cloudwatchLogsExports: ['postgresql'],
+        cloudwatchLogsRetention: cdk.aws_logs.RetentionDays.ONE_DAY,
+        deletionProtection: props.environment === 'prod',
+        removalPolicy: props.environment === 'prod' 
+          ? cdk.RemovalPolicy.RETAIN 
+          : cdk.RemovalPolicy.DESTROY,
       });
 
       // Output single instance endpoint and secret
       new cdk.CfnOutput(this, 'InstanceEndpoint', {
-        value: this.instance.instanceEndpoint.hostname,
+        value: this.instance.dbInstanceEndpointAddress,
         description: 'RDS Instance Endpoint',
         exportName: `finefinds-${props.environment}-db-endpoint`,
       });
@@ -188,5 +192,22 @@ export class RdsConstruct extends Construct {
         exportName: `finefinds-${props.environment}-db-secret-arn`,
       });
     }
+
+    // Add tags
+    cdk.Tags.of(this.instance).add('Environment', props.environment);
+
+    // Output the database endpoint
+    new cdk.CfnOutput(this, 'DatabaseEndpoint', {
+      value: this.instance.dbInstanceEndpointAddress,
+      description: 'Database endpoint',
+      exportName: `finefinds-${props.environment}-db-endpoint`,
+    });
+
+    // Output the database port
+    new cdk.CfnOutput(this, 'DatabasePort', {
+      value: this.instance.dbInstanceEndpointPort,
+      description: 'Database port',
+      exportName: `finefinds-${props.environment}-db-port`,
+    });
   }
 } 
