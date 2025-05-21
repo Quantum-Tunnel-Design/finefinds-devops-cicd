@@ -28,7 +28,7 @@ export class EcsConstruct extends Construct {
     this.cluster = new ecs.Cluster(this, 'Cluster', {
       vpc: props.vpc,
       clusterName: `finefinds-${props.environment}-cluster`,
-      containerInsights: props.environment === 'prod',
+      containerInsightsV2: props.environment === 'prod' ? ecs.ContainerInsights.ENABLED : ecs.ContainerInsights.DISABLED,
     });
 
     // Create task definition
@@ -100,6 +100,13 @@ export class EcsConstruct extends Construct {
       allowAllOutbound: true,
     });
 
+    // Allow inbound access from the load balancer
+    securityGroup.addIngressRule(
+      ec2.Peer.ipv4(props.vpc.vpcCidrBlock),
+      ec2.Port.tcp(props.config.ecs.containerPort),
+      'Allow inbound access from within VPC'
+    );
+
     // Create load balancer
     this.loadBalancer = new elbv2.ApplicationLoadBalancer(this, 'LoadBalancer', {
       vpc: props.vpc,
@@ -132,10 +139,15 @@ export class EcsConstruct extends Construct {
 
     // Add HTTPS listener if in production
     if (props.environment === 'prod') {
+      // Create a self-signed certificate if no domain is available
+      const certificate = new cdk.aws_certificatemanager.Certificate(this, 'SelfSignedCert', {
+        domainName: this.loadBalancer.loadBalancerDnsName,
+      });
+      
       this.loadBalancer.addListener('HttpsListener', {
         port: 443,
         defaultTargetGroups: [targetGroup],
-        certificates: [], // Add ACM certificate here
+        certificates: [certificate],
       });
     }
 
@@ -148,9 +160,7 @@ export class EcsConstruct extends Construct {
       minHealthyPercent: 50,
       securityGroups: [securityGroup],
       vpcSubnets: {
-        subnetType: props.environment === 'prod' 
-          ? ec2.SubnetType.PRIVATE_WITH_EGRESS 
-          : ec2.SubnetType.PRIVATE_ISOLATED,
+        subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
       },
       assignPublicIp: false,
     });
@@ -190,6 +200,23 @@ export class EcsConstruct extends Construct {
         scaleOutCooldown: cdk.Duration.seconds(300),
       });
     }
+
+    // Add CloudWatch alarms for monitoring
+    const cpuAlarm = new cdk.aws_cloudwatch.Alarm(this, 'CpuUtilizationAlarm', {
+      metric: this.service.metricCpuUtilization(),
+      threshold: 80,
+      evaluationPeriods: 3,
+      datapointsToAlarm: 2,
+      alarmDescription: 'Alarm if CPU utilization exceeds 80%',
+    });
+
+    const memoryAlarm = new cdk.aws_cloudwatch.Alarm(this, 'MemoryUtilizationAlarm', {
+      metric: this.service.metricMemoryUtilization(),
+      threshold: 80,
+      evaluationPeriods: 3,
+      datapointsToAlarm: 2,
+      alarmDescription: 'Alarm if memory utilization exceeds 80%',
+    });
 
     // Output load balancer DNS
     new cdk.CfnOutput(this, 'LoadBalancerDns', {

@@ -9,8 +9,8 @@ yarn-error.log*
 # CDK
 cdk.out/
 cdk.context.json
-*.cdk.staging.json
-*.cdk.staging.*
+*.cdk.uat.json
+*.cdk.uat.*
 
 # AWS
 .aws-sam/
@@ -56,4 +56,7 @@ frontend/admin-portal/.env
 infra/.env
 infra/.env.*
 
-dist/
+dist/finefinds-dev-bastion.pem
+
+*.pem
+*.pub

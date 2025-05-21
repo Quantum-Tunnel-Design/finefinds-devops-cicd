@@ -1,10 +1,11 @@
 export interface BaseConfig {
   environment: string;
-  enableDynamoDB?: boolean;
+  region: string;
+  account: string;
   vpc: {
+    cidr: string;
     maxAzs: number;
     natGateways: number;
-    cidr: string;
   };
   ecs: {
     containerPort: number;
@@ -13,6 +14,14 @@ export interface BaseConfig {
     desiredCount: number;
     minCapacity: number;
     maxCapacity: number;
+    healthCheckPath: string;
+    healthCheckInterval: number;
+    healthCheckTimeout: number;
+    healthCheckHealthyThresholdCount: number;
+    healthCheckUnhealthyThresholdCount: number;
+  };
+  ecr: {
+    repositoryName: string;
   };
   monitoring: {
     alarmEmail: string;
@@ -24,11 +33,11 @@ export interface BaseConfig {
   };
   rds: {
     instanceType: string;
-    instanceClass: string;
-    instanceSize: string;
+    allocatedStorage: number;
+    maxAllocatedStorage: number;
+    backupRetention: number;
     multiAz: boolean;
-    backupRetentionDays: number;
-    performanceInsights: boolean;
+    deletionProtection: boolean;
   };
   cognito: {
     clientUsers: {
@@ -41,24 +50,7 @@ export interface BaseConfig {
         requireNumbers: boolean;
         requireSymbols: boolean;
       };
-      userGroups: {
-        parents: {
-          name: string;
-          description: string;
-        };
-        students: {
-          name: string;
-          description: string;
-        };
-        vendors: {
-          name: string;
-          description: string;
-        };
-        guests: {
-          name: string;
-          description: string;
-        };
-      };
+      userGroups: Record<string, { name: string; description: string }>;
     };
     adminUsers: {
       userPoolName: string;
@@ -70,22 +62,9 @@ export interface BaseConfig {
         requireNumbers: boolean;
         requireSymbols: boolean;
       };
-      userGroups: {
-        superAdmins: {
-          name: string;
-          description: string;
-        };
-        admins: {
-          name: string;
-          description: string;
-        };
-        support: {
-          name: string;
-          description: string;
-        };
-      };
+      userGroups: Record<string, { name: string; description: string }>;
     };
-    identityProviders: {
+    identityProviders?: {
       google?: {
         clientId: string;
         clientSecret: string;
@@ -111,11 +90,6 @@ export interface BaseConfig {
     monthlyRetention: number;
     yearlyRetention: number;
   };
-  dns: {
-    domainName: string;
-    hostedZoneId: string;
-    certificateValidation: boolean;
-  };
   tags: {
     [key: string]: string;
   };
@@ -137,5 +111,38 @@ export interface BaseConfig {
     snapshotRetentionLimit: number;
     snapshotWindow: string;
     maintenanceWindow: string;
+  };
+  amplify: {
+    clientWebApp: {
+      repository: string;
+      owner: string;
+      branch: string;
+      buildSettings: {
+        buildCommand: string;
+        startCommand: string;
+        environmentVariables: {
+          [key: string]: string;
+        };
+      };
+    };
+    adminApp: {
+      repository: string;
+      owner: string;
+      branch: string;
+      buildSettings: {
+        buildCommand: string;
+        startCommand: string;
+        environmentVariables: {
+          [key: string]: string;
+        };
+      };
+    };
+  };
+  dynamodb: {
+    billingMode: string;
+    pointInTimeRecovery: boolean;
+  };
+  bastion?: {
+    keyName?: string;
   };
 } 

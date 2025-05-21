@@ -7,7 +7,6 @@ import { EcsConstruct } from './constructs/ecs';
 import { IamConstruct } from './constructs/iam';
 import { CognitoConstruct } from './constructs/cognito';
 import { MonitoringConstruct } from './constructs/monitoring';
-import { DnsConstruct } from './constructs/dns';
 import { BackupConstruct } from './constructs/backup';
 import { WafConstruct } from './constructs/waf';
 import { CloudFrontConstruct } from './constructs/cloudfront';
@@ -16,7 +15,11 @@ import { RedisConstruct } from './constructs/redis';
 import { AutoShutdownConstruct } from './constructs/auto-shutdown';
 import { DynamoDBConstruct } from './constructs/dynamodb';
 import { RdsConstruct } from './constructs/rds';
+import { MigrationTaskConstruct } from './constructs/migration-task';
+import { AmplifyConstruct } from './constructs/amplify';
+import { BastionConstruct } from './constructs/bastion';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
 
 /**
  * Creates a secret if it doesn't exist, or imports it if it does
@@ -229,14 +232,71 @@ export class FineFindsStack extends cdk.Stack {
       executionRole: iam.ecsExecutionRole,
     });
     
+    // Create migration task definition
+    const migrationTask = new MigrationTaskConstruct(this, 'MigrationTask', {
+      environment: props.config.environment,
+      config: props.config,
+      vpc: vpc.vpc,
+      taskRole: iam.ecsTaskRole,
+      executionRole: iam.ecsExecutionRole,
+    });
+
     // Add dependencies to ensure proper creation order
     if (props.config.environment === 'prod' && rds.cluster) {
       ecs.service.node.addDependency(rds.cluster);
+      migrationTask.taskDefinition.node.addDependency(rds.cluster);
     } else if (rds.instance) {
       ecs.service.node.addDependency(rds.instance);
+      migrationTask.taskDefinition.node.addDependency(rds.instance);
     }
     ecs.service.node.addDependency(dbConnectionStringSecret);
+    migrationTask.taskDefinition.node.addDependency(dbConnectionStringSecret);
     ecs.service.node.addDependency(redisConnectionSecret);
+
+    // Output subnet IDs for migration task
+    const privateSubnets = vpc.vpc.selectSubnets({
+      subnetType: ec2.SubnetType.PRIVATE_ISOLATED
+    }).subnetIds;
+    const subnetIdsOutput = new cdk.CfnOutput(this, 'MigrationSubnetIds', {
+      value: privateSubnets.length > 0 ? privateSubnets.join(',') : 'No private subnets available',
+      description: 'Private subnet IDs for migration task',
+      exportName: `finefinds-${props.config.environment}-migration-task-subnet-ids`,
+    });
+    subnetIdsOutput.node.addDependency(vpc.vpc);
+
+    // Create security group for migration task
+    const migrationSecurityGroup = new ec2.SecurityGroup(this, 'MigrationTaskSecurityGroup', {
+      vpc: vpc.vpc,
+      description: 'Security group for database migration task',
+      allowAllOutbound: true,
+    });
+
+    // Allow inbound access from within the VPC
+    migrationSecurityGroup.addIngressRule(
+      ec2.Peer.ipv4(vpc.vpc.vpcCidrBlock),
+      ec2.Port.allTcp(),
+      'Allow all inbound from within VPC'
+    );
+
+    // Allow inbound access from the security group to the database
+    if (props.config.environment === 'prod' && rds.cluster) {
+      rds.cluster.connections.allowDefaultPortFrom(
+        migrationSecurityGroup,
+        'Allow access from migration task'
+      );
+    } else if (rds.instance) {
+      rds.instance.connections.allowDefaultPortFrom(
+        migrationSecurityGroup,
+        'Allow access from migration task'
+      );
+    }
+
+    // Output security group ID for migration task
+    new cdk.CfnOutput(this, 'MigrationTaskSecurityGroupId', {
+      value: migrationSecurityGroup.securityGroupId,
+      description: 'Security group ID for migration task',
+      exportName: `finefinds-${props.config.environment}-migration-task-sg-id`,
+    });
 
     // Configure database security groups to allow access from ECS services
     if (props.config.environment === 'prod' && rds.cluster) {
@@ -253,47 +313,6 @@ export class FineFindsStack extends cdk.Stack {
       );
     }
 
-    // Set up initial database migration task
-    const migrationTask = new cdk.aws_ecs.FargateTaskDefinition(this, 'MigrationTaskDef', {
-      memoryLimitMiB: 512,
-      cpu: 256,
-      taskRole: iam.ecsTaskRole,
-      executionRole: iam.ecsExecutionRole,
-    });
-    
-    migrationTask.addContainer('MigrationContainer', {
-      image: cdk.aws_ecs.ContainerImage.fromRegistry('891076991993.dkr.ecr.us-east-1.amazonaws.com/finefinds-base/node-20-alpha:latest'),
-      command: ['npm', 'run', 'migration:run'],
-      logging: cdk.aws_ecs.LogDrivers.awsLogs({
-        streamPrefix: 'db-migration',
-        logGroup: new cdk.aws_logs.LogGroup(this, 'MigrationLogGroup', {
-          logGroupName: `/finefinds/${props.config.environment}/db-migration`,
-          retention: props.config.environment === 'prod' 
-            ? cdk.aws_logs.RetentionDays.ONE_MONTH 
-            : cdk.aws_logs.RetentionDays.ONE_DAY,
-          removalPolicy: props.config.environment === 'prod' 
-            ? cdk.RemovalPolicy.RETAIN 
-            : cdk.RemovalPolicy.DESTROY,
-        }),
-      }),
-      environment: {
-        NODE_ENV: props.config.environment,
-      },
-      secrets: {
-        DATABASE_URL: cdk.aws_ecs.Secret.fromSecretsManager(dbConnectionStringSecret),
-        REDIS_URL: cdk.aws_ecs.Secret.fromSecretsManager(redisConnectionSecret),
-      },
-    });
-    
-    // Add dependencies for the migration task
-    if (props.config.environment === 'prod' && rds.cluster) {
-      migrationTask.node.addDependency(rds.cluster);
-    } else if (rds.instance) {
-      migrationTask.node.addDependency(rds.instance);
-    }
-    migrationTask.node.addDependency(dbConnectionStringSecret);
-    migrationTask.node.addDependency(redisConnectionSecret);
-    
     // Output important resource information
     new cdk.CfnOutput(this, 'DatabaseEndpoint', {
       value: props.config.environment === 'prod' && rds.cluster 
@@ -331,12 +350,34 @@ export class FineFindsStack extends cdk.Stack {
       alarmTopic,
     });
 
-    // Create DNS Resources
-    const dns = new DnsConstruct(this, 'Dns', {
+    // Create CloudFront Resources
+    const cloudfront = new CloudFrontConstruct(this, 'CloudFront', {
       environment: props.config.environment,
       config: props.config,
       loadBalancer: ecs.loadBalancer,
-      domainName: props.config.dns.domainName,
+      uploadsBucket: new cdk.aws_s3.Bucket(this, 'UploadsBucket', {
+        bucketName: `finefinds-${props.config.environment}-uploads`,
+        versioned: props.config.s3.versioned,
+        encryption: cdk.aws_s3.BucketEncryption.S3_MANAGED,
+        blockPublicAccess: cdk.aws_s3.BlockPublicAccess.BLOCK_ALL,
+        removalPolicy: props.config.environment === 'prod' 
+          ? cdk.RemovalPolicy.RETAIN 
+          : cdk.RemovalPolicy.DESTROY,
+      }),
+    });
+
+    // Output CloudFront distribution domain name for manual DNS configuration in Dreamhost
+    new cdk.CfnOutput(this, 'CloudFrontDomainName', {
+      value: cloudfront.distribution.distributionDomainName,
+      description: 'CloudFront distribution domain name for Dreamhost DNS configuration',
+      exportName: `finefinds-${props.config.environment}-cf-domain-name`,
+    });
+
+    // Output load balancer DNS name for manual DNS configuration in Dreamhost
+    new cdk.CfnOutput(this, 'LoadBalancerDnsName', {
+      value: ecs.loadBalancer.loadBalancerDnsName,
+      description: 'Load Balancer DNS name for Dreamhost DNS configuration',
+      exportName: `finefinds-${props.config.environment}-lb-dns-name`,
     });
 
     // Create Backup Resources (only for production)
@@ -356,31 +397,41 @@ export class FineFindsStack extends cdk.Stack {
       });
     }
 
-    // Create CloudFront Resources
-    const cloudfront = new CloudFrontConstruct(this, 'CloudFront', {
-      environment: props.config.environment,
-      config: props.config,
-      loadBalancer: ecs.loadBalancer,
-      uploadsBucket: new cdk.aws_s3.Bucket(this, 'UploadsBucket', {
-        bucketName: `finefinds-${props.config.environment}-uploads`,
-        versioned: props.config.s3.versioned,
-        encryption: cdk.aws_s3.BucketEncryption.S3_MANAGED,
-        blockPublicAccess: cdk.aws_s3.BlockPublicAccess.BLOCK_ALL,
-        removalPolicy: props.config.environment === 'prod' 
-          ? cdk.RemovalPolicy.RETAIN 
-          : cdk.RemovalPolicy.DESTROY,
-      }),
-    });
-    
     // Create DynamoDB tables if needed
-    // Note: Only include this if your application requires DynamoDB
-    // This is optimized for cost in non-production environments
-    if (props.config.enableDynamoDB ?? false) {
+    if (props.config.environment === 'prod' || props.config.environment === 'uat') {
       const dynamodb = new DynamoDBConstruct(this, 'DynamoDB', {
         environment: props.config.environment,
         config: props.config,
         kmsKey: kms.key,
       });
+    }
+
+    // Create Amplify apps for frontend applications
+    const amplify = new AmplifyConstruct(this, 'Amplify', {
+      environment: props.config.environment,
+      config: props.config,
+    });
+
+    // Create bastion host for non-production environments
+    if (['dev', 'sandbox', 'qa', 'uat'].includes(props.config.environment)) {
+      const bastion = new BastionConstruct(this, 'Bastion', {
+        environment: props.config.environment,
+        config: props.config,
+        vpc: vpc.vpc,
+      });
+
+      // Allow bastion host to access the database
+      if (props.config.environment === 'prod' && rds.cluster) {
+        rds.cluster.connections.allowDefaultPortFrom(
+          bastion.securityGroup,
+          'Allow access from bastion host'
+        );
+      } else if (rds.instance) {
+        rds.instance.connections.allowDefaultPortFrom(
+          bastion.securityGroup,
+          'Allow access from bastion host'
+        );
+      }
     }
 
     // Add tags to all resources

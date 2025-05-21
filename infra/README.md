@@ -38,12 +38,12 @@ The infrastructure is organized into the following constructs:
 
 ## Environment Configuration
 
-The infrastructure supports multiple environments (dev, qa, staging, prod). Each environment has its own configuration in `infra/env/`:
+The infrastructure supports multiple environments (dev, qa, uat, prod). Each environment has its own configuration in `infra/env/`:
 
 - `base-config.ts`: Common configuration
 - `dev.ts`: Development environment
 - `qa.ts`: QA environment
-- `staging.ts`: Staging environment
+- `uat.ts`: Staging environment
 - `prod.ts`: Production environment
 
 ## Deployment
@@ -59,7 +59,7 @@ The infrastructure supports multiple environments (dev, qa, staging, prod). Each
    ```bash
    npm run cdk deploy dev  # For development
    npm run cdk deploy qa   # For QA
-   npm run cdk deploy staging  # For staging
+   npm run cdk deploy uat  # For UAT
    npm run cdk deploy prod  # For production
    ```
 
@@ -68,7 +68,7 @@ The infrastructure supports multiple environments (dev, qa, staging, prod). Each
 The infrastructure is automatically deployed through GitHub Actions using a branch-to-environment strategy:
 
 - `main` branch → Production environment
-- `staging` branch → Staging environment
+- `uat` branch → Staging environment
 - `qa` branch → QA environment
 - `dev` branch → Development environment
 - `sonarqube` branch → Triggers SonarQube setup
@@ -78,7 +78,7 @@ The infrastructure is automatically deployed through GitHub Actions using a bran
 We have two key workflows:
 
 1. **CDK Deploy (`cdk-deploy.yml`)**
-   - Triggers on push to main branches (`main`, `staging`, `qa`, `dev`)
+   - Triggers on push to main branches (`main`, `uat`, `qa`, `dev`)
    - Deploys infrastructure to the corresponding environment
    - Sends Slack notifications on success/failure
    
