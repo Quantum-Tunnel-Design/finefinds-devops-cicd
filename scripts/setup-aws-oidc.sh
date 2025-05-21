@@ -160,7 +160,7 @@ create_role_policy() {
                 "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-cognito-config*",
                 "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-redis-connection*",
                 "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-rds-connection*",
-                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:FineFinds*RdsDatabaseSecr-*",
+                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-rds-database-secret-*",
                 "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-github-token*",
                 "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-jwt-secret*",
                 "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-smtp-secret*",
@@ -193,8 +193,8 @@ create_role_policy() {
             ],
             "Resource": [
                 "arn:aws:cloudformation:${AWS_REGION}:${ACCOUNT_ID}:stack/CDKToolkit/*",
-                "arn:aws:cloudformation:${AWS_REGION}:${ACCOUNT_ID}:stack/FineFinds-*/*",
-                "arn:aws:cloudformation:${AWS_REGION}:${ACCOUNT_ID}:stack/FineFinds-*"
+                "arn:aws:cloudformation:${AWS_REGION}:${ACCOUNT_ID}:stack/finefinds-*/*",
+                "arn:aws:cloudformation:${AWS_REGION}:${ACCOUNT_ID}:stack/finefinds-*"
             ]
         },
         {
@@ -214,8 +214,8 @@ create_role_policy() {
                 "logs:FilterLogEvents"
             ],
             "Resource": [
-                "arn:aws:logs:us-east-1:*:log-group:/finefinds/*/migration:*",
-                "arn:aws:logs:us-east-1:*:log-group:/finefinds/*/app:*"
+                "arn:aws:logs:us-east-1:*:log-group:finefinds-*-migration:*",
+                "arn:aws:logs:us-east-1:*:log-group:finefinds-*-app:*"
             ]
         },
         {
@@ -248,7 +248,7 @@ create_role_policy() {
             "Resource": [
                 "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:cluster/finefinds-${env}",
                 "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:service/finefinds-${env}-cluster/*",
-                "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:service/FineFinds${env}EcsService*",
+                "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:service/finefinds-${env}-ecs-service*",
                 "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:task-definition/*",
                 "arn:aws:iam::${ACCOUNT_ID}:role/github-actions-services-dev",
                 "arn:aws:secretsmanager:${AWS_REGION}:${ACCOUNT_ID}:secret:finefinds-*-*"
@@ -267,7 +267,7 @@ create_role_policy() {
                 "arn:aws:iam::${ACCOUNT_ID}:role/finefinds-*-ecs-execution-role",
                 "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:cluster/finefinds-${env}",
                 "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:service/finefinds-${env}-cluster/*",
-                "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:service/FineFinds${env}EcsService*",
+                "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:service/finefinds-${env}-ecs-service*",
                 "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:task-definition/*",
                 "arn:aws:iam::${ACCOUNT_ID}:role/github-actions-*"
             ]
@@ -292,8 +292,8 @@ create_role_policy() {
             ],
             "Resource": [
                 "arn:aws:logs:${AWS_REGION}:${ACCOUNT_ID}:log-group:*",
-                "arn:aws:logs:${AWS_REGION}:${ACCOUNT_ID}:log-group:/finefinds/*:*",
-                "arn:aws:logs:${AWS_REGION}:${ACCOUNT_ID}:log-group:/finefinds/*:log-stream:*"
+                "arn:aws:logs:${AWS_REGION}:${ACCOUNT_ID}:log-group:finefinds-*:*",
+                "arn:aws:logs:${AWS_REGION}:${ACCOUNT_ID}:log-group:finefinds-*:log-stream:*"
             ]
         },
         {
