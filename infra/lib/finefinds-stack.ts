@@ -143,13 +143,14 @@ export class FineFindsStack extends cdk.Stack {
             SecretId: dbConnectionStringSecret.secretArn,
             SecretString: cdk.Lazy.string({
               produce: () => {
+                const password = rds.cluster?.secret?.secretValueFromJson('password').unsafeUnwrap() || '';
                 return JSON.stringify({
                   dbName: 'finefinds',
                   engine: 'postgres',
                   host: rds.cluster?.clusterEndpoint.hostname,
                   port: 5432,
                   username: 'postgres',
-                  password: rds.cluster?.secret?.secretValueFromJson('password').toString() || '',
+                  password: password,
                 });
               }
             }),
@@ -163,13 +164,14 @@ export class FineFindsStack extends cdk.Stack {
             SecretId: dbConnectionStringSecret.secretArn,
             SecretString: cdk.Lazy.string({
               produce: () => {
+                const password = rds.cluster?.secret?.secretValueFromJson('password').unsafeUnwrap() || '';
                 return JSON.stringify({
                   dbName: 'finefinds',
                   engine: 'postgres',
                   host: rds.cluster?.clusterEndpoint.hostname,
                   port: 5432,
                   username: 'postgres',
-                  password: rds.cluster?.secret?.secretValueFromJson('password').toString() || '',
+                  password: password,
                 });
               }
             }),
@@ -194,13 +196,14 @@ export class FineFindsStack extends cdk.Stack {
             SecretId: dbConnectionStringSecret.secretArn,
             SecretString: cdk.Lazy.string({
               produce: () => {
+                const password = rds.instance?.secret?.secretValueFromJson('password').unsafeUnwrap() || '';
                 return JSON.stringify({
                   dbName: 'finefinds',
                   engine: 'postgres',
                   host: rds.instance?.instanceEndpoint.hostname,
                   port: 5432,
                   username: 'postgres',
-                  password: rds.instance?.secret?.secretValueFromJson('password').toString() || '',
+                  password: password,
                 });
               }
             }),
@@ -214,13 +217,14 @@ export class FineFindsStack extends cdk.Stack {
             SecretId: dbConnectionStringSecret.secretArn,
             SecretString: cdk.Lazy.string({
               produce: () => {
+                const password = rds.instance?.secret?.secretValueFromJson('password').unsafeUnwrap() || '';
                 return JSON.stringify({
                   dbName: 'finefinds',
                   engine: 'postgres',
                   host: rds.instance?.instanceEndpoint.hostname,
                   port: 5432,
                   username: 'postgres',
-                  password: rds.instance?.secret?.secretValueFromJson('password').toString() || '',
+                  password: password,
                 });
               }
             }),
