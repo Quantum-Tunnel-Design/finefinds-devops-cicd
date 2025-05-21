@@ -1,4 +1,4 @@
-name: CDK Deploy v2
+name: CDK Deploy
 
 on:
   push:
@@ -51,6 +51,7 @@ jobs:
       (needs.check_skip.outputs.should_skip != 'true' && github.event_name == 'push') ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy')
     runs-on: ubuntu-latest
+    # Map branches to environments for GitHub Actions
     environment: >-
       ${{ 
         github.event_name == 'workflow_dispatch' && github.event.inputs.environment ||
@@ -74,6 +75,7 @@ jobs:
       AWS_REGION: us-east-1
       CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
       CDK_DEFAULT_REGION: us-east-1
+      # Define environment for CDK deployment
       CDK_ENV: >-
         ${{ 
           github.event_name == 'workflow_dispatch' && github.event.inputs.environment ||
@@ -82,6 +84,7 @@ jobs:
           github.ref == 'refs/heads/qa' && 'qa' || 
           'dev' 
         }}
+      # Add version environment variable
       STACK_VERSION: >-
         ${{ 
           github.ref == 'refs/tags/*' && github.ref_name || 
@@ -97,7 +100,7 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-devops-${{ env.CDK_ENV }}
           aws-region: us-east-1
-          role-duration-seconds: 3600
+          role-duration-seconds: 3600  # Increase session duration to 1 hour
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
@@ -122,13 +125,16 @@ jobs:
           STACK_NAME="FineFinds-${{ env.CDK_ENV }}"
           echo "Checking status of $STACK_NAME stack..."
           
+          # Check if the stack exists and get its status
           STACK_STATUS=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query "Stacks[0].StackStatus" --output text 2>/dev/null || echo "STACK_NOT_FOUND")
           
           echo "Current stack status: $STACK_STATUS"
           
+          # If stack is in progress, wait or exit
           if [[ $STACK_STATUS == *"_IN_PROGRESS" ]]; then
             echo "Stack operation is already in progress. Waiting for it to complete..."
             
+            # Try to wait for the stack operation to complete (timeout after 30 minutes)
             aws cloudformation wait stack-$([[ $STACK_STATUS == "CREATE_IN_PROGRESS" ]] && echo "create-complete" || echo "update-complete") --stack-name $STACK_NAME --timeout-in-minutes 30 || {
               echo "::error::Stack operation timed out after 30 minutes. Please check the CloudFormation console."
               exit 1
@@ -155,8 +161,10 @@ jobs:
         run: |
           cd infra
           echo "Bootstrapping CDK for environment: ${{ env.CDK_ENV }}, qualifier: ${{ env.QUALIFIER }}"
+          # First, ensure we're using the custom qualifier for all operations
           export CDK_QUALIFIER=${{ env.QUALIFIER }}
           
+          # Bootstrap with explicit lookup role creation
           npx cdk bootstrap aws://${{ secrets.AWS_ACCOUNT_ID }}/${{ env.CDK_DEFAULT_REGION }} \
             --qualifier ${{ env.QUALIFIER }} \
             --context qualifier=${{ env.QUALIFIER }} \
@@ -189,103 +197,93 @@ jobs:
             --context aws-cdk:image-asset-publishing-role-name=cdk-${{ env.QUALIFIER }}-image-publishing-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
             --context aws-cdk:asset-publishing-role-name=cdk-${{ env.QUALIFIER }}-publishing-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
             --require-approval never
+        
+      - name: CDK Diff
+        if: github.event_name == 'pull_request'
+        run: |
+          cd infra
+          npm run cdk diff -- FineFinds-${{ env.CDK_ENV }} --context env=${{ env.CDK_ENV }} --context version=${{ env.STACK_VERSION }} --context aws-cdk:qualifier=${{ env.QUALIFIER }}
 
-      - name: Deploy Infrastructure
+      - name: CDK Deploy
         if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy')
         run: |
           cd infra
-          echo "Deploying infrastructure for environment: ${{ env.CDK_ENV }}, qualifier: ${{ env.QUALIFIER }}"
-          npx cdk deploy --all \
-            --qualifier ${{ env.QUALIFIER }} \
-            --context qualifier=${{ env.QUALIFIER }} \
-            --context environment=${{ env.CDK_ENV }} \
-            --context version=${{ env.STACK_VERSION }} \
-            --context aws-cdk:qualifier=${{ env.QUALIFIER }} \
-            --context aws-cdk:lookup-role-name=cdk-${{ env.QUALIFIER }}-lookup-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
-            --context aws-cdk:deploy-role-name=cdk-${{ env.QUALIFIER }}-deploy-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
-            --context aws-cdk:file-asset-role-name=cdk-${{ env.QUALIFIER }}-file-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
-            --context aws-cdk:image-asset-role-name=cdk-${{ env.QUALIFIER }}-image-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
-            --context aws-cdk:image-asset-publishing-role-name=cdk-${{ env.QUALIFIER }}-image-publishing-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
-            --context aws-cdk:asset-publishing-role-name=cdk-${{ env.QUALIFIER }}-publishing-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
-            --require-approval never
+          npm run cdk deploy -- FineFinds-${{ env.CDK_ENV }} --context env=${{ env.CDK_ENV }} --context version=${{ env.STACK_VERSION }} --context aws-cdk:qualifier=${{ env.QUALIFIER }} --require-approval never
+        env:
+          CDK_DEPLOY_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+          CDK_DEPLOY_REGION: ${{ secrets.AWS_REGION }}
 
-  destroy:
-    needs: check_skip
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
-    runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment }}
-    permissions:
-      id-token: write
-      contents: read
-    env:
-      QUALIFIER: >-
-        ${{ 
-          github.event_name == 'workflow_dispatch' && format('ff{0}', github.event.inputs.environment) ||
-          github.ref == 'refs/heads/main' && 'ffprod' || 
-          github.ref == 'refs/heads/uat' && 'ffuat' || 
-          github.ref == 'refs/heads/qa' && 'ffqa' || 
-          'ffdev'
-        }}
-      AWS_REGION: us-east-1
-      CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
-      CDK_DEFAULT_REGION: us-east-1
-      CDK_ENV: ${{ github.event.inputs.environment }}
-      STACK_VERSION: >-
-        ${{ 
-          github.ref == 'refs/tags/*' && github.ref_name || 
-          format('{0}-{1}', github.run_number, github.sha)
-        }}
+      - name: CDK Destroy
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
+        run: |
+          cd infra
+          npm run cdk destroy -- FineFinds-${{ env.CDK_ENV }} --context env=${{ env.CDK_ENV }} --context version=${{ env.STACK_VERSION }} --context aws-cdk:qualifier=${{ env.QUALIFIER }} --force
+        env:
+          CDK_DEPLOY_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+          CDK_DEPLOY_REGION: ${{ secrets.AWS_REGION }}
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Slack Notification (Success)
+        if: success()
+        uses: slackapi/slack-github-action@v2.1.0
         with:
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-devops-${{ env.CDK_ENV }}
-          aws-region: us-east-1
-          role-duration-seconds: 3600
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL_DEVOPS }}
+          webhook-type: webhook-trigger
+          payload: |
+            {
+              "channel": "${{ secrets.SLACK_CHANNEL_DEVOPS }}",
+              "attachments": [
+                {
+                  "color": "#36a64f",
+                  "pretext": ":white_check_mark: *CDK ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy' && 'Destroy' || 'Deploy' }} Succeeded*",
+                  "fields": [
+                    { "title": "Environment", "value": "${{ env.CDK_ENV }}", "short": true },
+                    { "title": "Version", "value": "${{ env.STACK_VERSION }}", "short": true },
+                    { "title": "Branch", "value": "${{ github.ref_name }}", "short": true },
+                    { "title": "Actor", "value": "${{ github.actor }}", "short": true },
+                    { "title": "Commit", "value": "${{ github.sha }}", "short": false }
+                  ],
+                  "actions": [
+                    {
+                      "type": "button",
+                      "text": "View Workflow",
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_DEVOPS_TOKEN }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - name: Slack Notification (Failure)
+        if: failure()
+        uses: slackapi/slack-github-action@v2.1.0
         with:
-          node-version: '20'
-
-      - name: Install CDK CLI
-        run: |
-          npm install -g aws-cdk@latest
-  
-      - name: Verify CDK Version
-        run: |
-          cdk --version 
-
-      - name: Install Dependencies
-        run: |
-          cd infra
-          npm ci
-
-      - name: Clean CDK Context and Cache
-        run: |
-          cd infra
-          echo "Cleaning .cdk.context.json and cached context..."
-          rm -f .cdk.context.json || true
-          npx cdk context --clear
-
-      - name: Destroy Infrastructure
-        run: |
-          cd infra
-          echo "Destroying infrastructure for environment: ${{ env.CDK_ENV }}, qualifier: ${{ env.QUALIFIER }}"
-          npx cdk destroy --all \
-            --qualifier ${{ env.QUALIFIER }} \
-            --context qualifier=${{ env.QUALIFIER }} \
-            --context environment=${{ env.CDK_ENV }} \
-            --context version=${{ env.STACK_VERSION }} \
-            --context aws-cdk:qualifier=${{ env.QUALIFIER }} \
-            --context aws-cdk:lookup-role-name=cdk-${{ env.QUALIFIER }}-lookup-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
-            --context aws-cdk:deploy-role-name=cdk-${{ env.QUALIFIER }}-deploy-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
-            --context aws-cdk:file-asset-role-name=cdk-${{ env.QUALIFIER }}-file-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
-            --context aws-cdk:image-asset-role-name=cdk-${{ env.QUALIFIER }}-image-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
-            --context aws-cdk:image-asset-publishing-role-name=cdk-${{ env.QUALIFIER }}-image-publishing-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
-            --context aws-cdk:asset-publishing-role-name=cdk-${{ env.QUALIFIER }}-publishing-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
-            --require-approval never 
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL_DEVOPS }}
+          webhook-type: webhook-trigger
+          payload: |
+            {
+              "channel": "${{ secrets.SLACK_CHANNEL }}",
+              "attachments": [
+                {
+                  "color": "#ff0000",
+                  "pretext": ":x: *CDK ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy' && 'Destroy' || 'Deploy' }} Failed*",
+                  "fields": [
+                    { "title": "Environment", "value": "${{ env.CDK_ENV }}", "short": true },
+                    { "title": "Version", "value": "${{ env.STACK_VERSION }}", "short": true },
+                    { "title": "Branch", "value": "${{ github.ref_name }}", "short": true },
+                    { "title": "Actor", "value": "${{ github.actor }}", "short": true },
+                    { "title": "Commit", "value": "${{ github.sha }}", "short": false }
+                  ],
+                  "actions": [
+                    {
+                      "type": "button",
+                      "text": "View Workflow",
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_DEVOPS_TOKEN }}
