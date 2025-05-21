@@ -196,7 +196,8 @@ create_role_policy() {
                 "ecs:ListTaskDefinitions",
                 "ecs:DeregisterTaskDefinition",
                 "ecs:DescribeClusters",
-                "ecs:ListClusters"
+                "ecs:ListClusters",
+                "ecs:CreateService"
             ],
             "Resource": [
                 "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:cluster/finefinds-${env}",
