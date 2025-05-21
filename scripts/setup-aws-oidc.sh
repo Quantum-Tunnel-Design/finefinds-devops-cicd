@@ -170,31 +170,13 @@ create_role_policy() {
         {
             "Effect": "Allow",
             "Action": [
-                "cloudformation:DescribeStacks",
-                "cloudformation:ListStacks",
-                "cloudformation:GetTemplateSummary",
-                "cloudformation:CreateStack",
-                "cloudformation:UpdateStack",
-                "cloudformation:DeleteStack",
-                "cloudformation:DescribeStackEvents",
-                "cloudformation:GetTemplate",
-                "cloudformation:ValidateTemplate",
-                "cloudformation:GetStackPolicy",
-                "cloudformation:SetStackPolicy",
-                "cloudformation:UpdateTerminationProtection",
-                "cloudformation:DeleteChangeSet",
-                "cloudformation:DescribeChangeSet",
-                "cloudformation:ExecuteChangeSet",
-                "cloudformation:CreateChangeSet",
-                "cloudformation:ListChangeSets",
-                "cloudformation:ListStackResources",
-                "cloudformation:DescribeStackResources",
-                "cloudformation:DescribeStackResource"
+                "cloudformation:*"
             ],
             "Resource": [
                 "arn:aws:cloudformation:${AWS_REGION}:${ACCOUNT_ID}:stack/CDKToolkit/*",
                 "arn:aws:cloudformation:${AWS_REGION}:${ACCOUNT_ID}:stack/finefinds-*/*",
-                "arn:aws:cloudformation:${AWS_REGION}:${ACCOUNT_ID}:stack/finefinds-*"
+                "arn:aws:cloudformation:${AWS_REGION}:${ACCOUNT_ID}:stack/finefinds-*",
+                "arn:aws:cloudformation:${AWS_REGION}:${ACCOUNT_ID}:stack/*"
             ]
         },
         {
