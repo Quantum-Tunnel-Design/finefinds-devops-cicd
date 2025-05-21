@@ -21,7 +21,7 @@ export class AmplifyConstruct extends Construct {
       appName: `finefinds-${props.environment}-client-web`,
       sourceCodeProvider: new amplify.GitHubSourceCodeProvider({
         owner: 'Quantum-Tunnel-Design',
-        repository: 'finefinds-client-web-app',
+        repository: 'finefinds-client-web',
         oauthToken: cdk.SecretValue.secretsManager('github-token', {
           jsonField: 'token',
         }),
@@ -32,7 +32,7 @@ export class AmplifyConstruct extends Construct {
         NEXT_PUBLIC_COGNITO_USER_POOL_ID: props.config.cognito.clientUsers.userPoolName,
         NEXT_PUBLIC_COGNITO_CLIENT_ID: props.config.cognito.clientUsers.userPoolName,
         NEXT_PUBLIC_AWS_REGION: props.config.region || 'us-east-1',
-        NODE_ENV: props.environment,
+        NODE_ENV: props.environment.toLowerCase(),
         _LIVE_UPDATES: '[{"name":"next","pkg":"@aws-amplify/cli"}]',
       },
       buildSpec: codebuild.BuildSpec.fromObject({
@@ -89,7 +89,7 @@ export class AmplifyConstruct extends Construct {
         NEXT_PUBLIC_COGNITO_USER_POOL_ID: props.config.cognito.adminUsers.userPoolName,
         NEXT_PUBLIC_COGNITO_CLIENT_ID: props.config.cognito.adminUsers.userPoolName,
         NEXT_PUBLIC_AWS_REGION: props.config.region || 'us-east-1',
-        NODE_ENV: props.environment,
+        NODE_ENV: props.environment.toLowerCase(),
         _LIVE_UPDATES: '[{"name":"next","pkg":"@aws-amplify/cli"}]',
       },
       buildSpec: codebuild.BuildSpec.fromObject({
@@ -143,7 +143,7 @@ export class AmplifyConstruct extends Construct {
         NEXT_PUBLIC_COGNITO_USER_POOL_ID: props.config.cognito.clientUsers.userPoolName,
         NEXT_PUBLIC_COGNITO_CLIENT_ID: props.config.cognito.clientUsers.userPoolName,
         NEXT_PUBLIC_AWS_REGION: props.config.region || 'us-east-1',
-        NODE_ENV: props.environment,
+        NODE_ENV: props.environment.toLowerCase(),
       },
     });
 
@@ -157,7 +157,7 @@ export class AmplifyConstruct extends Construct {
         NEXT_PUBLIC_COGNITO_USER_POOL_ID: props.config.cognito.adminUsers.userPoolName,
         NEXT_PUBLIC_COGNITO_CLIENT_ID: props.config.cognito.adminUsers.userPoolName,
         NEXT_PUBLIC_AWS_REGION: props.config.region || 'us-east-1',
-        NODE_ENV: props.environment,
+        NODE_ENV: props.environment.toLowerCase(),
       },
     });
 

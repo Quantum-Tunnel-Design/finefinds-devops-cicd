@@ -43,7 +43,7 @@ export const devConfig: BaseConfig = {
   },
   cognito: {
     clientUsers: {
-      userPoolName: 'finefinds-client-users-dev',
+      userPoolName: 'finefinds-dev-client-users',
       selfSignUpEnabled: true,
       passwordPolicy: {
         minLength: 8,
@@ -72,7 +72,7 @@ export const devConfig: BaseConfig = {
       },
     },
     adminUsers: {
-      userPoolName: 'finefinds-admin-users-dev',
+      userPoolName: 'finefinds-dev-admin-users',
       selfSignUpEnabled: false,
       passwordPolicy: {
         minLength: 12,
