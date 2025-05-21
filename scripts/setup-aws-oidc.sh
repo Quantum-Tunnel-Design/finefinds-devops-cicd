@@ -143,11 +143,12 @@ create_role_policy() {
         {
             "Effect": "Allow",
             "Action": [
-                "rds:DescribeDBInstances"
+                "rds:DescribeDBInstances",
+                "rds:DescribeDBClusters"
             ],
             "Resource": [
-                "arn:aws:rds:us-east-1:*:db:finefinds-${env}-db",
-                "arn:aws:rds:us-east-1:***:db:finefinds-dev-rdsdatabase74c89a2a-tgxwanklvozk"
+                "arn:aws:rds:${AWS_REGION}:${ACCOUNT_ID}:db:finefinds-${env}-db",
+                "arn:aws:rds:${AWS_REGION}:${ACCOUNT_ID}:cluster:finefinds-${env}-db"
             ]
         },
         {
@@ -157,14 +158,13 @@ create_role_policy() {
                 "secretsmanager:DescribeSecret"
             ],
             "Resource": [
-                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-cognito-config*",
-                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-redis-connection*",
-                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-rds-connection*",
-                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-rds-database-secret-*",
-                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-github-token*",
-                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-jwt-secret*",
-                "arn:aws:secretsmanager:us-east-1:${ACCOUNT_ID}:secret:finefinds-*-smtp-secret*",
-                "arn:aws:iam::***:role/github-actions-*"
+                "arn:aws:secretsmanager:${AWS_REGION}:${ACCOUNT_ID}:secret:finefinds-${env}-rds-connection*",
+                "arn:aws:secretsmanager:${AWS_REGION}:${ACCOUNT_ID}:secret:finefinds-${env}-redis-connection*",
+                "arn:aws:secretsmanager:${AWS_REGION}:${ACCOUNT_ID}:secret:finefinds-${env}-mongodb-connection*",
+                "arn:aws:secretsmanager:${AWS_REGION}:${ACCOUNT_ID}:secret:finefinds-${env}-jwt-secret*",
+                "arn:aws:secretsmanager:${AWS_REGION}:${ACCOUNT_ID}:secret:finefinds-${env}-smtp-secret*",
+                "arn:aws:secretsmanager:${AWS_REGION}:${ACCOUNT_ID}:secret:finefinds-${env}-opensearch-admin-password*",
+                "arn:aws:secretsmanager:${AWS_REGION}:${ACCOUNT_ID}:secret:finefinds-${env}-github-token*"
             ]
         },
         {
@@ -201,57 +201,55 @@ create_role_policy() {
             "Effect": "Allow",
             "Action": [
                 "ecs:DescribeTaskDefinition",
-                "ecs:ListTaskDefinitions"
-            ],
-            "Resource": "*"
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-                "logs:GetLogEvents",
-                "logs:DescribeLogStreams",
-                "logs:DescribeLogGroups",
-                "logs:FilterLogEvents"
-            ],
-            "Resource": [
-                "arn:aws:logs:us-east-1:*:log-group:finefinds-*-migration:*",
-                "arn:aws:logs:us-east-1:*:log-group:finefinds-*-app:*"
-            ]
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
+                "ecs:ListTaskDefinitions",
                 "ecs:RunTask",
                 "ecs:StopTask",
                 "ecs:DescribeTasks",
                 "ecs:ListTasks",
-                "ecs:DescribeTaskDefinition"
-            ],
-            "Resource": [
-                "arn:aws:ecs:us-east-1:*:task-definition/finefinds-backend-migration-dev:*",
-                "arn:aws:ecs:us-east-1:*:task/finefinds-dev-cluster/*",
-                "arn:aws:ecs:us-east-1:*:cluster/finefinds-dev-cluster"
-            ]
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
+                "ecs:DescribeTaskDefinition",
                 "ecs:UpdateService",
                 "ecs:DescribeServices",
                 "ecs:RegisterTaskDefinition",
                 "ecs:ListTaskDefinitions",
                 "ecs:DeregisterTaskDefinition",
-                "iam:PassRole",
-                "secretsmanager:GetSecretValue",
-                "secretsmanager:DescribeSecret"
+                "ecs:DescribeClusters",
+                "ecs:ListClusters"
             ],
             "Resource": [
                 "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:cluster/finefinds-${env}",
                 "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:service/finefinds-${env}-cluster/*",
                 "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:service/finefinds-${env}-ecs-service*",
                 "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:task-definition/*",
-                "arn:aws:iam::${ACCOUNT_ID}:role/github-actions-services-dev",
-                "arn:aws:secretsmanager:${AWS_REGION}:${ACCOUNT_ID}:secret:finefinds-*-*"
+                "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:task/finefinds-${env}-cluster/*"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "appmesh:*",
+                "servicediscovery:*"
+            ],
+            "Resource": [
+                "arn:aws:appmesh:${AWS_REGION}:${ACCOUNT_ID}:mesh/finefinds-${env}",
+                "arn:aws:appmesh:${AWS_REGION}:${ACCOUNT_ID}:mesh/finefinds-${env}/*",
+                "arn:aws:servicediscovery:${AWS_REGION}:${ACCOUNT_ID}:namespace/*",
+                "arn:aws:servicediscovery:${AWS_REGION}:${ACCOUNT_ID}:service/*"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents",
+                "logs:DescribeLogStreams",
+                "logs:DescribeLogGroups",
+                "logs:FilterLogEvents",
+                "logs:PutRetentionPolicy"
+            ],
+            "Resource": [
+                "arn:aws:logs:${AWS_REGION}:${ACCOUNT_ID}:log-group:/finefinds/${env}/*",
+                "arn:aws:logs:${AWS_REGION}:${ACCOUNT_ID}:log-group:/finefinds/${env}/*:log-stream:*"
             ]
         },
         {
@@ -265,35 +263,7 @@ create_role_policy() {
                 "arn:aws:iam::${ACCOUNT_ID}:role/ecsInstanceRole",
                 "arn:aws:iam::${ACCOUNT_ID}:role/finefinds-*-ecs-task-role",
                 "arn:aws:iam::${ACCOUNT_ID}:role/finefinds-*-ecs-execution-role",
-                "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:cluster/finefinds-${env}",
-                "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:service/finefinds-${env}-cluster/*",
-                "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:service/finefinds-${env}-ecs-service*",
-                "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:task-definition/*",
                 "arn:aws:iam::${ACCOUNT_ID}:role/github-actions-*"
-            ]
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-                "ecs:DescribeClusters",
-                "ecs:ListClusters"
-            ],
-            "Resource": "*"
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-                "logs:DescribeLogGroups",
-                "logs:CreateLogGroup",
-                "logs:PutLogEvents",
-                "logs:CreateLogStream",
-                "logs:DescribeLogStreams",
-                "logs:PutRetentionPolicy"
-            ],
-            "Resource": [
-                "arn:aws:logs:${AWS_REGION}:${ACCOUNT_ID}:log-group:*",
-                "arn:aws:logs:${AWS_REGION}:${ACCOUNT_ID}:log-group:finefinds-*:*",
-                "arn:aws:logs:${AWS_REGION}:${ACCOUNT_ID}:log-group:finefinds-*:log-stream:*"
             ]
         },
         {
