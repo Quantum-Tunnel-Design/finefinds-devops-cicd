@@ -51,30 +51,5 @@ export class SecretsConstruct extends Construct {
         this.smtpSecret.secretArn,
       ],
     });
-
-    // Output secret ARNs
-    new cdk.CfnOutput(this, 'RedisSecretArn', {
-      value: this.redisSecret.secretArn,
-      description: 'Redis secret ARN',
-      exportName: `finefinds-${props.environment}-redis-secret-arn`,
-    });
-
-    new cdk.CfnOutput(this, 'OpenSearchSecretArn', {
-      value: this.opensearchSecret.secretArn,
-      description: 'OpenSearch Secret ARN',
-      exportName: `finefinds-${props.environment}-opensearch-secret-arn`,
-    });
-
-    new cdk.CfnOutput(this, 'JwtSecretArn', {
-      value: this.jwtSecret.secretArn,
-      description: 'JWT Secret ARN',
-      exportName: `finefinds-${props.environment}-jwt-secret-arn`,
-    });
-
-    new cdk.CfnOutput(this, 'SmtpSecretArn', {
-      value: this.smtpSecret.secretArn,
-      description: 'SMTP Secret ARN',
-      exportName: `finefinds-${props.environment}-smtp-secret-arn`,
-    });
   }
 } 
