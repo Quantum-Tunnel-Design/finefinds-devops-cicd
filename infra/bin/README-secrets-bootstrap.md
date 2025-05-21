@@ -71,6 +71,6 @@ For a complete reset, you would need to delete the existing secrets first:
 
 ```bash
 # Be very careful with these commands in production!
-aws secretsmanager delete-secret --secret-id finefinds-<env>-db-connection --force-delete-without-recovery
+aws secretsmanager delete-secret --secret-id finefinds-<env>-rds-connection --force-delete-without-recovery
 aws secretsmanager delete-secret --secret-id finefinds-<env>-redis-connection --force-delete-without-recovery
-``` 
+```

@@ -10,12 +10,13 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as cr from 'aws-cdk-lib/custom-resources';
 import * as iam from 'aws-cdk-lib/aws-iam';
 
-export interface FineFindsSonarQubeStackProps extends cdk.StackProps {
+export interface FinefindsSonarqubeStackProps extends cdk.StackProps {
+  environment: string;
   config: BaseConfig;
 }
 
-export class FineFindsSonarQubeStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props: FineFindsSonarQubeStackProps) {
+export class FinefindsSonarqubeStack extends cdk.Stack {
+  constructor(scope: Construct, id: string, props: FinefindsSonarqubeStackProps) {
     super(scope, id, props);
 
     // Create KMS key for encryption
@@ -51,7 +52,7 @@ export class FineFindsSonarQubeStack extends cdk.Stack {
 
     // Create SonarQube admin token secret with RETAIN removal policy to prevent loss
     const adminTokenSecret = new secretsmanager.Secret(this, 'SonarQubeAdminTokenSecret', {
-      secretName: `finefinds/shared/sonarqube/admin-token`,
+      secretName: `finefinds-shared-sonarqube-secret`,
       description: 'SonarQube Admin Token for Shared Instance',
       encryptionKey: kms.key,
       generateSecretString: {
@@ -63,10 +64,10 @@ export class FineFindsSonarQubeStack extends cdk.Stack {
     });
 
     // Output the secret ARN for reference in CI/CD pipelines
-    const adminTokenOutput = new cdk.CfnOutput(this, 'SonarQubeAdminToken', {
+    new cdk.CfnOutput(this, 'SonarQubeAdminTokenArn', {
       value: adminTokenSecret.secretArn,
-      description: 'SonarQube Admin Token Secret ARN',
-      exportName: `finefinds-shared-sonarqube-admin-token-arn`,
+      description: 'SonarQube admin token ARN',
+      exportName: `finefinds-shared-sonarqube-secret-arn`,
     });
 
     // Output the SonarQube URL from the resilient construct
@@ -79,7 +80,7 @@ export class FineFindsSonarQubeStack extends cdk.Stack {
 
     // Add tags to all resources
     cdk.Tags.of(this).add('Environment', 'shared');
-    cdk.Tags.of(this).add('Project', 'FineFinds');
+    cdk.Tags.of(this).add('Project', 'finefinds');
     cdk.Tags.of(this).add('ManagedBy', 'CDK');
     cdk.Tags.of(this).add('Component', 'SonarQube');
   }

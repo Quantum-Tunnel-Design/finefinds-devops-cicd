@@ -64,7 +64,7 @@ export class RedisConstruct extends Construct {
         },
         {
           key: 'Project',
-          value: 'FineFinds',
+          value: 'finefinds',
         },
       ],
     });

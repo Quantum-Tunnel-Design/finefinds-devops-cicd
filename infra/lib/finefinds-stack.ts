@@ -247,6 +247,22 @@ export class FineFindsStack extends cdk.Stack {
       vpc: vpc.vpc,
       taskRole: iam.ecsTaskRole,
       executionRole: iam.ecsExecutionRole,
+      secrets: {
+        DATABASE_URL: ecs.Secret.fromSecretsManager(
+          cdk.aws_secretsmanager.Secret.fromSecretNameV2(
+            this,
+            'DbConnectionSecret',
+            `finefinds-${props.config.environment}-rds-connection`
+          )
+        ),
+        REDIS_URL: ecs.Secret.fromSecretsManager(
+          cdk.aws_secretsmanager.Secret.fromSecretNameV2(
+            this,
+            'RedisConnectionSecret',
+            `finefinds-${props.config.environment}-redis-connection`
+          )
+        ),
+      },
     });
     
     // Create migration task definition

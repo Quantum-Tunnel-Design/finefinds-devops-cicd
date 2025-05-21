@@ -92,6 +92,6 @@ export class BastionConstruct extends Construct {
     // Add tags
     cdk.Tags.of(this.instance).add('Name', `finefinds-${props.environment}-bastion`);
     cdk.Tags.of(this.instance).add('Environment', props.environment);
-    cdk.Tags.of(this.instance).add('Project', 'FineFinds');
+    cdk.Tags.of(this.instance).add('Project', 'finefinds');
   }
 } 

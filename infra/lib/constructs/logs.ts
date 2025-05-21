@@ -21,64 +21,48 @@ export class LogsConstruct extends Construct {
     super(scope, id);
 
     // Create application log group
-    this.applicationLogGroup = new logs.LogGroup(this, 'ApplicationLogs', {
-      logGroupName: `/finefinds/${props.environment}/application`,
-      retention: props.environment === 'prod' 
-        ? logs.RetentionDays.ONE_MONTH 
-        : logs.RetentionDays.ONE_DAY,
+    this.applicationLogGroup = new logs.LogGroup(this, 'ApplicationLogGroup', {
+      logGroupName: `finefinds-${props.environment}-application-logs`,
+      retention: props.environment === 'prod' ? logs.RetentionDays.ONE_MONTH : logs.RetentionDays.ONE_WEEK,
       encryptionKey: props.kmsKey,
-      removalPolicy: props.environment === 'prod' 
-        ? cdk.RemovalPolicy.RETAIN 
-        : cdk.RemovalPolicy.DESTROY,
+      removalPolicy: props.environment === 'prod' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
     });
 
     // Create access log group
-    this.accessLogGroup = new logs.LogGroup(this, 'AccessLogs', {
-      logGroupName: `/finefinds/${props.environment}/access`,
-      retention: props.environment === 'prod' 
-        ? logs.RetentionDays.ONE_MONTH 
-        : logs.RetentionDays.ONE_DAY,
+    this.accessLogGroup = new logs.LogGroup(this, 'AccessLogGroup', {
+      logGroupName: `finefinds-${props.environment}-access-logs`,
+      retention: props.environment === 'prod' ? logs.RetentionDays.ONE_MONTH : logs.RetentionDays.ONE_WEEK,
       encryptionKey: props.kmsKey,
-      removalPolicy: props.environment === 'prod' 
-        ? cdk.RemovalPolicy.RETAIN 
-        : cdk.RemovalPolicy.DESTROY,
+      removalPolicy: props.environment === 'prod' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
     });
 
     // Create error log group
-    this.errorLogGroup = new logs.LogGroup(this, 'ErrorLogs', {
-      logGroupName: `/finefinds/${props.environment}/error`,
-      retention: props.environment === 'prod' 
-        ? logs.RetentionDays.ONE_MONTH 
-        : logs.RetentionDays.ONE_DAY,
+    this.errorLogGroup = new logs.LogGroup(this, 'ErrorLogGroup', {
+      logGroupName: `finefinds-${props.environment}-error-logs`,
+      retention: props.environment === 'prod' ? logs.RetentionDays.ONE_MONTH : logs.RetentionDays.ONE_WEEK,
       encryptionKey: props.kmsKey,
-      removalPolicy: props.environment === 'prod' 
-        ? cdk.RemovalPolicy.RETAIN 
-        : cdk.RemovalPolicy.DESTROY,
+      removalPolicy: props.environment === 'prod' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
     });
 
     // Create audit log group
-    this.auditLogGroup = new logs.LogGroup(this, 'AuditLogs', {
-      logGroupName: `/finefinds/${props.environment}/audit`,
-      retention: props.environment === 'prod' 
-        ? logs.RetentionDays.ONE_MONTH 
-        : logs.RetentionDays.ONE_DAY,
+    this.auditLogGroup = new logs.LogGroup(this, 'AuditLogGroup', {
+      logGroupName: `finefinds-${props.environment}-audit-logs`,
+      retention: props.environment === 'prod' ? logs.RetentionDays.ONE_MONTH : logs.RetentionDays.ONE_WEEK,
       encryptionKey: props.kmsKey,
-      removalPolicy: props.environment === 'prod' 
-        ? cdk.RemovalPolicy.RETAIN 
-        : cdk.RemovalPolicy.DESTROY,
+      removalPolicy: props.environment === 'prod' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
     });
 
     // Create metric filters for error logs
     this.errorLogGroup.addMetricFilter('ErrorCount', {
       metricName: 'ErrorCount',
-      metricNamespace: `FineFinds/${props.environment}`,
+      metricNamespace: `finefinds-${props.environment}`,
       filterPattern: logs.FilterPattern.stringValue('$.level', '=', 'ERROR'),
       metricValue: '1',
     });
 
     this.errorLogGroup.addMetricFilter('WarningCount', {
       metricName: 'WarningCount',
-      metricNamespace: `FineFinds/${props.environment}`,
+      metricNamespace: `finefinds-${props.environment}`,
       filterPattern: logs.FilterPattern.stringValue('$.level', '=', 'WARN'),
       metricValue: '1',
     });
@@ -86,14 +70,14 @@ export class LogsConstruct extends Construct {
     // Create metric filters for access logs
     this.accessLogGroup.addMetricFilter('RequestCount', {
       metricName: 'RequestCount',
-      metricNamespace: `FineFinds/${props.environment}`,
+      metricNamespace: `finefinds-${props.environment}`,
       filterPattern: logs.FilterPattern.exists('$.request'),
       metricValue: '1',
     });
 
     this.accessLogGroup.addMetricFilter('ResponseTime', {
       metricName: 'ResponseTime',
-      metricNamespace: `FineFinds/${props.environment}`,
+      metricNamespace: `finefinds-${props.environment}`,
       filterPattern: logs.FilterPattern.exists('$.responseTime'),
       metricValue: '$.responseTime',
     });

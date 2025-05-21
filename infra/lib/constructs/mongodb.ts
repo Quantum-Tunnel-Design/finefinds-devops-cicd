@@ -18,7 +18,7 @@ export class MongoDbConstruct extends Construct {
 
     // Create secret for MongoDB connection string
     this.connectionString = new secretsmanager.Secret(this, 'MongoDbConnectionString', {
-      secretName: `finefinds-${props.environment}-mongodb`,
+      secretName: `finefinds-${props.environment}-mongodb-connection`,
       description: 'MongoDB Atlas connection string',
       encryptionKey: props.kmsKey,
       generateSecretString: {
@@ -43,10 +43,10 @@ export class MongoDbConstruct extends Construct {
     });
 
     // Output MongoDB connection string ARN
-    new cdk.CfnOutput(this, 'MongoDbConnectionStringArn', {
+    new cdk.CfnOutput(this, 'MongoDBConnectionStringArn', {
       value: this.connectionString.secretArn,
-      description: 'MongoDB Connection String ARN',
-      exportName: `finefinds-${props.environment}-mongodb-connection-string-arn`,
+      description: 'MongoDB connection string ARN',
+      exportName: `finefinds-${props.environment}-mongodb-secret-arn`,
     });
   }
 } 

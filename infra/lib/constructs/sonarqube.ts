@@ -8,6 +8,7 @@ import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
 import { Construct } from 'constructs';
 import { BaseConfig } from '../../env/base-config';
+import * as logs from 'aws-cdk-lib/aws-logs';
 
 export interface SonarQubeConstructProps {
   environment: string;
@@ -193,11 +194,11 @@ export class SonarQubeConstruct extends Construct {
     // Explicitly add dependency to ensure database is created before the service
     this.service.node.addDependency(this.database);
     
-    // Add a CloudWatch log group for enhanced logging
-    const logGroup = new cdk.aws_logs.LogGroup(this, 'SonarQubeLogGroup', {
-      logGroupName: `/finefinds/sonarqube/service`,
-      retention: cdk.aws_logs.RetentionDays.ONE_WEEK,
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    // Create log group for SonarQube service
+    const serviceLogGroup = new logs.LogGroup(this, 'ServiceLogGroup', {
+      logGroupName: `finefinds-shared-sonarqube-service-logs`,
+      retention: logs.RetentionDays.ONE_MONTH,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
 
     // Create Application Load Balancer for SonarQube

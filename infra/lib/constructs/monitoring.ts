@@ -61,7 +61,7 @@ export class MonitoringConstruct extends Construct {
     const retentionDays = props.environment === 'prod' ? 90 : 7;
 
     new logs.LogGroup(this, 'EcsLogGroup', {
-      logGroupName: `/ecs/finefinds-${props.environment}`,
+      logGroupName: `finefinds-${props.environment}-ecs-logs`,
       retention: props.environment === 'prod' 
         ? logs.RetentionDays.THREE_MONTHS 
         : logs.RetentionDays.ONE_WEEK,
@@ -71,7 +71,7 @@ export class MonitoringConstruct extends Construct {
     });
 
     new logs.LogGroup(this, 'ApplicationLogGroup', {
-      logGroupName: `/finefinds/${props.environment}/application`,
+      logGroupName: `finefinds-${props.environment}-application-logs`,
       retention: props.environment === 'prod' 
         ? logs.RetentionDays.THREE_MONTHS 
         : logs.RetentionDays.ONE_WEEK,
@@ -137,13 +137,13 @@ export class MonitoringConstruct extends Construct {
         title: 'Application Errors and Warnings',
         left: [
           new cloudwatch.Metric({
-            namespace: `FineFinds/${props.environment}`,
+            namespace: `finefinds-${props.environment}`,
             metricName: 'ErrorCount',
             statistic: 'Sum',
             period: cdk.Duration.minutes(1),
           }),
           new cloudwatch.Metric({
-            namespace: `FineFinds/${props.environment}`,
+            namespace: `finefinds-${props.environment}`,
             metricName: 'WarningCount',
             statistic: 'Sum',
             period: cdk.Duration.minutes(1),

@@ -23,7 +23,7 @@ export class SecretsConstruct extends Construct {
 
     // Create database secret
     this.databaseSecret = new secretsmanager.Secret(this, 'DatabaseSecret', {
-      secretName: `${props.config.environment}/database`,
+      secretName: `finefinds-${props.environment}-rds-connection`,
       description: 'Database credentials',
       encryptionKey: props.kmsKey,
       generateSecretString: {
@@ -38,7 +38,7 @@ export class SecretsConstruct extends Construct {
 
     // Create Redis secret
     this.redisSecret = new secretsmanager.Secret(this, 'RedisSecret', {
-      secretName: `${props.config.environment}/redis`,
+      secretName: `finefinds-${props.environment}-redis-connection`,
       description: 'Redis connection details',
       encryptionKey: props.kmsKey,
       generateSecretString: {
@@ -68,31 +68,32 @@ export class SecretsConstruct extends Construct {
 
     // Create JWT secret
     this.jwtSecret = new secretsmanager.Secret(this, 'JwtSecret', {
-      secretName: `finefinds-${props.environment}-jwt`,
-      description: 'JWT signing key for FineFinds application',
+      secretName: `finefinds-${props.environment}-jwt-secret`,
+      description: 'JWT secret for application authentication',
       encryptionKey: props.kmsKey,
       generateSecretString: {
-        secretStringTemplate: JSON.stringify({}),
-        generateStringKey: 'key',
-        excludePunctuation: false,
-        passwordLength: 64,
+        secretStringTemplate: JSON.stringify({ secret: '' }),
+        generateStringKey: 'secret',
+        excludePunctuation: true,
+        passwordLength: 32,
       },
     });
 
     // Create SMTP secret
     this.smtpSecret = new secretsmanager.Secret(this, 'SmtpSecret', {
-      secretName: `finefinds-${props.environment}-smtp`,
-      description: 'SMTP credentials for FineFinds application',
+      secretName: `finefinds-${props.environment}-smtp-secret`,
+      description: 'SMTP credentials for email sending',
       encryptionKey: props.kmsKey,
       generateSecretString: {
         secretStringTemplate: JSON.stringify({
-          host: props.config.smtp.host,
-          port: props.config.smtp.port,
-          username: props.config.smtp.username,
+          host: '',
+          port: 587,
+          username: '',
+          password: '',
         }),
         generateStringKey: 'password',
-        excludePunctuation: false,
-        passwordLength: 32,
+        excludePunctuation: true,
+        passwordLength: 16,
       },
     });
 
@@ -116,13 +117,13 @@ export class SecretsConstruct extends Construct {
     new cdk.CfnOutput(this, 'DatabaseSecretArn', {
       value: this.databaseSecret.secretArn,
       description: 'Database secret ARN',
-      exportName: `finefinds-${props.config.environment}-database-secret-arn`,
+      exportName: `finefinds-${props.environment}-rds-secret-arn`,
     });
 
     new cdk.CfnOutput(this, 'RedisSecretArn', {
       value: this.redisSecret.secretArn,
       description: 'Redis secret ARN',
-      exportName: `finefinds-${props.config.environment}-redis-secret-arn`,
+      exportName: `finefinds-${props.environment}-redis-secret-arn`,
     });
 
     new cdk.CfnOutput(this, 'OpenSearchSecretArn', {

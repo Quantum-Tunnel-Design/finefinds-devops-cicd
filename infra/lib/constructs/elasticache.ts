@@ -52,7 +52,7 @@ export class ElastiCacheConstruct extends Construct {
 
     // Create replication group
     this.replicationGroup = new elasticache.CfnReplicationGroup(this, 'RedisReplicationGroup', {
-      replicationGroupDescription: `FineFinds ${props.environment} Redis Cluster`,
+      replicationGroupDescription: `finefinds-${props.environment}-redis-cluster`,
       engine: 'redis',
       engineVersion: '6.2',
       cacheNodeType: props.environment === 'prod' ? 'cache.r6g.large' : 'cache.t3.micro',
@@ -74,7 +74,7 @@ export class ElastiCacheConstruct extends Construct {
           destinationDetails: {
             cloudWatchLogsDetails: {
               logGroup: new logs.LogGroup(this, 'RedisSlowLogs', {
-                logGroupName: `/aws/elasticache/${props.environment}/redis-slow-logs`,
+                logGroupName: `finefinds-${props.environment}-redis-slow-logs`,
                 retention: logs.RetentionDays.ONE_MONTH,
                 removalPolicy: cdk.RemovalPolicy.RETAIN,
               }).logGroupName,
@@ -88,7 +88,7 @@ export class ElastiCacheConstruct extends Construct {
           destinationDetails: {
             cloudWatchLogsDetails: {
               logGroup: new logs.LogGroup(this, 'RedisEngineLogs', {
-                logGroupName: `/aws/elasticache/${props.environment}/redis-engine-logs`,
+                logGroupName: `finefinds-${props.environment}-redis-engine-logs`,
                 retention: logs.RetentionDays.ONE_MONTH,
                 removalPolicy: cdk.RemovalPolicy.RETAIN,
               }).logGroupName,
@@ -103,7 +103,7 @@ export class ElastiCacheConstruct extends Construct {
         },
         {
           key: 'Project',
-          value: 'FineFinds',
+          value: 'finefinds',
         },
       ],
     });

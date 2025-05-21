@@ -79,7 +79,7 @@ export class BackupConstruct extends Construct {
       this.plan.addSelection('Selection', {
         resources: [
           backup.BackupResource.fromTag('Environment', props.environment),
-          backup.BackupResource.fromTag('Project', 'FineFinds'),
+          backup.BackupResource.fromTag('Project', 'finefinds'),
         ],
       });
 
