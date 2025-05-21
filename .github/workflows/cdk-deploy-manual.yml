@@ -1,8 +1,6 @@
-name: CDK Deploy v2
+name: CDK Deploy v2 - Manual Triggers
 
 on:
-  push:
-    branches: [main, qa, uat, dev]
   workflow_dispatch:
     inputs:
       action:
@@ -27,66 +25,20 @@ permissions:
   contents: read
 
 jobs:
-  check_skip:
-    runs-on: ubuntu-latest
-    outputs:
-      should_skip: ${{ steps.skip_check.outputs.should_skip }}
-    steps:
-      - name: Check for skip deployment indicator
-        id: skip_check
-        run: |
-          # Check if commit message contains [skip deploy] or [no deploy]
-          if [[ "${{ github.event.head_commit.message }}" == *"[skip deploy]"* ]] || 
-             [[ "${{ github.event.head_commit.message }}" == *"[no deploy]"* ]]; then
-            echo "should_skip=true" >> $GITHUB_OUTPUT
-            echo "Deployment will be skipped due to [skip deploy] or [no deploy] in commit message"
-          else
-            echo "should_skip=false" >> $GITHUB_OUTPUT
-            echo "No skip indicator found in commit message, proceeding with deployment"
-          fi
-
   deploy:
-    needs: check_skip
-    if: |
-      (needs.check_skip.outputs.should_skip != 'true' && github.event_name == 'push') ||
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy')
+    if: github.event.inputs.action == 'deploy'
     runs-on: ubuntu-latest
-    environment: >-
-      ${{ 
-        github.event_name == 'workflow_dispatch' && github.event.inputs.environment ||
-        github.ref == 'refs/heads/main' && 'prod' || 
-        github.ref == 'refs/heads/uat' && 'uat' || 
-        github.ref == 'refs/heads/qa' && 'qa' || 
-        'dev' 
-      }}
+    environment: ${{ github.event.inputs.environment }}
     permissions:
       id-token: write
       contents: read
     env:
-      QUALIFIER: >-
-        ${{ 
-          github.event_name == 'workflow_dispatch' && format('ff{0}', github.event.inputs.environment) ||
-          github.ref == 'refs/heads/main' && 'ffprod' || 
-          github.ref == 'refs/heads/uat' && 'ffuat' || 
-          github.ref == 'refs/heads/qa' && 'ffqa' || 
-          'ffdev'
-        }}
+      QUALIFIER: ${{ format('ff{0}', github.event.inputs.environment) }}
       AWS_REGION: us-east-1
       CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
       CDK_DEFAULT_REGION: us-east-1
-      CDK_ENV: >-
-        ${{ 
-          github.event_name == 'workflow_dispatch' && github.event.inputs.environment ||
-          github.ref == 'refs/heads/main' && 'prod' || 
-          github.ref == 'refs/heads/uat' && 'uat' || 
-          github.ref == 'refs/heads/qa' && 'qa' || 
-          'dev' 
-        }}
-      STACK_VERSION: >-
-        ${{ 
-          github.ref == 'refs/tags/*' && github.ref_name || 
-          format('{0}-{1}', github.run_number, github.sha)
-        }}
+      CDK_ENV: ${{ github.event.inputs.environment }}
+      STACK_VERSION: ${{ format('{0}-{1}', github.run_number, github.sha) }}
 
     steps:
       - name: Checkout
@@ -151,7 +103,6 @@ jobs:
           npx cdk context --clear
   
       - name: CDK Bootstrap (Initial Setup)
-        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy')
         run: |
           cd infra
           echo "Bootstrapping CDK for environment: ${{ env.CDK_ENV }}, qualifier: ${{ env.QUALIFIER }}"
@@ -172,7 +123,7 @@ jobs:
             --require-approval never
       
       - name: Bootstrap Secrets
-        if: (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy')) && env.IS_NEW_ENVIRONMENT == 'true'
+        if: env.IS_NEW_ENVIRONMENT == 'true'
         run: |
           cd infra
           echo "Bootstrapping secrets for new environment: ${{ env.CDK_ENV }}, qualifier: ${{ env.QUALIFIER }}"
@@ -190,51 +141,92 @@ jobs:
             --context aws-cdk:asset-publishing-role-name=cdk-${{ env.QUALIFIER }}-publishing-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
             --require-approval never
 
-      - name: Deploy Infrastructure
-        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy')
+      - name: CDK Deploy
         run: |
           cd infra
-          echo "Deploying infrastructure for environment: ${{ env.CDK_ENV }}, qualifier: ${{ env.QUALIFIER }}"
-          npx cdk deploy --all \
-            --qualifier ${{ env.QUALIFIER }} \
-            --context qualifier=${{ env.QUALIFIER }} \
-            --context environment=${{ env.CDK_ENV }} \
-            --context version=${{ env.STACK_VERSION }} \
-            --context aws-cdk:qualifier=${{ env.QUALIFIER }} \
-            --context aws-cdk:lookup-role-name=cdk-${{ env.QUALIFIER }}-lookup-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
-            --context aws-cdk:deploy-role-name=cdk-${{ env.QUALIFIER }}-deploy-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
-            --context aws-cdk:file-asset-role-name=cdk-${{ env.QUALIFIER }}-file-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
-            --context aws-cdk:image-asset-role-name=cdk-${{ env.QUALIFIER }}-image-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
-            --context aws-cdk:image-asset-publishing-role-name=cdk-${{ env.QUALIFIER }}-image-publishing-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
-            --context aws-cdk:asset-publishing-role-name=cdk-${{ env.QUALIFIER }}-publishing-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
-            --require-approval never
+          npm run cdk deploy -- FineFinds-${{ env.CDK_ENV }} --context env=${{ env.CDK_ENV }} --context version=${{ env.STACK_VERSION }} --context aws-cdk:qualifier=${{ env.QUALIFIER }} --require-approval never
+        env:
+          CDK_DEPLOY_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+          CDK_DEPLOY_REGION: ${{ secrets.AWS_REGION }}
+
+      - name: Slack Notification (Success)
+        if: success()
+        uses: slackapi/slack-github-action@v2.1.0
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL_DEVOPS }}
+          webhook-type: webhook-trigger
+          payload: |
+            {
+              "channel": "${{ secrets.SLACK_CHANNEL_DEVOPS }}",
+              "attachments": [
+                {
+                  "color": "#36a64f",
+                  "pretext": ":white_check_mark: *CDK Deploy Succeeded*",
+                  "fields": [
+                    { "title": "Environment", "value": "${{ env.CDK_ENV }}", "short": true },
+                    { "title": "Version", "value": "${{ env.STACK_VERSION }}", "short": true },
+                    { "title": "Actor", "value": "${{ github.actor }}", "short": true },
+                    { "title": "Commit", "value": "${{ github.sha }}", "short": false }
+                  ],
+                  "actions": [
+                    {
+                      "type": "button",
+                      "text": "View Workflow",
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_DEVOPS_TOKEN }}
+
+      - name: Slack Notification (Failure)
+        if: failure()
+        uses: slackapi/slack-github-action@v2.1.0
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL_DEVOPS }}
+          webhook-type: webhook-trigger
+          payload: |
+            {
+              "channel": "${{ secrets.SLACK_CHANNEL }}",
+              "attachments": [
+                {
+                  "color": "#ff0000",
+                  "pretext": ":x: *CDK Deploy Failed*",
+                  "fields": [
+                    { "title": "Environment", "value": "${{ env.CDK_ENV }}", "short": true },
+                    { "title": "Version", "value": "${{ env.STACK_VERSION }}", "short": true },
+                    { "title": "Actor", "value": "${{ github.actor }}", "short": true },
+                    { "title": "Commit", "value": "${{ github.sha }}", "short": false }
+                  ],
+                  "actions": [
+                    {
+                      "type": "button",
+                      "text": "View Workflow",
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_DEVOPS_TOKEN }}
 
   destroy:
-    needs: check_skip
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
+    if: github.event.inputs.action == 'destroy'
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment }}
     permissions:
       id-token: write
       contents: read
     env:
-      QUALIFIER: >-
-        ${{ 
-          github.event_name == 'workflow_dispatch' && format('ff{0}', github.event.inputs.environment) ||
-          github.ref == 'refs/heads/main' && 'ffprod' || 
-          github.ref == 'refs/heads/uat' && 'ffuat' || 
-          github.ref == 'refs/heads/qa' && 'ffqa' || 
-          'ffdev'
-        }}
+      QUALIFIER: ${{ format('ff{0}', github.event.inputs.environment) }}
       AWS_REGION: us-east-1
       CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
       CDK_DEFAULT_REGION: us-east-1
       CDK_ENV: ${{ github.event.inputs.environment }}
-      STACK_VERSION: >-
-        ${{ 
-          github.ref == 'refs/tags/*' && github.ref_name || 
-          format('{0}-{1}', github.run_number, github.sha)
-        }}
+      STACK_VERSION: ${{ format('{0}-{1}', github.run_number, github.sha) }}
 
     steps:
       - name: Checkout
@@ -272,20 +264,74 @@ jobs:
           rm -f .cdk.context.json || true
           npx cdk context --clear
 
-      - name: Destroy Infrastructure
+      - name: CDK Destroy
         run: |
           cd infra
-          echo "Destroying infrastructure for environment: ${{ env.CDK_ENV }}, qualifier: ${{ env.QUALIFIER }}"
-          npx cdk destroy --all \
-            --qualifier ${{ env.QUALIFIER }} \
-            --context qualifier=${{ env.QUALIFIER }} \
-            --context environment=${{ env.CDK_ENV }} \
-            --context version=${{ env.STACK_VERSION }} \
-            --context aws-cdk:qualifier=${{ env.QUALIFIER }} \
-            --context aws-cdk:lookup-role-name=cdk-${{ env.QUALIFIER }}-lookup-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
-            --context aws-cdk:deploy-role-name=cdk-${{ env.QUALIFIER }}-deploy-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
-            --context aws-cdk:file-asset-role-name=cdk-${{ env.QUALIFIER }}-file-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
-            --context aws-cdk:image-asset-role-name=cdk-${{ env.QUALIFIER }}-image-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
-            --context aws-cdk:image-asset-publishing-role-name=cdk-${{ env.QUALIFIER }}-image-publishing-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
-            --context aws-cdk:asset-publishing-role-name=cdk-${{ env.QUALIFIER }}-publishing-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
-            --require-approval never 
+          npm run cdk destroy -- FineFinds-${{ env.CDK_ENV }} --context env=${{ env.CDK_ENV }} --context version=${{ env.STACK_VERSION }} --context aws-cdk:qualifier=${{ env.QUALIFIER }} --force
+        env:
+          CDK_DEPLOY_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+          CDK_DEPLOY_REGION: ${{ secrets.AWS_REGION }}
+
+      - name: Slack Notification (Success)
+        if: success()
+        uses: slackapi/slack-github-action@v2.1.0
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL_DEVOPS }}
+          webhook-type: webhook-trigger
+          payload: |
+            {
+              "channel": "${{ secrets.SLACK_CHANNEL_DEVOPS }}",
+              "attachments": [
+                {
+                  "color": "#36a64f",
+                  "pretext": ":white_check_mark: *CDK Destroy Succeeded*",
+                  "fields": [
+                    { "title": "Environment", "value": "${{ env.CDK_ENV }}", "short": true },
+                    { "title": "Version", "value": "${{ env.STACK_VERSION }}", "short": true },
+                    { "title": "Actor", "value": "${{ github.actor }}", "short": true },
+                    { "title": "Commit", "value": "${{ github.sha }}", "short": false }
+                  ],
+                  "actions": [
+                    {
+                      "type": "button",
+                      "text": "View Workflow",
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_DEVOPS_TOKEN }}
+
+      - name: Slack Notification (Failure)
+        if: failure()
+        uses: slackapi/slack-github-action@v2.1.0
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL_DEVOPS }}
+          webhook-type: webhook-trigger
+          payload: |
+            {
+              "channel": "${{ secrets.SLACK_CHANNEL }}",
+              "attachments": [
+                {
+                  "color": "#ff0000",
+                  "pretext": ":x: *CDK Destroy Failed*",
+                  "fields": [
+                    { "title": "Environment", "value": "${{ env.CDK_ENV }}", "short": true },
+                    { "title": "Version", "value": "${{ env.STACK_VERSION }}", "short": true },
+                    { "title": "Actor", "value": "${{ github.actor }}", "short": true },
+                    { "title": "Commit", "value": "${{ github.sha }}", "short": false }
+                  ],
+                  "actions": [
+                    {
+                      "type": "button",
+                      "text": "View Workflow",
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_DEVOPS_TOKEN }}
