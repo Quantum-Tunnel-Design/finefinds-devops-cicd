@@ -2,9 +2,9 @@
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
 import { FineFindsStack } from '../lib/finefinds-stack';
-import { FineFindsSonarQubeStack } from '../lib/sonarqube-stack';
+import { FinefindsSonarqubeStack } from '../lib/sonarqube-stack';
 import { devConfig } from '../env/dev';
-import { stagingConfig } from '../env/uat';
+import { uatConfig } from '../env/uat';
 import { qaConfig } from '../env/qa';
 import { prodConfig } from '../env/prod';
 
@@ -26,11 +26,12 @@ if (includeSonarQube) {
   console.log('Creating SonarQube stack as requested via includeSonarQube context variable');
   
   // Use dev config for SonarQube shared instance
-  new FineFindsSonarQubeStack(app, 'FineFindsSonarQubeStack', {
+  new FinefindsSonarqubeStack(app, 'FinefindsSonarqubeStack', {
     env: {
       account: process.env.CDK_DEFAULT_ACCOUNT,
       region: process.env.CDK_DEFAULT_REGION || 'us-east-1',
     },
+    environment: 'shared',
     config: devConfig,
     synthesizer: customSynthesizer,
   });
@@ -47,7 +48,7 @@ if (includeSonarQube) {
       config = prodConfig;
       break;
     case 'uat':
-      config = stagingConfig;
+      config = uatConfig;
       break;
     case 'qa':
       config = qaConfig;
