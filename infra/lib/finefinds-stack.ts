@@ -330,29 +330,6 @@ export class FineFindsStack extends cdk.Stack {
       );
     }
 
-    // Output important resource information
-    new cdk.CfnOutput(this, 'DatabaseEndpoint', {
-      value: props.config.environment === 'prod' && rds.cluster 
-        ? rds.cluster.clusterEndpoint.hostname
-        : rds.instance?.instanceEndpoint.hostname || 'No database endpoint available',
-      description: 'Database endpoint',
-      exportName: `finefinds-${props.config.environment}-rds-endpoint`,
-    });
-    
-    new cdk.CfnOutput(this, 'DatabaseSecretArn', {
-      value: props.config.environment === 'prod' && rds.cluster 
-        ? rds.cluster.secret?.secretArn || 'No secret available'
-        : rds.instance?.secret?.secretArn || 'No secret available',
-      description: 'Database credentials secret ARN',
-      exportName: `finefinds-${props.config.environment}-rds-secret-arn`,
-    });
-    
-    new cdk.CfnOutput(this, 'RedisEndpoint', {
-      value: redis.cluster.attrRedisEndpointAddress,
-      description: 'Redis endpoint',
-      exportName: `finefinds-${props.config.environment}-redis-cache-endpoint`,
-    });
-
     // Create Cognito User Pools
     const cognito = new CognitoConstruct(this, 'Cognito', {
       environment: props.config.environment,
