@@ -30,6 +30,7 @@ class SecretsBootstrapStack extends cdk.Stack {
     const jwtSecretName = `finefinds-${environment}-jwt-secret`;
     const smtpSecretName = `finefinds-${environment}-smtp-secret`;
     const cognitoSecretName = `finefinds-${environment}-cognito-config`;
+    const rdsSecretName = `finefinds-${environment}-rds-connection`;
 
     // Create or import GitHub token secret
     const githubSecret = new cr.AwsCustomResource(this, 'GitHubToken', {
@@ -61,6 +62,54 @@ class SecretsBootstrapStack extends cdk.Stack {
         action: 'deleteSecret',
         parameters: {
           SecretId: githubSecretName,
+          ForceDeleteWithoutRecovery: true
+        }
+      },
+      policy: cr.AwsCustomResourcePolicy.fromSdkCalls({
+        resources: cr.AwsCustomResourcePolicy.ANY_RESOURCE
+      })
+    });
+
+    // Create or import RDS connection secret
+    const rdsSecret = new cr.AwsCustomResource(this, 'RdsConnectionSecret', {
+      onCreate: {
+        service: 'SecretsManager',
+        action: 'createSecret',
+        parameters: {
+          Name: rdsSecretName,
+          Description: 'RDS connection details for the application',
+          SecretString: JSON.stringify({
+            username: 'placeholder',
+            password: 'placeholder',
+            engine: 'postgres',
+            host: 'placeholder',
+            port: 5432,
+            dbClusterIdentifier: 'placeholder'
+          })
+        },
+        physicalResourceId: cr.PhysicalResourceId.of(rdsSecretName)
+      },
+      onUpdate: {
+        service: 'SecretsManager',
+        action: 'updateSecret',
+        parameters: {
+          SecretId: rdsSecretName,
+          SecretString: JSON.stringify({
+            username: 'placeholder',
+            password: 'placeholder',
+            engine: 'postgres',
+            host: 'placeholder',
+            port: 5432,
+            dbClusterIdentifier: 'placeholder'
+          })
+        },
+        physicalResourceId: cr.PhysicalResourceId.of(rdsSecretName)
+      },
+      onDelete: {
+        service: 'SecretsManager',
+        action: 'deleteSecret',
+        parameters: {
+          SecretId: rdsSecretName,
           ForceDeleteWithoutRecovery: true
         }
       },
@@ -243,6 +292,7 @@ class SecretsBootstrapStack extends cdk.Stack {
     const smtpSecretRef = secretsmanager.Secret.fromSecretNameV2(this, 'ImportedSmtpSecret', smtpSecretName);
     const githubSecretRef = secretsmanager.Secret.fromSecretNameV2(this, 'ImportedGitHubToken', githubSecretName);
     const cognitoSecretRef = secretsmanager.Secret.fromSecretNameV2(this, 'ImportedCognitoConfig', cognitoSecretName);
+    const rdsSecretRef = secretsmanager.Secret.fromSecretNameV2(this, 'ImportedRdsSecret', rdsSecretName);
 
     // Apply RETAIN removal policy to the custom resources
     redisSecret.node.addDependency(redisConnectionSecret);
@@ -280,6 +330,12 @@ class SecretsBootstrapStack extends cdk.Stack {
       value: cognitoSecretRef.secretArn,
       description: 'Cognito configuration secret ARN',
       exportName: `finefinds-${environment}-cognito-config-arn`,
+    });
+
+    new cdk.CfnOutput(this, 'RdsSecretArn', {
+      value: rdsSecretRef.secretArn,
+      description: 'RDS Connection secret ARN',
+      exportName: `finefinds-${environment}-rds-connection-secret-arn`,
     });
   }
 }

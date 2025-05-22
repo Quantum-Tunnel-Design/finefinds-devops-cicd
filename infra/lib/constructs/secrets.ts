@@ -37,13 +37,8 @@ export class SecretsConstruct extends Construct {
     // Create SMTP secret
     this.smtpSecret = secretsmanager.Secret.fromSecretNameV2(this, 'SmtpSecret', `finefinds-${props.environment}-smtp-secret`);
 
-    // Create Cognito Config Secret
-    this.cognitoConfigSecret = new secretsmanager.Secret(this, 'CognitoConfigSecret', {
-      secretName: `finefinds-${props.environment}-cognito-config`,
-      description: `Cognito configuration for FineFinds ${props.environment} environment`,
-      encryptionKey: props.kmsKey,
-    });
-    this.cognitoConfigSecret.applyRemovalPolicy(props.environment === 'prod' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY);
+    // Import Cognito Config Secret
+    this.cognitoConfigSecret = secretsmanager.Secret.fromSecretNameV2(this, 'CognitoConfigSecret', `finefinds-${props.environment}-cognito-config`);
 
     // Create IAM policy for ECS tasks to access secrets
     const secretsPolicy = new iam.PolicyStatement({
