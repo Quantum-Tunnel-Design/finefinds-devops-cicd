@@ -53,9 +53,24 @@ export class EcsConstruct extends Construct {
     });
 
     // Add container to task definition
+    const ecrRepo = ecr.Repository.fromRepositoryName(this, 'ECRRepo', 'finefinds-services-dev');
+
+    // Add the ECR repository policy
+    const ecrPolicyStatement = new iam.PolicyStatement({
+      sid: 'ECSTaskExecutionRoleAccess',
+      effect: iam.Effect.ALLOW,
+      principals: [new iam.ArnPrincipal(`arn:aws:iam::${cdk.Stack.of(this).account}:role/finefinds-${props.environment}-ecs-execution-role`)],
+      actions: [
+        'ecr:BatchCheckLayerAvailability',
+        'ecr:BatchGetImage',
+        'ecr:GetDownloadUrlForLayer',
+      ],
+    });
+    ecrRepo.addToResourcePolicy(ecrPolicyStatement);
+
     const container = taskDefinition.addContainer('AppContainer', {
       image: ecs.ContainerImage.fromEcrRepository(
-        ecr.Repository.fromRepositoryName(this, 'ECRRepo', 'finefinds-services-dev'),
+        ecrRepo,
         'latest'
       ),
       logging: ecs.LogDrivers.awsLogs({
