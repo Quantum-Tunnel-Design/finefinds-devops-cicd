@@ -125,7 +125,7 @@ export class FineFindsStack extends cdk.Stack {
               produce: () => {
                 const password = cdk.SecretValue.secretsManager(rds.cluster!.secret!.secretArn, {
                   jsonField: 'password',
-                }).toString();
+                }).unsafeUnwrap();
 
                 return JSON.stringify({
                   dbName: 'finefinds',
@@ -150,7 +150,7 @@ export class FineFindsStack extends cdk.Stack {
               produce: () => {
                 const password = cdk.SecretValue.secretsManager(rds.cluster!.secret!.secretArn, {
                   jsonField: 'password',
-                }).toString();
+                }).unsafeUnwrap();
 
                 return JSON.stringify({
                   dbName: 'finefinds',
@@ -191,7 +191,7 @@ export class FineFindsStack extends cdk.Stack {
               produce: () => {
                 const password = cdk.SecretValue.secretsManager(rds.instance!.secret!.secretArn, {
                   jsonField: 'password',
-                }).toString();
+                }).unsafeUnwrap();
 
                 return JSON.stringify({
                   dbName: 'finefinds',
@@ -216,7 +216,7 @@ export class FineFindsStack extends cdk.Stack {
               produce: () => {
                 const password = cdk.SecretValue.secretsManager(rds.instance!.secret!.secretArn, {
                   jsonField: 'password',
-                }).toString();
+                }).unsafeUnwrap();
 
                 return JSON.stringify({
                   dbName: 'finefinds',
