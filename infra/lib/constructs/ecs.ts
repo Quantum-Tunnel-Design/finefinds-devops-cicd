@@ -99,9 +99,9 @@ export class EcsConstruct extends Construct {
       healthCheck: {
         command: ['CMD-SHELL', 'wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1'],
         interval: cdk.Duration.seconds(30),
-        timeout: cdk.Duration.seconds(30),
+        timeout: cdk.Duration.seconds(10),
         retries: 3,
-        startPeriod: cdk.Duration.seconds(5),
+        startPeriod: cdk.Duration.seconds(60),
       },
     });
 
