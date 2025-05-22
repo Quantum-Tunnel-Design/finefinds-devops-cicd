@@ -22,11 +22,18 @@ interface UserPoolConfig {
   userGroups: Record<string, { name: string; description: string }>;
 }
 
+// Define the schema for custom attributes
+const customRoleNameAttributeSchema = new cognito.StringAttribute({ mutable: true });
+const customMetadataAttributeSchema = new cognito.StringAttribute({ mutable: true });
+
 export class CognitoConstruct extends Construct {
   public readonly clientUserPool: cognito.UserPool;
   public readonly adminUserPool: cognito.UserPool;
   public readonly clientUserPoolClient: cognito.UserPoolClient;
   public readonly adminUserPoolClient: cognito.UserPoolClient;
+
+  // Store the names of custom attributes for easy reference in UserPoolClient
+  private readonly customAttributeNames = ['roleName', 'metadata'];
 
   constructor(scope: Construct, id: string, props: CognitoConstructProps) {
     super(scope, id);
@@ -40,8 +47,8 @@ export class CognitoConstruct extends Construct {
     this.createUserGroups(this.adminUserPool, props.config.cognito.adminUsers.userGroups, 'Admin', props.environment);
 
     // Create app clients
-    this.clientUserPoolClient = this.createUserPoolClient('Client', this.clientUserPool, props);
-    this.adminUserPoolClient = this.createUserPoolClient('Admin', this.adminUserPool, props);
+    this.clientUserPoolClient = this.createUserPoolClient('Client', this.clientUserPool, props, this.customAttributeNames);
+    this.adminUserPoolClient = this.createUserPoolClient('Admin', this.adminUserPool, props, this.customAttributeNames);
 
     // Configure identity providers
     this.configureIdentityProviders(props);
@@ -66,22 +73,28 @@ export class CognitoConstruct extends Construct {
         phone: true,
       },
       standardAttributes: {
-        email: {
-          required: true,
-          mutable: true,
-        },
-        phoneNumber: {
-          required: false,
-          mutable: true,
-        },
-        givenName: {
-          required: true,
-          mutable: true,
-        },
-        familyName: {
-          required: true,
-          mutable: true,
-        },
+        email: { required: true, mutable: true },
+        phoneNumber: { required: false, mutable: true },
+        givenName: { required: true, mutable: true },
+        familyName: { required: true, mutable: true },
+        // Examples of other standard attributes you might want to customize:
+        // address: { required: false, mutable: true },
+        // birthdate: { required: false, mutable: true },
+        // gender: { required: false, mutable: true },
+        // locale: { required: false, mutable: true },
+        // middleName: { required: false, mutable: true },
+        // name: { required: false, mutable: true }, // typically a concatenation
+        // nickname: { required: false, mutable: true },
+        // preferredUsername: { required: false, mutable: true }, // often same as username or email
+        // picture: { required: false, mutable: true },
+        // profile: { required: false, mutable: true }, // URL to a profile page
+        // updatedAt: { required: false, mutable: true }, // usually managed by Cognito
+        // website: { required: false, mutable: true },
+        // zoneinfo: { required: false, mutable: true },
+      },
+      customAttributes: {
+        'roleName': customRoleNameAttributeSchema,
+        'metadata': customMetadataAttributeSchema,
       },
       passwordPolicy,
       mfa: isProd ? cognito.Mfa.REQUIRED : cognito.Mfa.OFF,
@@ -123,7 +136,6 @@ export class CognitoConstruct extends Construct {
         description: group.description,
       });
       
-      // Apply removal policy to the user group
       userGroup.applyRemovalPolicy(isProd ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY);
     });
   }
@@ -131,15 +143,44 @@ export class CognitoConstruct extends Construct {
   private createUserPoolClient(
     type: 'Client' | 'Admin',
     userPool: cognito.UserPool,
-    props: CognitoConstructProps
+    props: CognitoConstructProps,
+    customAttrNames: string[] // Parameter is now an array of custom attribute simple names
   ): cognito.UserPoolClient {
     const isProd = props.environment === 'prod';
     const clientName = `${props.environment}-${type}AppClient`;
+
+    // Map simple names to full custom attribute names (e.g., 'roleName' -> 'custom:roleName')
+    const fullCustomAttrNames = customAttrNames.map(name => `custom:${name}`);
+
+    const clientReadAttributes = new cognito.ClientAttributes()
+      .withStandardAttributes({ 
+        email: true, 
+        emailVerified: true, 
+        phoneNumber: true, 
+        phoneNumberVerified: true,
+        givenName: true,
+        familyName: true,
+        // Add other standard attributes clients can read as needed
+      })
+      .withCustomAttributes(...fullCustomAttrNames);
+
+    const clientWriteAttributes = new cognito.ClientAttributes()
+      .withStandardAttributes({ 
+        // Typically, clients might not write to emailVerified or phoneNumberVerified directly
+        email: true, 
+        phoneNumber: true,
+        givenName: true,
+        familyName: true,
+        // Add other standard attributes clients can write as needed
+      })
+      .withCustomAttributes(...fullCustomAttrNames);
 
     return new cognito.UserPoolClient(this, `${type}AppClient`, {
       userPool,
       userPoolClientName: clientName,
       generateSecret: isProd,
+      readAttributes: clientReadAttributes,
+      writeAttributes: clientWriteAttributes,
       oAuth: {
         flows: {
           authorizationCodeGrant: true,
@@ -155,6 +196,9 @@ export class CognitoConstruct extends Construct {
           cognito.OAuthScope.EMAIL,
           cognito.OAuthScope.OPENID,
           cognito.OAuthScope.PROFILE,
+          // For custom attributes to appear in id_token/access_token via OAuth scopes,
+          // you need to set up a Resource Server on the User Pool and define scopes for them.
+          // Then add those scopes here, e.g., cognito.OAuthScope.custom('my-resource-server/my.custom.scope')
         ],
       },
       preventUserExistenceErrors: isProd,
