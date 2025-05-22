@@ -70,7 +70,10 @@ export class EcsConstruct extends Construct {
 
     const container = taskDefinition.addContainer('AppContainer', {
       image: ecs.ContainerImage.fromEcrRepository(
-        ecrRepo,
+        ecr.Repository.fromRepositoryAttributes(this, 'ECRRepo', {
+          repositoryArn: 'arn:aws:ecr:us-east-1:891076991993:repository/finefinds-base/node-20-alpha',
+          repositoryName: 'finefinds-base/node-20-alpha',
+        }),
         'latest'
       ),
       logging: ecs.LogDrivers.awsLogs({
@@ -89,7 +92,57 @@ export class EcsConstruct extends Construct {
         NODE_ENV: props.environment,
         PORT: props.config.ecs.containerPort.toString(),
       },
-      secrets: props.secrets,
+      secrets: {
+        ...props.secrets,
+        // Add secrets for database and Redis connection
+        DATABASE_URL: ecs.Secret.fromSecretsManager(
+          cdk.aws_secretsmanager.Secret.fromSecretNameV2(
+            this,
+            'DbConnectionSecret',
+            `finefinds-${props.environment}-db-connection`
+          ),
+          'connectionString'
+        ),
+        REDIS_URL: ecs.Secret.fromSecretsManager(
+          cdk.aws_secretsmanager.Secret.fromSecretNameV2(
+            this,
+            'RedisConnectionSecret',
+            `finefinds-${props.environment}-redis-connection`
+          )
+        ),
+        COGNITO_CLIENT_USER_POOL_ID: ecs.Secret.fromSecretsManager(
+          cdk.aws_secretsmanager.Secret.fromSecretNameV2(
+            this,
+            'CognitoConfigSecretCognitoClientUserPoolId',
+            `finefinds-${props.environment}-cognito-config`
+          ),
+          'clientUserPoolId'
+        ),
+        COGNITO_CLIENT_CLIENT_ID: ecs.Secret.fromSecretsManager(
+          cdk.aws_secretsmanager.Secret.fromSecretNameV2(
+            this,
+            'CognitoConfigSecretCognitoAppClientUserPoolId',
+            `finefinds-${props.environment}-cognito-config`
+          ),
+          'clientUserPoolClientId'
+        ),
+        COGNITO_ADMIN_USER_POOL_ID: ecs.Secret.fromSecretsManager(
+          cdk.aws_secretsmanager.Secret.fromSecretNameV2(
+            this,
+            'CognitoConfigSecretCognitoAdminserPoolId',
+            `finefinds-${props.environment}-cognito-config`
+          ),
+          'adminUserPoolId'
+        ),
+        COGNITO_ADMIN_CLIENT_ID: ecs.Secret.fromSecretsManager(
+          cdk.aws_secretsmanager.Secret.fromSecretNameV2(
+            this,
+            'CognitoConfigSecretCognitoAdminClientUserPoolId',
+            `finefinds-${props.environment}-cognito-config`
+          ),
+          'adminUserPoolClientId'
+        ),
+      },
       portMappings: [
         {
           containerPort: props.config.ecs.containerPort,
@@ -97,7 +150,7 @@ export class EcsConstruct extends Construct {
         },
       ],
       healthCheck: {
-        command: ['CMD-SHELL', 'wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1'],
+        command: ['CMD-SHELL', 'curl -f http://localhost:3000/health || exit 1'],
         interval: cdk.Duration.seconds(30),
         timeout: cdk.Duration.seconds(10),
         retries: 3,
