@@ -95,54 +95,6 @@ export class EcsConstruct extends Construct {
       },
       secrets: {
         ...props.secrets,
-        // Add secrets for database and Redis connection
-        DATABASE_URL: ecs.Secret.fromSecretsManager(
-          cdk.aws_secretsmanager.Secret.fromSecretNameV2(
-            this,
-            'DbConnectionSecret',
-            `finefinds-${props.environment}-rds-connection`
-          ),
-          'connectionString'
-        ),
-        REDIS_URL: ecs.Secret.fromSecretsManager(
-          cdk.aws_secretsmanager.Secret.fromSecretNameV2(
-            this,
-            'RedisConnectionSecret',
-            `finefinds-${props.environment}-redis-connection`
-          )
-        ),
-        COGNITO_CLIENT_USER_POOL_ID: ecs.Secret.fromSecretsManager(
-          cdk.aws_secretsmanager.Secret.fromSecretNameV2(
-            this,
-            'CognitoConfigSecretCognitoClientUserPoolId',
-            `finefinds-${props.environment}-cognito-config`
-          ),
-          'clientUserPoolId'
-        ),
-        COGNITO_CLIENT_CLIENT_ID: ecs.Secret.fromSecretsManager(
-          cdk.aws_secretsmanager.Secret.fromSecretNameV2(
-            this,
-            'CognitoConfigSecretCognitoAppClientUserPoolId',
-            `finefinds-${props.environment}-cognito-config`
-          ),
-          'clientUserPoolClientId'
-        ),
-        COGNITO_ADMIN_USER_POOL_ID: ecs.Secret.fromSecretsManager(
-          cdk.aws_secretsmanager.Secret.fromSecretNameV2(
-            this,
-            'CognitoConfigSecretCognitoAdminserPoolId',
-            `finefinds-${props.environment}-cognito-config`
-          ),
-          'adminUserPoolId'
-        ),
-        COGNITO_ADMIN_CLIENT_ID: ecs.Secret.fromSecretsManager(
-          cdk.aws_secretsmanager.Secret.fromSecretNameV2(
-            this,
-            'CognitoConfigSecretCognitoAdminClientUserPoolId',
-            `finefinds-${props.environment}-cognito-config`
-          ),
-          'adminUserPoolClientId'
-        ),
       },
       portMappings: [
         {
