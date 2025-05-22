@@ -30,7 +30,7 @@ export class EcsConstruct extends Construct {
     this.cluster = new ecs.Cluster(this, 'Cluster', {
       vpc: props.vpc,
       clusterName: `finefinds-${props.environment}-cluster`,
-      containerInsightsV2: props.environment === 'prod' ? ecs.ContainerInsights.ENABLED : ecs.ContainerInsights.DISABLED,
+      containerInsights: props.environment === 'prod',
     });
 
     // Explicitly create the PrivateDnsNamespace for service discovery
@@ -81,6 +81,13 @@ export class EcsConstruct extends Construct {
           protocol: ecs.Protocol.TCP,
         },
       ],
+      healthCheck: {
+        command: ['CMD-SHELL', 'wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1'],
+        interval: cdk.Duration.seconds(30),
+        timeout: cdk.Duration.seconds(30),
+        retries: 3,
+        startPeriod: cdk.Duration.seconds(5),
+      },
     });
 
     // Create security group for the service
@@ -116,7 +123,9 @@ export class EcsConstruct extends Construct {
       healthCheck: {
         path: '/health',
         interval: cdk.Duration.seconds(30),
-        timeout: cdk.Duration.seconds(5),
+        timeout: cdk.Duration.seconds(30),
+        healthyThresholdCount: 2,
+        unhealthyThresholdCount: 3,
         healthyHttpCodes: '200',
       },
     });
