@@ -52,28 +52,29 @@ export class EcsConstruct extends Construct {
       executionRole: props.executionRole,
     });
 
-    // Add container to task definition
-    const ecrRepo = ecr.Repository.fromRepositoryName(this, 'ECRRepo', 'finefinds-services-dev');
+    // Reference to the placeholder ECR image that the service will initially start with.
+    // The actual application image will be deployed later by a separate CI/CD pipeline for the backend.
+    const placeholderEcrRepo = ecr.Repository.fromRepositoryAttributes(this, 'PlaceholderEcrRepoForInitialService', { // Unique ID
+      repositoryArn: 'arn:aws:ecr:us-east-1:891076991993:repository/finefinds-base/node-20-alpha',
+      repositoryName: 'finefinds-base/node-20-alpha',
+    });
 
-    // Add the ECR repository policy
-    const ecrPolicyStatement = new iam.PolicyStatement({
-      sid: 'ECSTaskExecutionRoleAccess',
+    // Add a resource policy to this ECR repository to allow the ECS Execution Role to pull images
+    // This is a good practice in addition to the IAM role's identity-based policy.
+    placeholderEcrRepo.addToResourcePolicy(new iam.PolicyStatement({
+      sid: 'AllowEcsExecutionRolePull',
       effect: iam.Effect.ALLOW,
-      principals: [new iam.ArnPrincipal(`arn:aws:iam::${cdk.Stack.of(this).account}:role/finefinds-${props.environment}-ecs-execution-role`)],
+      principals: [props.executionRole!], // Use the executionRole passed in props
       actions: [
         'ecr:BatchCheckLayerAvailability',
-        'ecr:BatchGetImage',
         'ecr:GetDownloadUrlForLayer',
+        'ecr:BatchGetImage',
       ],
-    });
-    ecrRepo.addToResourcePolicy(ecrPolicyStatement);
+    }));
 
     const container = taskDefinition.addContainer('AppContainer', {
       image: ecs.ContainerImage.fromEcrRepository(
-        ecr.Repository.fromRepositoryAttributes(this, 'ECRRepo', {
-          repositoryArn: 'arn:aws:ecr:us-east-1:891076991993:repository/finefinds-base/node-20-alpha',
-          repositoryName: 'finefinds-base/node-20-alpha',
-        }),
+        placeholderEcrRepo, // Use the placeholder ECR repository
         'latest'
       ),
       logging: ecs.LogDrivers.awsLogs({
