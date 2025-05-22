@@ -84,7 +84,14 @@ export class IamConstruct extends Construct {
         ],
         resources: [
           'arn:aws:ecr:us-east-1:891076991993:repository/finefinds-base/node-20-alpha',
-          'arn:aws:ecr:us-east-1:891076991993:repository/finefinds-base/sonarqube'
+          'arn:aws:ecr:us-east-1:891076991993:repository/finefinds-base/sonarqube',
+          // Add permission for the finefinds-services-dev repository
+          cdk.Arn.format({
+            service: 'ecr',
+            resource: 'repository',
+            resourceName: `finefinds-services-${props.environment}`,
+            // account and region will be implicitly picked from the stack
+          }, cdk.Stack.of(this)),
         ],
       })
     );
@@ -132,7 +139,14 @@ export class IamConstruct extends Construct {
         ],
         resources: [
           'arn:aws:ecr:us-east-1:891076991993:repository/finefinds-base/node-20-alpha',
-          'arn:aws:ecr:us-east-1:891076991993:repository/finefinds-base/sonarqube'
+          'arn:aws:ecr:us-east-1:891076991993:repository/finefinds-base/sonarqube',
+          // Add permission for the finefinds-services-dev repository
+          cdk.Arn.format({
+            service: 'ecr',
+            resource: 'repository',
+            resourceName: `finefinds-services-${props.environment}`,
+            // account and region will be implicitly picked from the stack
+          }, cdk.Stack.of(this)),
         ],
       })
     );

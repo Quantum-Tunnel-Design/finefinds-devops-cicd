@@ -55,10 +55,7 @@ export class EcsConstruct extends Construct {
     // Add container to task definition
     const container = taskDefinition.addContainer('AppContainer', {
       image: ecs.ContainerImage.fromEcrRepository(
-        ecr.Repository.fromRepositoryAttributes(this, 'ECRRepo', {
-          repositoryArn: 'arn:aws:ecr:us-east-1:891076991993:repository/finefinds-base/node-20-alpha',
-          repositoryName: 'finefinds-base/node-20-alpha',
-        }),
+        ecr.Repository.fromRepositoryName(this, 'ECRRepo', 'finefinds-services-dev'),
         'latest'
       ),
       logging: ecs.LogDrivers.awsLogs({
