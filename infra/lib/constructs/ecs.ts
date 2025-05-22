@@ -122,10 +122,10 @@ export class EcsConstruct extends Construct {
       targetType: elbv2.TargetType.IP,
       healthCheck: {
         path: '/health',
-        interval: cdk.Duration.seconds(30),
+        interval: cdk.Duration.seconds(60),
         timeout: cdk.Duration.seconds(30),
         healthyThresholdCount: 2,
-        unhealthyThresholdCount: 3,
+        unhealthyThresholdCount: 4,
         healthyHttpCodes: '200',
       },
     });
