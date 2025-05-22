@@ -70,7 +70,10 @@ export class EcsConstruct extends Construct {
 
     const container = taskDefinition.addContainer('AppContainer', {
       image: ecs.ContainerImage.fromEcrRepository(
-        ecrRepo,
+        ecr.Repository.fromRepositoryAttributes(this, 'ECRRepo', {
+          repositoryArn: 'arn:aws:ecr:us-east-1:891076991993:repository/finefinds-base/node-20-alpha',
+          repositoryName: 'finefinds-base/node-20-alpha',
+        }),
         'latest'
       ),
       logging: ecs.LogDrivers.awsLogs({
@@ -146,6 +149,13 @@ export class EcsConstruct extends Construct {
           protocol: ecs.Protocol.TCP,
         },
       ],
+      healthCheck: {
+        command: ['CMD-SHELL', 'curl -f http://localhost:3000/health || exit 1'],
+        interval: cdk.Duration.seconds(60),
+        timeout: cdk.Duration.seconds(30),
+        retries: 3,
+        startPeriod: cdk.Duration.seconds(60),
+      },
     });
 
     // Create security group for the service
@@ -179,7 +189,6 @@ export class EcsConstruct extends Construct {
       protocol: elbv2.ApplicationProtocol.HTTP,
       targetType: elbv2.TargetType.IP,
       healthCheck: {
-        enabled: true,
         path: '/health',
         interval: cdk.Duration.seconds(60),
         timeout: cdk.Duration.seconds(30),

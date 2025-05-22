@@ -112,13 +112,6 @@ export class FineFindsStack extends cdk.Stack {
       `finefinds-${props.config.environment}-redis-connection`
     );
 
-    // Import the fixed-name RDS connection secret that the application will use
-    const fixedNameRdsConnectionSecret = secretsmanager.Secret.fromSecretNameV2(
-      this,
-      'FixedNameRdsConnectionSecret',
-      `finefinds-${props.config.environment}-rds-connection`
-    );
-
     // Update the database connection secret once the RDS instance is available
     if (props.config.environment === 'prod' && rds.cluster && rds.cluster.secret) {
       // For production, use the Aurora cluster
@@ -127,7 +120,7 @@ export class FineFindsStack extends cdk.Stack {
           service: 'SecretsManager',
           action: 'updateSecret',
           parameters: {
-            SecretId: fixedNameRdsConnectionSecret.secretArn,
+            SecretId: rds.cluster.secret.secretArn,
             SecretString: cdk.Lazy.string({
               produce: () => {
                 const password = cdk.SecretValue.secretsManager(rds.cluster!.secret!.secretArn, {
@@ -152,7 +145,7 @@ export class FineFindsStack extends cdk.Stack {
           service: 'SecretsManager',
           action: 'updateSecret',
           parameters: {
-            SecretId: fixedNameRdsConnectionSecret.secretArn,
+            SecretId: rds.cluster.secret.secretArn,
             SecretString: cdk.Lazy.string({
               produce: () => {
                 const password = cdk.SecretValue.secretsManager(rds.cluster!.secret!.secretArn, {
@@ -175,13 +168,7 @@ export class FineFindsStack extends cdk.Stack {
         },
         policy: cdk.custom_resources.AwsCustomResourcePolicy.fromStatements([
           new iamcdk.PolicyStatement({
-            effect: iamcdk.Effect.ALLOW,
             actions: ['secretsmanager:UpdateSecret'],
-            resources: [fixedNameRdsConnectionSecret.secretArn],
-          }),
-          new iamcdk.PolicyStatement({
-            effect: iamcdk.Effect.ALLOW,
-            actions: ['secretsmanager:GetSecretValue'],
             resources: [rds.cluster.secret.secretArn],
           }),
         ]),
@@ -199,7 +186,7 @@ export class FineFindsStack extends cdk.Stack {
           service: 'SecretsManager',
           action: 'updateSecret',
           parameters: {
-            SecretId: fixedNameRdsConnectionSecret.secretArn,
+            SecretId: rds.instance.secret.secretArn,
             SecretString: cdk.Lazy.string({
               produce: () => {
                 const password = cdk.SecretValue.secretsManager(rds.instance!.secret!.secretArn, {
@@ -224,7 +211,7 @@ export class FineFindsStack extends cdk.Stack {
           service: 'SecretsManager',
           action: 'updateSecret',
           parameters: {
-            SecretId: fixedNameRdsConnectionSecret.secretArn,
+            SecretId: rds.instance.secret.secretArn,
             SecretString: cdk.Lazy.string({
               produce: () => {
                 const password = cdk.SecretValue.secretsManager(rds.instance!.secret!.secretArn, {
@@ -247,13 +234,7 @@ export class FineFindsStack extends cdk.Stack {
         },
         policy: cdk.custom_resources.AwsCustomResourcePolicy.fromStatements([
           new iamcdk.PolicyStatement({
-            effect: iamcdk.Effect.ALLOW,
             actions: ['secretsmanager:UpdateSecret'],
-            resources: [fixedNameRdsConnectionSecret.secretArn],
-          }),
-          new iamcdk.PolicyStatement({
-            effect: iamcdk.Effect.ALLOW,
-            actions: ['secretsmanager:GetSecretValue'],
             resources: [rds.instance.secret.secretArn],
           }),
         ]),
@@ -265,15 +246,6 @@ export class FineFindsStack extends cdk.Stack {
       }
     }
 
-    // Determine which RDS secret to use (instance or cluster) for reading the master password
-    const rdsGeneratedSecret = props.config.environment === 'prod' && rds.cluster?.secret 
-                      ? rds.cluster.secret 
-                      : rds.instance?.secret;
-
-    if (!rdsGeneratedSecret) {
-      throw new Error('RDS generated secret could not be determined. Ensure RDS instance or cluster and its secret are properly defined.');
-    }
-
     // Create ECS Cluster and Services
     const ecs = new EcsConstruct(this, 'Ecs', {
       environment: props.config.environment,
@@ -281,10 +253,6 @@ export class FineFindsStack extends cdk.Stack {
       vpc: vpc.vpc,
       taskRole: iam.ecsTaskRole,
       executionRole: iam.ecsExecutionRole,
-      secrets: {
-        'DB_CONNECTION_SECRET': cdk.aws_ecs.Secret.fromSecretsManager(fixedNameRdsConnectionSecret),
-        'REDIS_CONNECTION_SECRET': cdk.aws_ecs.Secret.fromSecretsManager(redisConnectionSecret),
-      },
     });
 
     // Create migration task definition
@@ -294,7 +262,6 @@ export class FineFindsStack extends cdk.Stack {
       vpc: vpc.vpc,
       taskRole: iam.ecsTaskRole,
       executionRole: iam.ecsExecutionRole,
-      dbConnectionSecret: fixedNameRdsConnectionSecret,
     });
 
     // Add dependencies to ensure proper creation order
