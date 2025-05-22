@@ -94,8 +94,8 @@ create_role_policy() {
             "Resource": [
                 "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/${repo}-${env}",
                 "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/${repo}-${env}/*",
-                "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/finefinds-base/aws-envoy",
-                "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/finefinds-base/aws-envoy/*",
+                "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/finefinds-base/node-20-alpha",
+                "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/finefinds-base/node-20-alpha/*",
                 "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/cdk-ff${env}-container-assets-*-*",
                 "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/finefinds-services-${env}",
                 "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/finefinds-services-${env}/*"
@@ -135,6 +135,8 @@ create_role_policy() {
             "Resource": [
                 "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/${repo}-${env}",
                 "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/${repo}-${env}/*",
+                "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/finefinds-base/node-20-alpha",
+                "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/finefinds-base/node-20-alpha/*",
                 "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/cdk-ff${env}-container-assets-*-*",
                 "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/finefinds-services-${env}",
                 "arn:aws:ecr:${AWS_REGION}:${ACCOUNT_ID}:repository/finefinds-services-${env}/*"
@@ -189,23 +191,20 @@ create_role_policy() {
                 "ecs:StopTask",
                 "ecs:DescribeTasks",
                 "ecs:ListTasks",
-                "ecs:DescribeTaskDefinition",
                 "ecs:UpdateService",
                 "ecs:DescribeServices",
                 "ecs:RegisterTaskDefinition",
-                "ecs:ListTaskDefinitions",
                 "ecs:DeregisterTaskDefinition",
                 "ecs:DescribeClusters",
                 "ecs:ListClusters",
                 "ecs:CreateService"
             ],
             "Resource": [
-                "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:cluster/finefinds-${env}",
+                "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:cluster/finefinds-${env}-cluster",
                 "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:service/finefinds-${env}-cluster/*",
-                "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:service/finefinds-${env}-service",
+                "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:service/finefinds-${env}-cluster/finefinds-${env}-service",
                 "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:task-definition/*",
-                "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:task/finefinds-${env}-cluster/*",
-                "*"
+                "arn:aws:ecs:${AWS_REGION}:${ACCOUNT_ID}:task/finefinds-${env}-cluster/*"
             ]
         },
         {
