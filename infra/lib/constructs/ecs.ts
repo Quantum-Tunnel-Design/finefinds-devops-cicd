@@ -179,7 +179,7 @@ export class EcsConstruct extends Construct {
       protocol: elbv2.ApplicationProtocol.HTTP,
       targetType: elbv2.TargetType.IP,
       healthCheck: {
-        enabled: false,
+        enabled: true,
         path: '/health',
         interval: cdk.Duration.seconds(60),
         timeout: cdk.Duration.seconds(30),
