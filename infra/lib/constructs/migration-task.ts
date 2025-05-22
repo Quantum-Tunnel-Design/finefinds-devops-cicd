@@ -4,6 +4,7 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
+import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import { Construct } from 'constructs';
 import { BaseConfig } from '../../env/base-config';
 
@@ -13,6 +14,7 @@ export interface MigrationTaskConstructProps {
   vpc: ec2.Vpc;
   taskRole?: iam.IRole;
   executionRole?: iam.IRole;
+  dbConnectionSecret?: secretsmanager.ISecret;
 }
 
 export class MigrationTaskConstruct extends Construct {
@@ -55,15 +57,9 @@ export class MigrationTaskConstruct extends Construct {
       environment: {
         NODE_ENV: props.environment,
       },
-      secrets: {
-        DATABASE_URL: ecs.Secret.fromSecretsManager(
-          cdk.aws_secretsmanager.Secret.fromSecretNameV2(
-            this,
-            'DbConnectionSecret',
-            `finefinds-${props.environment}-rds-connection`
-          )
-        ),
-      },
+      secrets: props.dbConnectionSecret ? {
+        DATABASE_URL: ecs.Secret.fromSecretsManager(props.dbConnectionSecret, 'connectionString'),
+      } : undefined,
     });
 
     // Output the task definition ARN
