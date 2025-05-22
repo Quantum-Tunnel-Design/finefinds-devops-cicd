@@ -131,6 +131,7 @@ export class FineFindsStack extends cdk.Stack {
                   port: 5432,
                   username: 'postgres',
                   password: password,
+                  connectionString: `postgresql://postgres:${password}@${rds.cluster?.clusterEndpoint.hostname}:5432/finefinds`,
                 });
               }
             }),
@@ -152,6 +153,7 @@ export class FineFindsStack extends cdk.Stack {
                   port: 5432,
                   username: 'postgres',
                   password: password,
+                  connectionString: `postgresql://postgres:${password}@${rds.cluster?.clusterEndpoint.hostname}:5432/finefinds`,
                 });
               }
             }),
@@ -189,6 +191,7 @@ export class FineFindsStack extends cdk.Stack {
                   port: 5432,
                   username: 'postgres',
                   password: password,
+                  connectionString: `postgresql://postgres:${password}@${rds.cluster?.clusterEndpoint.hostname}:5432/finefinds`,
                 });
               }
             }),
@@ -210,6 +213,7 @@ export class FineFindsStack extends cdk.Stack {
                   port: 5432,
                   username: 'postgres',
                   password: password,
+                  connectionString: `postgresql://postgres:${password}@${rds.cluster?.clusterEndpoint.hostname}:5432/finefinds`,
                 });
               }
             }),
