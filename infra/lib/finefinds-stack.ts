@@ -175,10 +175,12 @@ export class FineFindsStack extends cdk.Stack {
         },
         policy: cdk.custom_resources.AwsCustomResourcePolicy.fromStatements([
           new iamcdk.PolicyStatement({
+            effect: iamcdk.Effect.ALLOW,
             actions: ['secretsmanager:UpdateSecret'],
             resources: [fixedNameRdsConnectionSecret.secretArn],
           }),
           new iamcdk.PolicyStatement({
+            effect: iamcdk.Effect.ALLOW,
             actions: ['secretsmanager:GetSecretValue'],
             resources: [rds.cluster.secret.secretArn],
           }),
@@ -245,10 +247,12 @@ export class FineFindsStack extends cdk.Stack {
         },
         policy: cdk.custom_resources.AwsCustomResourcePolicy.fromStatements([
           new iamcdk.PolicyStatement({
+            effect: iamcdk.Effect.ALLOW,
             actions: ['secretsmanager:UpdateSecret'],
             resources: [fixedNameRdsConnectionSecret.secretArn],
           }),
           new iamcdk.PolicyStatement({
+            effect: iamcdk.Effect.ALLOW,
             actions: ['secretsmanager:GetSecretValue'],
             resources: [rds.instance.secret.secretArn],
           }),
