@@ -146,13 +146,6 @@ export class EcsConstruct extends Construct {
           protocol: ecs.Protocol.TCP,
         },
       ],
-      healthCheck: {
-        command: ['CMD-SHELL', 'curl -f http://localhost:3000/health || exit 1'],
-        interval: cdk.Duration.seconds(30),
-        timeout: cdk.Duration.seconds(10),
-        retries: 3,
-        startPeriod: cdk.Duration.seconds(60),
-      },
     });
 
     // Create security group for the service
@@ -186,6 +179,7 @@ export class EcsConstruct extends Construct {
       protocol: elbv2.ApplicationProtocol.HTTP,
       targetType: elbv2.TargetType.IP,
       healthCheck: {
+        enabled: false,
         path: '/health',
         interval: cdk.Duration.seconds(60),
         timeout: cdk.Duration.seconds(30),
