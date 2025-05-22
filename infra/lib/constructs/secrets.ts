@@ -17,6 +17,7 @@ export class SecretsConstruct extends Construct {
   public readonly opensearchSecret: secretsmanager.ISecret;
   public readonly jwtSecret: secretsmanager.ISecret;
   public readonly smtpSecret: secretsmanager.ISecret;
+  public readonly cognitoConfigSecret: secretsmanager.ISecret;
 
   constructor(scope: Construct, id: string, props: SecretsConstructProps) {
     super(scope, id);
@@ -36,6 +37,14 @@ export class SecretsConstruct extends Construct {
     // Create SMTP secret
     this.smtpSecret = secretsmanager.Secret.fromSecretNameV2(this, 'SmtpSecret', `finefinds-${props.environment}-smtp-secret`);
 
+    // Create Cognito Config Secret
+    this.cognitoConfigSecret = new secretsmanager.Secret(this, 'CognitoConfigSecret', {
+      secretName: `finefinds-${props.environment}-cognito-config`,
+      description: `Cognito configuration for FineFinds ${props.environment} environment`,
+      encryptionKey: props.kmsKey,
+    });
+    this.cognitoConfigSecret.applyRemovalPolicy(props.environment === 'prod' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY);
+
     // Create IAM policy for ECS tasks to access secrets
     const secretsPolicy = new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
@@ -49,6 +58,7 @@ export class SecretsConstruct extends Construct {
         this.opensearchSecret.secretArn,
         this.jwtSecret.secretArn,
         this.smtpSecret.secretArn,
+        this.cognitoConfigSecret.secretArn,
       ],
     });
   }

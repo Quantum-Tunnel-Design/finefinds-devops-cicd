@@ -341,6 +341,47 @@ export class FineFindsStack extends cdk.Stack {
       config: props.config,
     });
 
+    // Custom Resource to populate the Cognito Config Secret
+    const cognitoSecretJson = {
+      clientUserPoolId: cognito.clientUserPool.userPoolId,
+      clientUserPoolClientId: cognito.clientUserPoolClient.userPoolClientId,
+      adminUserPoolId: cognito.adminUserPool.userPoolId,
+      adminUserPoolClientId: cognito.adminUserPoolClient.userPoolClientId,
+      // Add client secrets only if they are generated (i.e., for prod)
+      ...(props.config.environment === 'prod' && cognito.clientUserPoolClient.userPoolClientSecret && {
+        clientUserPoolClientSecret: cognito.clientUserPoolClient.userPoolClientSecret.unsafeUnwrap(), // Requires unsafeUnwrap for CfnOutput compatibility
+      }),
+      ...(props.config.environment === 'prod' && cognito.adminUserPoolClient.userPoolClientSecret && {
+        adminUserPoolClientSecret: cognito.adminUserPoolClient.userPoolClientSecret.unsafeUnwrap(), // Requires unsafeUnwrap
+      }),
+    };
+
+    const updateCognitoConfigSecret = new cdk.custom_resources.AwsCustomResource(this, 'UpdateCognitoConfigSecret', {
+      onCreate: {
+        service: 'SecretsManager',
+        action: 'putSecretValue', // Use putSecretValue to create or update
+        parameters: {
+          SecretId: secrets.cognitoConfigSecret.secretArn,
+          SecretString: JSON.stringify(cognitoSecretJson),
+        },
+        physicalResourceId: cdk.custom_resources.PhysicalResourceId.of(`UpdateCognitoConfigSecret-${cognito.clientUserPool.userPoolId}`),
+      },
+      onUpdate: {
+        service: 'SecretsManager',
+        action: 'putSecretValue',
+        parameters: {
+          SecretId: secrets.cognitoConfigSecret.secretArn,
+          SecretString: JSON.stringify(cognitoSecretJson),
+        },
+        physicalResourceId: cdk.custom_resources.PhysicalResourceId.of(`UpdateCognitoConfigSecret-${cognito.clientUserPool.userPoolId}`),
+      },
+      policy: cdk.custom_resources.AwsCustomResourcePolicy.fromSdkCalls({
+        resources: [secrets.cognitoConfigSecret.secretArn], // Allow access to this specific secret
+      }),
+    });
+    updateCognitoConfigSecret.node.addDependency(cognito);
+    updateCognitoConfigSecret.node.addDependency(secrets.cognitoConfigSecret);
+
     // Create Monitoring Resources
     const monitoring = new MonitoringConstruct(this, 'Monitoring', {
       environment: props.config.environment,
