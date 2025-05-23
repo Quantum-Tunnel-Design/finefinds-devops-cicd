@@ -48,6 +48,21 @@ export class IamConstruct extends Construct {
       })
     );
 
+    // Add S3 write permissions for application-specific buckets
+    this.ecsTaskRole.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          's3:PutObject',
+          's3:PutObjectAcl',
+          's3:DeleteObject',
+        ],
+        resources: [
+          `arn:aws:s3:::finefinds-${props.environment}-*/*`, // Scoped to buckets like finefinds-dev-uploads/*
+        ],
+      })
+    );
+
     // Uncomment specific RDS policy
     this.ecsTaskRole.addToPolicy(
       new iam.PolicyStatement({
@@ -57,6 +72,79 @@ export class IamConstruct extends Construct {
         ],
         resources: [
           `arn:aws:secretsmanager:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:secret:finefinds-${props.environment}-rds-connection-*`,
+        ],
+      })
+    );
+
+    // Add Cognito permissions for ECS Task Role
+    this.ecsTaskRole.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'cognito-idp:AdminAddUserToGroup',
+          'cognito-idp:AdminConfirmSignUp',
+          'cognito-idp:AdminCreateUser',
+          'cognito-idp:AdminDeleteUser',
+          'cognito-idp:AdminDeleteUserAttributes',
+          'cognito-idp:AdminDisableUser',
+          'cognito-idp:AdminEnableUser',
+          'cognito-idp:AdminGetUser',
+          'cognito-idp:AdminInitiateAuth',
+          'cognito-idp:AdminLinkProviderForUser',
+          'cognito-idp:AdminListGroupsForUser',
+          'cognito-idp:AdminListUserAuthEvents',
+          'cognito-idp:AdminRemoveUserFromGroup',
+          'cognito-idp:AdminResetUserPassword',
+          'cognito-idp:AdminRespondToAuthChallenge',
+          'cognito-idp:AdminSetUserMFAPreference',
+          'cognito-idp:AdminSetUserSettings',
+          'cognito-idp:AdminSetUserPassword',
+          'cognito-idp:AdminUpdateDeviceStatus',
+          'cognito-idp:AdminUpdateUserAttributes',
+          'cognito-idp:AdminUserGlobalSignOut',
+          'cognito-idp:AssociateSoftwareToken',
+          'cognito-idp:ChangePassword',
+          'cognito-idp:ConfirmDevice',
+          'cognito-idp:ConfirmForgotPassword',
+          'cognito-idp:ConfirmSignUp',
+          'cognito-idp:CreateGroup',
+          'cognito-idp:CreateUserImportJob',
+          'cognito-idp:CreateUserPoolClient',
+          'cognito-idp:DeleteGroup',
+          'cognito-idp:DeleteUser',
+          'cognito-idp:DeleteUserAttributes',
+          'cognito-idp:DeleteUserPoolClient',
+          'cognito-idp:DescribeUserPoolClient',
+          'cognito-idp:ForgetDevice',
+          'cognito-idp:ForgotPassword',
+          'cognito-idp:GetCSVHeader',
+          'cognito-idp:GetDevice',
+          'cognito-idp:GetGroup',
+          'cognito-idp:GetUser',
+          'cognito-idp:GetUserAttributeVerificationCode',
+          'cognito-idp:GetUserPoolMfaConfig',
+          'cognito-idp:GlobalSignOut',
+          'cognito-idp:InitiateAuth',
+          'cognito-idp:ListDevices',
+          'cognito-idp:ListGroups',
+          'cognito-idp:ListUsers',
+          'cognito-idp:ListUsersInGroup',
+          'cognito-idp:ResendConfirmationCode',
+          'cognito-idp:RespondToAuthChallenge',
+          'cognito-idp:SetUserMFAPreference',
+          'cognito-idp:SetUserSettings',
+          'cognito-idp:SignUp',
+          'cognito-idp:StartUserImportJob',
+          'cognito-idp:StopUserImportJob',
+          'cognito-idp:UpdateDeviceStatus',
+          'cognito-idp:UpdateGroup',
+          'cognito-idp:UpdateUserAttributes',
+          'cognito-idp:UpdateUserPoolClient',
+          'cognito-idp:VerifySoftwareToken',
+          'cognito-idp:VerifyUserAttribute',
+        ],
+        resources: [
+          `arn:aws:cognito-idp:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:userpool/*`,
         ],
       })
     );
