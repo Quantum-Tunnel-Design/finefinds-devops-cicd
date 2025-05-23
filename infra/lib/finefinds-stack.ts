@@ -118,9 +118,9 @@ export class FineFindsStack extends cdk.Stack {
       const updateDbSecret = new cdk.custom_resources.AwsCustomResource(this, 'UpdateDbConnectionSecretProd', {
         onCreate: {
           service: 'SecretsManager',
-          action: 'updateSecret',
+          action: 'putSecretValue',
           parameters: {
-            SecretId: rds.cluster.secret.secretArn,
+            SecretId: secrets.databaseSecret.secretArn,
             SecretString: cdk.Lazy.string({
               produce: () => {
                 const password = cdk.SecretValue.secretsManager(rds.cluster!.secret!.secretArn, {
@@ -139,13 +139,13 @@ export class FineFindsStack extends cdk.Stack {
               }
             }),
           },
-          physicalResourceId: cdk.custom_resources.PhysicalResourceId.of('DbSecretUpdateProd-' + Date.now().toString()),
+          physicalResourceId: cdk.custom_resources.PhysicalResourceId.of('DbFixedSecretUpdateProd-' + Date.now().toString()),
         },
         onUpdate: {
           service: 'SecretsManager',
-          action: 'updateSecret',
+          action: 'putSecretValue',
           parameters: {
-            SecretId: rds.cluster.secret.secretArn,
+            SecretId: secrets.databaseSecret.secretArn,
             SecretString: cdk.Lazy.string({
               produce: () => {
                 const password = cdk.SecretValue.secretsManager(rds.cluster!.secret!.secretArn, {
@@ -164,13 +164,19 @@ export class FineFindsStack extends cdk.Stack {
               }
             }),
           },
-          physicalResourceId: cdk.custom_resources.PhysicalResourceId.of('DbSecretUpdateProd-' + Date.now().toString()),
+          physicalResourceId: cdk.custom_resources.PhysicalResourceId.of('DbFixedSecretUpdateProd-' + Date.now().toString()),
         },
         policy: cdk.custom_resources.AwsCustomResourcePolicy.fromStatements([
           new iamcdk.PolicyStatement({
-            actions: ['secretsmanager:UpdateSecret'],
-            resources: [rds.cluster.secret.secretArn],
+            actions: ['secretsmanager:PutSecretValue', 'secretsmanager:DescribeSecret'],
+            resources: [secrets.databaseSecret.secretArn],
+            effect: iamcdk.Effect.ALLOW,
           }),
+          new iamcdk.PolicyStatement({
+            actions: ['secretsmanager:GetSecretValue', 'secretsmanager:DescribeSecret'],
+            resources: [rds.cluster.secret.secretArn],
+            effect: iamcdk.Effect.ALLOW,
+          })
         ]),
       });
       
@@ -178,15 +184,16 @@ export class FineFindsStack extends cdk.Stack {
       if (rds.cluster.secret) {
           updateDbSecret.node.addDependency(rds.cluster.secret);
       }
+      updateDbSecret.node.addDependency(secrets.databaseSecret);
       
     } else if (rds.instance && rds.instance.secret) {
       // For non-production, use single instance
       const updateDbSecret = new cdk.custom_resources.AwsCustomResource(this, 'UpdateDbConnectionSecretNonProd', {
         onCreate: {
           service: 'SecretsManager',
-          action: 'updateSecret',
+          action: 'putSecretValue',
           parameters: {
-            SecretId: rds.instance.secret.secretArn,
+            SecretId: secrets.databaseSecret.secretArn,
             SecretString: cdk.Lazy.string({
               produce: () => {
                 const password = cdk.SecretValue.secretsManager(rds.instance!.secret!.secretArn, {
@@ -205,13 +212,13 @@ export class FineFindsStack extends cdk.Stack {
               }
             }),
           },
-          physicalResourceId: cdk.custom_resources.PhysicalResourceId.of('DbSecretUpdateNonProd-' + Date.now().toString()),
+          physicalResourceId: cdk.custom_resources.PhysicalResourceId.of('DbFixedSecretUpdateNonProd-' + Date.now().toString()),
         },
         onUpdate: {
           service: 'SecretsManager',
-          action: 'updateSecret',
+          action: 'putSecretValue',
           parameters: {
-            SecretId: rds.instance.secret.secretArn,
+            SecretId: secrets.databaseSecret.secretArn,
             SecretString: cdk.Lazy.string({
               produce: () => {
                 const password = cdk.SecretValue.secretsManager(rds.instance!.secret!.secretArn, {
@@ -230,13 +237,19 @@ export class FineFindsStack extends cdk.Stack {
               }
             }),
           },
-          physicalResourceId: cdk.custom_resources.PhysicalResourceId.of('DbSecretUpdateNonProd-' + Date.now().toString()),
+          physicalResourceId: cdk.custom_resources.PhysicalResourceId.of('DbFixedSecretUpdateNonProd-' + Date.now().toString()),
         },
         policy: cdk.custom_resources.AwsCustomResourcePolicy.fromStatements([
           new iamcdk.PolicyStatement({
-            actions: ['secretsmanager:UpdateSecret'],
-            resources: [rds.instance.secret.secretArn],
+            actions: ['secretsmanager:PutSecretValue', 'secretsmanager:DescribeSecret'],
+            resources: [secrets.databaseSecret.secretArn],
+            effect: iamcdk.Effect.ALLOW,
           }),
+          new iamcdk.PolicyStatement({
+            actions: ['secretsmanager:GetSecretValue', 'secretsmanager:DescribeSecret'],
+            resources: [rds.instance.secret.secretArn],
+            effect: iamcdk.Effect.ALLOW,
+          })
         ]),
       });
       
@@ -244,6 +257,7 @@ export class FineFindsStack extends cdk.Stack {
       if (rds.instance.secret) {
           updateDbSecret.node.addDependency(rds.instance.secret);
       }
+      updateDbSecret.node.addDependency(secrets.databaseSecret);
     }
 
     // Create ECS Cluster and Services
