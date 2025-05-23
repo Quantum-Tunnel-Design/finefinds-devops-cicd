@@ -385,7 +385,7 @@ export class FineFindsStack extends cdk.Stack {
         service: 'SecretsManager',
         action: 'putSecretValue', // Use putSecretValue to create or update
         parameters: {
-          SecretId: secrets.cognitoConfigSecret.secretFullArn!,
+          SecretId: secrets.cognitoConfigSecret.secretName, // Changed to secretName
           SecretString: JSON.stringify(cognitoSecretJson),
         },
         physicalResourceId: cdk.custom_resources.PhysicalResourceId.of(`UpdateCognitoConfigSecret-${cognito.clientUserPool.userPoolId}`),
@@ -394,7 +394,7 @@ export class FineFindsStack extends cdk.Stack {
         service: 'SecretsManager',
         action: 'putSecretValue',
         parameters: {
-          SecretId: secrets.cognitoConfigSecret.secretFullArn!,
+          SecretId: secrets.cognitoConfigSecret.secretName, // Changed to secretName
           SecretString: JSON.stringify(cognitoSecretJson),
         },
         physicalResourceId: cdk.custom_resources.PhysicalResourceId.of(`UpdateCognitoConfigSecret-${cognito.clientUserPool.userPoolId}`),
@@ -402,7 +402,9 @@ export class FineFindsStack extends cdk.Stack {
       policy: cdk.custom_resources.AwsCustomResourcePolicy.fromStatements([
         new iamcdk.PolicyStatement({
           actions: ['secretsmanager:PutSecretValue', 'secretsmanager:DescribeSecret'],
-          resources: [secrets.cognitoConfigSecret.secretFullArn!],
+          resources: [
+            `arn:aws:secretsmanager:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:secret:${secrets.cognitoConfigSecret.secretName}-*`,
+          ],
           effect: iamcdk.Effect.ALLOW, // Be explicit about allowing
         }),
       ]),
