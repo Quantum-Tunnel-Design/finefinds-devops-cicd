@@ -239,12 +239,22 @@ export class CognitoConstruct extends Construct {
     providers.forEach(({ type, config, attributeMapping }) => {
       if (!config) return;
 
-      const provider = new cognito[`UserPoolIdentityProvider${type}`](this, `${type}Provider`, {
+      let providerProps: any = {
         userPool: this.clientUserPool,
         clientId: config.clientId,
-        clientSecret: config.clientSecret,
         attributeMapping,
-      });
+      };
+
+      if (type === 'Google') {
+        providerProps.clientSecretValue = cdk.SecretValue.unsafePlainText(config.clientSecret!);
+      } else {
+        // For other providers like Facebook, Amazon, if they still use clientSecret
+        // and haven't deprecated it or if the types still expect it.
+        // This example assumes they might still use clientSecret, adjust if necessary.
+        providerProps.clientSecret = config.clientSecret;
+      }
+
+      const provider = new cognito[`UserPoolIdentityProvider${type}`](this, `${type}Provider`, providerProps);
 
       this.clientUserPoolClient.node.addDependency(provider);
     });

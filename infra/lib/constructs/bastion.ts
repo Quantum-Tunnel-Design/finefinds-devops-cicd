@@ -25,6 +25,7 @@ export class BastionConstruct extends Construct {
 
     // Use existing key pair
     const keyPairName = props.config.bastion?.keyName || `finefinds-${props.environment}-bastion`;
+    const keyPair = ec2.KeyPair.fromKeyPairName(this, 'BastionKeyPair', keyPairName);
 
     // Create security group for the bastion host
     this.securityGroup = new ec2.SecurityGroup(this, 'BastionSecurityGroup', {
@@ -64,7 +65,7 @@ export class BastionConstruct extends Construct {
       machineImage: ec2.MachineImage.latestAmazonLinux2023(),
       securityGroup: this.securityGroup,
       role: role,
-      keyName: keyPairName,
+      keyPair: keyPair,
       userData: ec2.UserData.forLinux(),
     });
 

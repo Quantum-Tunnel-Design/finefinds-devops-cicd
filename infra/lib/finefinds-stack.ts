@@ -84,7 +84,7 @@ export class FineFindsStack extends cdk.Stack {
       kmsKey: kms.key,
     });
 
-    iam.ecsTaskRole.addToPolicy(secrets.taskRolePolicy);
+    // iam.ecsTaskRole.addToPolicy(secrets.taskRolePolicy); // Temporarily commented out
 
     // Create RDS Database
     const rds = new RdsConstruct(this, 'Rds', {
