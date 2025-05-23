@@ -97,10 +97,6 @@ jobs:
           cd infra
           npm ci
 
-      - name: CDK Synth All Stacks
-        working-directory: infra
-        run: npx cdk synth --all --require-approval never --context environment=${{ env.CDK_ENV }} --context version=${{ env.STACK_VERSION }} --context aws-cdk:qualifier=${{ env.QUALIFIER }}
-
       - name: Check for ongoing stack operations
         run: |
           STACK_NAME="FineFinds-${{ env.CDK_ENV }}"
@@ -214,7 +210,11 @@ jobs:
           else
             echo "All required bootstrapped secrets found and are accessible."
           fi
-        
+
+      - name: CDK Synth All Stacks
+        working-directory: infra
+        run: npx cdk synth --all --require-approval never --context environment=${{ env.CDK_ENV }} --context version=${{ env.STACK_VERSION }} --context aws-cdk:qualifier=${{ env.QUALIFIER }}
+
       - name: CDK Diff
         if: github.event_name == 'pull_request'
         run: |
