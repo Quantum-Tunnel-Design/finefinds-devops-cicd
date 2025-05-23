@@ -186,6 +186,8 @@ export class FineFindsStack extends cdk.Stack {
       }
       updateDbSecret.node.addDependency(secrets.databaseSecret);
       
+      // Grant the Lambda function created by AwsCustomResource the permission to put secret value
+      secrets.databaseSecret.grantWrite(updateDbSecret.grantPrincipal);
     } else if (rds.instance && rds.instance.secret) {
       // For non-production, use single instance
       const updateDbSecret = new cdk.custom_resources.AwsCustomResource(this, 'UpdateDbConnectionSecretNonProd', {
@@ -258,6 +260,9 @@ export class FineFindsStack extends cdk.Stack {
           updateDbSecret.node.addDependency(rds.instance.secret);
       }
       updateDbSecret.node.addDependency(secrets.databaseSecret);
+      
+      // Grant the Lambda function created by AwsCustomResource the permission to put secret value
+      secrets.databaseSecret.grantWrite(updateDbSecret.grantPrincipal);
     }
 
     // Create ECS Cluster and Services
@@ -397,6 +402,9 @@ export class FineFindsStack extends cdk.Stack {
         }),
       ]),
     });
+    // Grant the Lambda function created by AwsCustomResource the permission to put secret value
+    secrets.cognitoConfigSecret.grantWrite(updateCognitoConfigSecret.grantPrincipal);
+
     updateCognitoConfigSecret.node.addDependency(cognito);
     updateCognitoConfigSecret.node.addDependency(secrets.cognitoConfigSecret);
 
