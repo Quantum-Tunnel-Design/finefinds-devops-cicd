@@ -120,10 +120,10 @@ export class FineFindsStack extends cdk.Stack {
           service: 'SecretsManager',
           action: 'putSecretValue',
           parameters: {
-            SecretId: secrets.databaseSecret.secretArn,
+            SecretId: secrets.databaseSecret.secretFullArn!,
             SecretString: cdk.Lazy.string({
               produce: () => {
-                const password = cdk.SecretValue.secretsManager(rds.cluster!.secret!.secretArn, {
+                const password = cdk.SecretValue.secretsManager(rds.cluster!.secret!.secretFullArn!, {
                   jsonField: 'password',
                 }).unsafeUnwrap();
 
@@ -145,10 +145,10 @@ export class FineFindsStack extends cdk.Stack {
           service: 'SecretsManager',
           action: 'putSecretValue',
           parameters: {
-            SecretId: secrets.databaseSecret.secretArn,
+            SecretId: secrets.databaseSecret.secretFullArn!,
             SecretString: cdk.Lazy.string({
               produce: () => {
-                const password = cdk.SecretValue.secretsManager(rds.cluster!.secret!.secretArn, {
+                const password = cdk.SecretValue.secretsManager(rds.cluster!.secret!.secretFullArn!, {
                   jsonField: 'password',
                 }).unsafeUnwrap();
 
@@ -169,12 +169,12 @@ export class FineFindsStack extends cdk.Stack {
         policy: cdk.custom_resources.AwsCustomResourcePolicy.fromStatements([
           new iamcdk.PolicyStatement({
             actions: ['secretsmanager:PutSecretValue', 'secretsmanager:DescribeSecret'],
-            resources: [secrets.databaseSecret.secretArn],
+            resources: [secrets.databaseSecret.secretFullArn!],
             effect: iamcdk.Effect.ALLOW,
           }),
           new iamcdk.PolicyStatement({
             actions: ['secretsmanager:GetSecretValue', 'secretsmanager:DescribeSecret'],
-            resources: [rds.cluster.secret.secretArn],
+            resources: [rds.cluster.secret.secretFullArn!],
             effect: iamcdk.Effect.ALLOW,
           })
         ]),
@@ -195,10 +195,10 @@ export class FineFindsStack extends cdk.Stack {
           service: 'SecretsManager',
           action: 'putSecretValue',
           parameters: {
-            SecretId: secrets.databaseSecret.secretArn,
+            SecretId: secrets.databaseSecret.secretFullArn!,
             SecretString: cdk.Lazy.string({
               produce: () => {
-                const password = cdk.SecretValue.secretsManager(rds.instance!.secret!.secretArn, {
+                const password = cdk.SecretValue.secretsManager(rds.instance!.secret!.secretFullArn!, {
                   jsonField: 'password',
                 }).unsafeUnwrap();
 
@@ -220,10 +220,10 @@ export class FineFindsStack extends cdk.Stack {
           service: 'SecretsManager',
           action: 'putSecretValue',
           parameters: {
-            SecretId: secrets.databaseSecret.secretArn,
+            SecretId: secrets.databaseSecret.secretFullArn!,
             SecretString: cdk.Lazy.string({
               produce: () => {
-                const password = cdk.SecretValue.secretsManager(rds.instance!.secret!.secretArn, {
+                const password = cdk.SecretValue.secretsManager(rds.instance!.secret!.secretFullArn!, {
                   jsonField: 'password',
                 }).unsafeUnwrap();
 
@@ -244,12 +244,12 @@ export class FineFindsStack extends cdk.Stack {
         policy: cdk.custom_resources.AwsCustomResourcePolicy.fromStatements([
           new iamcdk.PolicyStatement({
             actions: ['secretsmanager:PutSecretValue', 'secretsmanager:DescribeSecret'],
-            resources: [secrets.databaseSecret.secretArn],
+            resources: [secrets.databaseSecret.secretFullArn!],
             effect: iamcdk.Effect.ALLOW,
           }),
           new iamcdk.PolicyStatement({
             actions: ['secretsmanager:GetSecretValue', 'secretsmanager:DescribeSecret'],
-            resources: [rds.instance.secret.secretArn],
+            resources: [rds.instance.secret.secretFullArn!],
             effect: iamcdk.Effect.ALLOW,
           })
         ]),
@@ -380,7 +380,7 @@ export class FineFindsStack extends cdk.Stack {
         service: 'SecretsManager',
         action: 'putSecretValue', // Use putSecretValue to create or update
         parameters: {
-          SecretId: secrets.cognitoConfigSecret.secretArn,
+          SecretId: secrets.cognitoConfigSecret.secretFullArn!,
           SecretString: JSON.stringify(cognitoSecretJson),
         },
         physicalResourceId: cdk.custom_resources.PhysicalResourceId.of(`UpdateCognitoConfigSecret-${cognito.clientUserPool.userPoolId}`),
@@ -389,7 +389,7 @@ export class FineFindsStack extends cdk.Stack {
         service: 'SecretsManager',
         action: 'putSecretValue',
         parameters: {
-          SecretId: secrets.cognitoConfigSecret.secretArn,
+          SecretId: secrets.cognitoConfigSecret.secretFullArn!,
           SecretString: JSON.stringify(cognitoSecretJson),
         },
         physicalResourceId: cdk.custom_resources.PhysicalResourceId.of(`UpdateCognitoConfigSecret-${cognito.clientUserPool.userPoolId}`),
@@ -397,7 +397,7 @@ export class FineFindsStack extends cdk.Stack {
       policy: cdk.custom_resources.AwsCustomResourcePolicy.fromStatements([
         new iamcdk.PolicyStatement({
           actions: ['secretsmanager:PutSecretValue', 'secretsmanager:DescribeSecret'],
-          resources: [secrets.cognitoConfigSecret.secretArn],
+          resources: [secrets.cognitoConfigSecret.secretFullArn!],
           effect: iamcdk.Effect.ALLOW, // Be explicit about allowing
         }),
       ]),
