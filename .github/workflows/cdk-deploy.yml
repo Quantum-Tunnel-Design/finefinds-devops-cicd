@@ -228,14 +228,14 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           cd infra
-          npm run cdk diff -- FineFinds-${{ env.CDK_ENV }} --context env=${{ env.CDK_ENV }} --context version=${{ env.STACK_VERSION }} --context aws-cdk:qualifier=${{ env.QUALIFIER }}
+          npm run cdk diff -- FineFinds-${{ env.CDK_ENV }} --context environment=${{ env.CDK_ENV }} --context version=${{ env.STACK_VERSION }} --context aws-cdk:qualifier=${{ env.QUALIFIER }}
 
       - name: CDK Deploy
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: |
           cd infra
           echo "Setting connectAmplifyToRepo context to: ${{ env.CONNECT_AMPLIFY_TO_REPO_CONTEXT }}"
-          npm run cdk deploy -- FineFinds-${{ env.CDK_ENV }} --context env=${{ env.CDK_ENV }} --context version=${{ env.STACK_VERSION }} --context aws-cdk:qualifier=${{ env.QUALIFIER }} --context connectAmplifyToRepo=${{ env.CONNECT_AMPLIFY_TO_REPO_CONTEXT }} --require-approval never
+          npm run cdk deploy -- FineFinds-${{ env.CDK_ENV }} --context environment=${{ env.CDK_ENV }} --context version=${{ env.STACK_VERSION }} --context aws-cdk:qualifier=${{ env.QUALIFIER }} --context connectAmplifyToRepo=${{ env.CONNECT_AMPLIFY_TO_REPO_CONTEXT }} --require-approval never
         env:
           CDK_DEPLOY_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
           CDK_DEPLOY_REGION: ${{ secrets.AWS_REGION }}
