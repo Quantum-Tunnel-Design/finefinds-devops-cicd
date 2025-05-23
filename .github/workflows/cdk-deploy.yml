@@ -3,6 +3,13 @@ name: CDK Deploy
 on:
   push:
     branches: [main, qa, uat, dev]
+  workflow_dispatch:
+    inputs:
+      connect_amplify_to_repo:
+        description: 'Connect Amplify apps to GitHub repositories? (true/false)'
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   id-token: write
@@ -67,6 +74,8 @@ jobs:
           github.ref == 'refs/tags/*' && github.ref_name || 
           format('{0}-{1}', github.run_number, github.sha)
         }}
+      CONNECT_AMPLIFY_TO_REPO_CONTEXT: >-
+        ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.connect_amplify_to_repo == true) && 'true' || 'false' }}
 
     steps:
       - name: Checkout
@@ -222,10 +231,11 @@ jobs:
           npm run cdk diff -- FineFinds-${{ env.CDK_ENV }} --context env=${{ env.CDK_ENV }} --context version=${{ env.STACK_VERSION }} --context aws-cdk:qualifier=${{ env.QUALIFIER }}
 
       - name: CDK Deploy
-        if: github.event_name == 'push' 
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: |
           cd infra
-          npm run cdk deploy -- FineFinds-${{ env.CDK_ENV }} --context env=${{ env.CDK_ENV }} --context version=${{ env.STACK_VERSION }} --context aws-cdk:qualifier=${{ env.QUALIFIER }} --require-approval never
+          echo "Setting connectAmplifyToRepo context to: ${{ env.CONNECT_AMPLIFY_TO_REPO_CONTEXT }}"
+          npm run cdk deploy -- FineFinds-${{ env.CDK_ENV }} --context env=${{ env.CDK_ENV }} --context version=${{ env.STACK_VERSION }} --context aws-cdk:qualifier=${{ env.QUALIFIER }} --context connectAmplifyToRepo=${{ env.CONNECT_AMPLIFY_TO_REPO_CONTEXT }} --require-approval never
         env:
           CDK_DEPLOY_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
           CDK_DEPLOY_REGION: ${{ secrets.AWS_REGION }}

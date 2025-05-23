@@ -16,16 +16,10 @@ export class AmplifyConstruct extends Construct {
   constructor(scope: Construct, id: string, props: AmplifyConstructProps) {
     super(scope, id);
 
-    // Create client web app
-    this.clientApp = new amplify.App(this, 'ClientWebApp', {
+    const connectToRepo = this.node.tryGetContext('connectAmplifyToRepo') === 'true';
+
+    let clientAppProps: amplify.AppProps = {
       appName: `finefinds-${props.environment}-client-web`,
-      sourceCodeProvider: new amplify.GitHubSourceCodeProvider({
-        owner: 'Quantum-Tunnel-Design',
-        repository: 'finefinds-client-web-app',
-        oauthToken: cdk.SecretValue.secretsManager(`finefinds-${props.environment}-github-token`, {
-          jsonField: 'token',
-        }),
-      }),
       environmentVariables: {
         ...props.config.amplify.clientWebApp.buildSettings.environmentVariables,
         NEXT_PUBLIC_API_URL: `https://api-${props.config.environment}.finefindslk.com`,
@@ -71,18 +65,26 @@ export class AmplifyConstruct extends Construct {
         ]
       }),
       platform: amplify.Platform.WEB_COMPUTE,
-    });
+    };
 
-    // Create admin app
-    this.adminApp = new amplify.App(this, 'AdminApp', {
+    if (connectToRepo) {
+      clientAppProps = {
+        ...clientAppProps,
+        sourceCodeProvider: new amplify.GitHubSourceCodeProvider({
+          owner: 'Quantum-Tunnel-Design',
+          repository: 'finefinds-client-web-app',
+          oauthToken: cdk.SecretValue.secretsManager(`finefinds-${props.environment}-github-token`, {
+            jsonField: 'token',
+          }),
+        }),
+      };
+    }
+
+    // Create client web app
+    this.clientApp = new amplify.App(this, 'ClientWebApp', clientAppProps);
+
+    let adminAppProps: amplify.AppProps = {
       appName: `finefinds-${props.environment}-admin`,
-      sourceCodeProvider: new amplify.GitHubSourceCodeProvider({
-        owner: 'Quantum-Tunnel-Design',
-        repository: 'finefinds-admin',
-        oauthToken: cdk.SecretValue.secretsManager(`finefinds-${props.environment}-github-token`, {
-          jsonField: 'token',
-        }),
-      }),
       environmentVariables: {
         ...props.config.amplify.adminApp.buildSettings.environmentVariables,
         NEXT_PUBLIC_API_URL: `https://api-${props.config.environment}.finefindslk.com`,
@@ -128,38 +130,55 @@ export class AmplifyConstruct extends Construct {
         ]
       }),
       platform: amplify.Platform.WEB_COMPUTE,
-    });
+    };
 
-    // Add branches for each environment
-    const branchName = props.environment === 'prod' ? 'main' : props.environment;
-    
-    // Client Web App branches
-    this.clientApp.addBranch(branchName, {
-      stage: props.environment === 'prod' ? 'PRODUCTION' : 'DEVELOPMENT',
-      autoBuild: true,
-      environmentVariables: {
-        ...props.config.amplify.clientWebApp.buildSettings.environmentVariables,
-        NEXT_PUBLIC_API_URL: `https://api-${props.config.environment}.finefindslk.com`,
-        NEXT_PUBLIC_COGNITO_USER_POOL_ID: props.config.cognito.clientUsers.userPoolName,
-        NEXT_PUBLIC_COGNITO_CLIENT_ID: props.config.cognito.clientUsers.userPoolName,
-        NEXT_PUBLIC_AWS_REGION: props.config.region || 'us-east-1',
-        NODE_ENV: props.environment.toLowerCase(),
-      },
-    });
+    if (connectToRepo) {
+      adminAppProps = {
+        ...adminAppProps,
+        sourceCodeProvider: new amplify.GitHubSourceCodeProvider({
+          owner: 'Quantum-Tunnel-Design',
+          repository: 'finefinds-admin',
+          oauthToken: cdk.SecretValue.secretsManager(`finefinds-${props.environment}-github-token`, {
+            jsonField: 'token',
+          }),
+        }),
+      };
+    }
+    // Create admin app
+    this.adminApp = new amplify.App(this, 'AdminApp', adminAppProps);
 
-    // Admin App branches
-    this.adminApp.addBranch(branchName, {
-      stage: props.environment === 'prod' ? 'PRODUCTION' : 'DEVELOPMENT',
-      autoBuild: true,
-      environmentVariables: {
-        ...props.config.amplify.adminApp.buildSettings.environmentVariables,
-        NEXT_PUBLIC_API_URL: `https://api-${props.config.environment}.finefindslk.com`,
-        NEXT_PUBLIC_COGNITO_USER_POOL_ID: props.config.cognito.adminUsers.userPoolName,
-        NEXT_PUBLIC_COGNITO_CLIENT_ID: props.config.cognito.adminUsers.userPoolName,
-        NEXT_PUBLIC_AWS_REGION: props.config.region || 'us-east-1',
-        NODE_ENV: props.environment.toLowerCase(),
-      },
-    });
+    // Add branches for each environment only if connecting to repo
+    if (connectToRepo) {
+      const branchName = props.environment === 'prod' ? 'main' : props.environment;
+      
+      // Client Web App branches
+      this.clientApp.addBranch(branchName, {
+        stage: props.environment === 'prod' ? 'PRODUCTION' : 'DEVELOPMENT',
+        autoBuild: true,
+        environmentVariables: {
+          ...props.config.amplify.clientWebApp.buildSettings.environmentVariables,
+          NEXT_PUBLIC_API_URL: `https://api-${props.config.environment}.finefindslk.com`,
+          NEXT_PUBLIC_COGNITO_USER_POOL_ID: props.config.cognito.clientUsers.userPoolName,
+          NEXT_PUBLIC_COGNITO_CLIENT_ID: props.config.cognito.clientUsers.userPoolName,
+          NEXT_PUBLIC_AWS_REGION: props.config.region || 'us-east-1',
+          NODE_ENV: props.environment.toLowerCase(),
+        },
+      });
+
+      // Admin App branches
+      this.adminApp.addBranch(branchName, {
+        stage: props.environment === 'prod' ? 'PRODUCTION' : 'DEVELOPMENT',
+        autoBuild: true,
+        environmentVariables: {
+          ...props.config.amplify.adminApp.buildSettings.environmentVariables,
+          NEXT_PUBLIC_API_URL: `https://api-${props.config.environment}.finefindslk.com`,
+          NEXT_PUBLIC_COGNITO_USER_POOL_ID: props.config.cognito.adminUsers.userPoolName,
+          NEXT_PUBLIC_COGNITO_CLIENT_ID: props.config.cognito.adminUsers.userPoolName,
+          NEXT_PUBLIC_AWS_REGION: props.config.region || 'us-east-1',
+          NODE_ENV: props.environment.toLowerCase(),
+        },
+      });
+    }
 
     // Output app URLs
     new cdk.CfnOutput(this, 'ClientWebAppUrl', {
