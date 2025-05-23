@@ -44,14 +44,17 @@ export class SecretsConstruct extends Construct {
     this.cognitoConfigSecret = secretsmanager.Secret.fromSecretNameV2(this, 'CognitoConfigSecret', `finefinds-${props.environment}-cognito-config`);
 
     // Create IAM policy for ECS tasks to access secrets
-    const secretArns = [
-      this.databaseSecret.secretFullArn,
-      this.redisSecret.secretFullArn,
-      this.opensearchSecret?.secretFullArn, // Optional chaining for opensearchSecret
-      this.jwtSecret.secretFullArn,
-      this.smtpSecret.secretFullArn,
-      this.cognitoConfigSecret.secretFullArn,
-    ].filter(arn => arn !== undefined) as string[]; // Filter out undefined and assert as string[]
+    const baseArn = `arn:aws:secretsmanager:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:secret`;
+
+    const secretArnPatterns = [
+      `${baseArn}:${this.databaseSecret.secretName}-*`,
+      `${baseArn}:${this.redisSecret.secretName}-*`,
+      // Conditionally add opensearch secret ARN pattern
+      ...(props.environment === 'prod' && this.opensearchSecret ? [`${baseArn}:${this.opensearchSecret.secretName}-*`] : []),
+      `${baseArn}:${this.jwtSecret.secretName}-*`,
+      `${baseArn}:${this.smtpSecret.secretName}-*`,
+      `${baseArn}:${this.cognitoConfigSecret.secretName}-*`,
+    ];
 
     this.taskRolePolicy = new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
@@ -59,15 +62,7 @@ export class SecretsConstruct extends Construct {
         'secretsmanager:GetSecretValue',
         'secretsmanager:DescribeSecret',
       ],
-      resources: secretArns, // Use the filtered list
+      resources: secretArnPatterns, // Use the ARN patterns
     });
-
-    // Re-add Diagnostic output
-    if (props.environment === 'dev') {
-      new cdk.CfnOutput(this, 'DebugJwtSecretArn', {
-        value: this.jwtSecret.secretFullArn || 'undefined-jwt-arn',
-        description: 'DEBUG: JWT Secret Full ARN for dev',
-      });
-    }
   }
 } 
