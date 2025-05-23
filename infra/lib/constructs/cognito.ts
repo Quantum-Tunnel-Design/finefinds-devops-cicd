@@ -97,13 +97,7 @@ export class CognitoConstruct extends Construct {
         'metadata': customMetadataAttributeSchema,
       },
       passwordPolicy,
-      mfa: isProd ? cognito.Mfa.REQUIRED : cognito.Mfa.OFF,
-      ...(isProd ? {
-        mfaSecondFactor: {
-          sms: true,
-          otp: true
-        }
-      } : {}),
+      mfa: cognito.Mfa.OFF,
       accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
       removalPolicy: isProd ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
     });
