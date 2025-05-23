@@ -42,25 +42,24 @@ export class IamConstruct extends Construct {
           'xray:GetSamplingRules',
           'xray:GetSamplingTargets',
           'xray:GetSamplingStatisticSummaries',
-          // Secrets Manager Access (covered by SecretsConstruct policy now)
-          // 'secretsmanager:GetSecretValue',
+          // 'secretsmanager:GetSecretValue', // REMOVED the broad permission
         ],
         resources: ['*'], // Note: Some actions here still use '*', review if they can be scoped
       })
     );
 
-    // Add specific permissions for RDS connection secret (covered by SecretsConstruct policy now)
-    // this.ecsTaskRole.addToPolicy(
-    //   new iam.PolicyStatement({
-    //     effect: iam.Effect.ALLOW,
-    //     actions: [
-    //       'secretsmanager:GetSecretValue',
-    //     ],
-    //     resources: [
-    //       `arn:aws:secretsmanager:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:secret:finefinds-${props.environment}-rds-connection-*`,
-    //     ],
-    //   })
-    // );
+    // Add specific permissions for RDS connection secret (KEEPING this specific one)
+    this.ecsTaskRole.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'secretsmanager:GetSecretValue',
+        ],
+        resources: [
+          `arn:aws:secretsmanager:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:secret:finefinds-${props.environment}-rds-connection-*`,
+        ],
+      })
+    );
 
     // Add specific ECR permissions with explicit cross-account access
     this.ecsTaskRole.addToPolicy(
