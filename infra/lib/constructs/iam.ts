@@ -42,13 +42,13 @@ export class IamConstruct extends Construct {
           'xray:GetSamplingRules',
           'xray:GetSamplingTargets',
           'xray:GetSamplingStatisticSummaries',
-          // 'secretsmanager:GetSecretValue', // REMOVED the broad permission
+          // 'secretsmanager:GetSecretValue', // Broad permission remains commented out
         ],
-        resources: ['*'], // Note: Some actions here still use '*', review if they can be scoped
+        resources: ['*'],
       })
     );
 
-    // Add specific permissions for RDS connection secret (KEEPING this specific one)
+    // Restore specific RDS policy
     this.ecsTaskRole.addToPolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
