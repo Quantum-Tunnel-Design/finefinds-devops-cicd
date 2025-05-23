@@ -40,7 +40,7 @@ export class RdsConstruct extends Construct {
       // For prod, use Aurora PostgreSQL cluster
       this.parameterGroup = new rds.ParameterGroup(this, 'ParameterGroup', {
         engine: rds.DatabaseClusterEngine.auroraPostgres({
-          version: rds.AuroraPostgresEngineVersion.VER_15_2,
+          version: rds.AuroraPostgresEngineVersion.VER_16_6,
         }),
         parameters: {
           'rds.force_ssl': '1',
@@ -58,7 +58,7 @@ export class RdsConstruct extends Construct {
       // Create Aurora RDS cluster for prod
       this.cluster = new rds.DatabaseCluster(this, 'Database', {
         engine: rds.DatabaseClusterEngine.auroraPostgres({
-          version: rds.AuroraPostgresEngineVersion.VER_15_2,
+          version: rds.AuroraPostgresEngineVersion.VER_17_4,
         }),
         instanceProps: {
           instanceType: ec2.InstanceType.of(
@@ -120,7 +120,7 @@ export class RdsConstruct extends Construct {
       // For non-prod environments, use single-instance PostgreSQL
       this.parameterGroup = new rds.ParameterGroup(this, 'ParameterGroup', {
         engine: rds.DatabaseInstanceEngine.postgres({
-          version: rds.PostgresEngineVersion.VER_15_2,
+          version: rds.PostgresEngineVersion.VER_17_4,
         }),
         parameters: {
           'ssl': '1',
@@ -135,7 +135,7 @@ export class RdsConstruct extends Construct {
       // Create single-instance RDS PostgreSQL for dev/test
       this.instance = new rds.DatabaseInstance(this, 'Database', {
         engine: rds.DatabaseInstanceEngine.postgres({
-          version: rds.PostgresEngineVersion.VER_15_2,
+          version: rds.PostgresEngineVersion.VER_17_2,
         }),
         vpc: props.vpc,
         vpcSubnets: {
