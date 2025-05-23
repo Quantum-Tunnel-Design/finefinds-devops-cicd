@@ -84,10 +84,7 @@ export class FineFindsStack extends cdk.Stack {
       kmsKey: kms.key,
     });
 
-    // Only add the policy if there are actual secret ARNs to grant permission to
-    if (secrets.taskRolePolicy.resources && secrets.taskRolePolicy.resources.length > 0) {
-      iam.ecsTaskRole.addToPolicy(secrets.taskRolePolicy);
-    }
+    iam.ecsTaskRole.addToPolicy(secrets.taskRolePolicy);
 
     // Create RDS Database
     const rds = new RdsConstruct(this, 'Rds', {
