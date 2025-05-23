@@ -375,9 +375,13 @@ export class FineFindsStack extends cdk.Stack {
         },
         physicalResourceId: cdk.custom_resources.PhysicalResourceId.of(`UpdateCognitoConfigSecret-${cognito.clientUserPool.userPoolId}`),
       },
-      policy: cdk.custom_resources.AwsCustomResourcePolicy.fromSdkCalls({
-        resources: [secrets.cognitoConfigSecret.secretArn], // Allow access to this specific secret
-      }),
+      policy: cdk.custom_resources.AwsCustomResourcePolicy.fromStatements([
+        new iamcdk.PolicyStatement({
+          actions: ['secretsmanager:PutSecretValue', 'secretsmanager:DescribeSecret'],
+          resources: [secrets.cognitoConfigSecret.secretArn],
+          effect: iamcdk.Effect.ALLOW, // Be explicit about allowing
+        }),
+      ]),
     });
     updateCognitoConfigSecret.node.addDependency(cognito);
     updateCognitoConfigSecret.node.addDependency(secrets.cognitoConfigSecret);
