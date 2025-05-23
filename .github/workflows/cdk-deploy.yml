@@ -210,7 +210,7 @@ jobs:
           else
             echo "All required bootstrapped secrets found and are accessible."
           fi
-
+        
       - name: CDK Synth All Stacks
         working-directory: infra
         run: npx cdk synth --all --require-approval never --context environment=${{ env.CDK_ENV }} --context version=${{ env.STACK_VERSION }} --context aws-cdk:qualifier=${{ env.QUALIFIER }}

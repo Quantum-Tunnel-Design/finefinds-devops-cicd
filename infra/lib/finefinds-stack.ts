@@ -84,7 +84,10 @@ export class FineFindsStack extends cdk.Stack {
       kmsKey: kms.key,
     });
 
-    iam.ecsTaskRole.addToPolicy(secrets.taskRolePolicy);
+    // Temporarily make this conditional again for diagnostics
+    if (secrets.taskRolePolicy.resources && secrets.taskRolePolicy.resources.length > 0) {
+      iam.ecsTaskRole.addToPolicy(secrets.taskRolePolicy);
+    }
 
     // Create RDS Database
     const rds = new RdsConstruct(this, 'Rds', {
