@@ -61,5 +61,13 @@ export class SecretsConstruct extends Construct {
       ],
       resources: secretArns, // Use the filtered list
     });
+
+    // Re-add Diagnostic output
+    if (props.environment === 'dev') {
+      new cdk.CfnOutput(this, 'DebugJwtSecretArn', {
+        value: this.jwtSecret.secretFullArn || 'undefined-jwt-arn',
+        description: 'DEBUG: JWT Secret Full ARN for dev',
+      });
+    }
   }
 } 
