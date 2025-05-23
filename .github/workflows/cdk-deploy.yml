@@ -175,6 +175,42 @@ jobs:
             --context aws-cdk:asset-publishing-role-name=cdk-${{ env.QUALIFIER }}-publishing-role-${{ secrets.AWS_ACCOUNT_ID }}-${{ env.CDK_DEFAULT_REGION }} \
             --require-approval never
         
+      - name: Verify Bootstrapped Secrets
+        if: github.event_name == 'push'
+        run: |
+          cd infra
+          SECRET_BASENAMES=(
+            "redis-connection"
+            "github-token"
+            "jwt-secret"
+            "smtp-secret"
+            "cognito-config"
+            "rds-connection"
+          )
+          ALL_SECRETS_VALID=true
+
+          if [ "${{ env.CDK_ENV }}" = "prod" ]; then
+            SECRET_BASENAMES+=("opensearch-admin-password")
+          fi
+
+          for basename in "${SECRET_BASENAMES[@]}"; do
+            SECRET_NAME="finefinds-${{ env.CDK_ENV }}-${basename}"
+            echo "Verifying existence and accessibility of secret: $SECRET_NAME in region ${{ env.AWS_REGION }}"
+            if aws secretsmanager describe-secret --secret-id "$SECRET_NAME" --region "${{ env.AWS_REGION }}" > /dev/null; then
+              echo "Secret $SECRET_NAME found and is accessible."
+            else
+              echo "::error::Secret $SECRET_NAME not found or not accessible."
+              ALL_SECRETS_VALID=false
+            fi
+          done
+
+          if [ "$ALL_SECRETS_VALID" = "false" ]; then
+            echo "::error::One or more required secrets are missing or not accessible. Halting deployment."
+            exit 1
+          else
+            echo "All required bootstrapped secrets found and are accessible."
+          fi
+        
       - name: CDK Diff
         if: github.event_name == 'pull_request'
         run: |

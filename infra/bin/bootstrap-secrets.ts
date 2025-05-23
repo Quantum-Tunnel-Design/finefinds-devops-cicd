@@ -31,6 +31,11 @@ class SecretsBootstrapStack extends cdk.Stack {
     const smtpSecretName = `finefinds-${environment}-smtp-secret`;
     const cognitoSecretName = `finefinds-${environment}-cognito-config`;
     const rdsSecretName = `finefinds-${environment}-rds-connection`;
+    let opensearchSecretName: string | undefined;
+
+    if (environment === 'prod') {
+      opensearchSecretName = `finefinds-${environment}-opensearch-admin-password`;
+    }
 
     // Create or import GitHub token secret
     const githubSecret = new cr.AwsCustomResource(this, 'GitHubToken', {
@@ -286,6 +291,47 @@ class SecretsBootstrapStack extends cdk.Stack {
       })
     });
 
+    // Conditionally create OpenSearch admin password secret for prod environment
+    let opensearchSecretResource: cr.AwsCustomResource | undefined;
+    if (environment === 'prod' && opensearchSecretName) {
+      opensearchSecretResource = new cr.AwsCustomResource(this, 'OpenSearchAdminPassword', {
+        onCreate: {
+          service: 'SecretsManager',
+          action: 'createSecret',
+          parameters: {
+            Name: opensearchSecretName,
+            Description: 'OpenSearch admin password for the application (prod)',
+            SecretString: JSON.stringify({
+              password: 'placeholder-will-be-updated-manually' // Or use generateSecretString
+            })
+          },
+          physicalResourceId: cr.PhysicalResourceId.of(opensearchSecretName)
+        },
+        onUpdate: {
+          service: 'SecretsManager',
+          action: 'updateSecret',
+          parameters: {
+            SecretId: opensearchSecretName,
+            SecretString: JSON.stringify({
+              password: 'placeholder-will-be-updated-manually'
+            })
+          },
+          physicalResourceId: cr.PhysicalResourceId.of(opensearchSecretName)
+        },
+        onDelete: {
+          service: 'SecretsManager',
+          action: 'deleteSecret',
+          parameters: {
+            SecretId: opensearchSecretName,
+            ForceDeleteWithoutRecovery: true // Set to false if you want to be able to recover
+          }
+        },
+        policy: cr.AwsCustomResourcePolicy.fromSdkCalls({
+          resources: cr.AwsCustomResourcePolicy.ANY_RESOURCE // Restrict if possible
+        })
+      });
+    }
+
     // Import the secrets for reference
     const redisConnectionSecret = secretsmanager.Secret.fromSecretNameV2(this, 'ImportedRedisConnectionString', redisSecretName);
     const jwtSecretRef = secretsmanager.Secret.fromSecretNameV2(this, 'ImportedJwtSecret', jwtSecretName);
@@ -293,6 +339,11 @@ class SecretsBootstrapStack extends cdk.Stack {
     const githubSecretRef = secretsmanager.Secret.fromSecretNameV2(this, 'ImportedGitHubToken', githubSecretName);
     const cognitoSecretRef = secretsmanager.Secret.fromSecretNameV2(this, 'ImportedCognitoConfig', cognitoSecretName);
     const rdsSecretRef = secretsmanager.Secret.fromSecretNameV2(this, 'ImportedRdsSecret', rdsSecretName);
+    let opensearchSecretRef: secretsmanager.ISecret | undefined;
+
+    if (environment === 'prod' && opensearchSecretName) {
+      opensearchSecretRef = secretsmanager.Secret.fromSecretNameV2(this, 'ImportedOpenSearchAdminPassword', opensearchSecretName);
+    }
 
     // Apply RETAIN removal policy to the custom resources
     redisSecret.node.addDependency(redisConnectionSecret);
@@ -300,6 +351,9 @@ class SecretsBootstrapStack extends cdk.Stack {
     smtpSecret.node.addDependency(smtpSecretRef);
     githubSecret.node.addDependency(githubSecretRef);
     cognitoSecret.node.addDependency(cognitoSecretRef);
+    if (opensearchSecretResource && opensearchSecretRef) {
+      opensearchSecretResource.node.addDependency(opensearchSecretRef);
+    }
 
     // Output secret ARNs
     new cdk.CfnOutput(this, 'RedisSecretArn', {
@@ -331,6 +385,14 @@ class SecretsBootstrapStack extends cdk.Stack {
       description: 'Cognito configuration secret ARN',
       exportName: `finefinds-${environment}-cognito-config-arn`,
     });
+
+    if (environment === 'prod' && opensearchSecretRef) {
+      new cdk.CfnOutput(this, 'OpenSearchAdminPasswordArn', {
+        value: opensearchSecretRef.secretArn,
+        description: 'OpenSearch admin password secret ARN (prod only)',
+        exportName: `finefinds-${environment}-opensearch-admin-password-arn`,
+      });
+    }
 
     new cdk.CfnOutput(this, 'RdsSecretArn', {
       value: rdsSecretRef.secretArn,

@@ -14,10 +14,11 @@ export interface SecretsConstructProps {
 export class SecretsConstruct extends Construct {
   public readonly databaseSecret: secretsmanager.ISecret;
   public readonly redisSecret: secretsmanager.ISecret;
-  public readonly opensearchSecret: secretsmanager.ISecret;
+  public readonly opensearchSecret?: secretsmanager.ISecret;
   public readonly jwtSecret: secretsmanager.ISecret;
   public readonly smtpSecret: secretsmanager.ISecret;
   public readonly cognitoConfigSecret: secretsmanager.ISecret;
+  public readonly taskRolePolicy: iam.PolicyStatement;
 
   constructor(scope: Construct, id: string, props: SecretsConstructProps) {
     super(scope, id);
@@ -28,8 +29,10 @@ export class SecretsConstruct extends Construct {
     // Create Redis secret
     this.redisSecret = secretsmanager.Secret.fromSecretNameV2(this, 'RedisSecret', `finefinds-${props.environment}-redis-connection`);
 
-    // Create OpenSearch secret
-    this.opensearchSecret = secretsmanager.Secret.fromSecretNameV2(this, 'OpenSearchSecret', `finefinds-${props.environment}-opensearch-admin-password`);
+    // Create OpenSearch secret only for prod environment
+    if (props.environment === 'prod') {
+      this.opensearchSecret = secretsmanager.Secret.fromSecretNameV2(this, 'OpenSearchSecret', `finefinds-${props.environment}-opensearch-admin-password`);
+    }
 
     // Create JWT secret
     this.jwtSecret = secretsmanager.Secret.fromSecretNameV2(this, 'JwtSecret', `finefinds-${props.environment}-jwt-secret`);
@@ -41,19 +44,19 @@ export class SecretsConstruct extends Construct {
     this.cognitoConfigSecret = secretsmanager.Secret.fromSecretNameV2(this, 'CognitoConfigSecret', `finefinds-${props.environment}-cognito-config`);
 
     // Create IAM policy for ECS tasks to access secrets
-    const secretsPolicy = new iam.PolicyStatement({
+    this.taskRolePolicy = new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
       actions: [
         'secretsmanager:GetSecretValue',
         'secretsmanager:DescribeSecret',
       ],
       resources: [
-        this.databaseSecret.secretArn,
-        this.redisSecret.secretArn,
-        this.opensearchSecret.secretArn,
-        this.jwtSecret.secretArn,
-        this.smtpSecret.secretArn,
-        this.cognitoConfigSecret.secretArn,
+        this.databaseSecret.secretFullArn!,
+        this.redisSecret.secretFullArn!,
+        ...(this.opensearchSecret ? [this.opensearchSecret.secretFullArn!] : []),
+        this.jwtSecret.secretFullArn!,
+        this.smtpSecret.secretFullArn!,
+        this.cognitoConfigSecret.secretFullArn!,
       ],
     });
   }

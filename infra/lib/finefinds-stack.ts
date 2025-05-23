@@ -84,6 +84,8 @@ export class FineFindsStack extends cdk.Stack {
       kmsKey: kms.key,
     });
 
+    iam.ecsTaskRole.addToPolicy(secrets.taskRolePolicy);
+
     // Create RDS Database
     const rds = new RdsConstruct(this, 'Rds', {
       environment: props.config.environment,
