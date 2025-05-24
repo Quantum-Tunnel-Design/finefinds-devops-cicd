@@ -22,7 +22,7 @@ export class VpcConstruct extends Construct {
     // Create VPC with public and private subnets
     this.vpc = new ec2.Vpc(this, 'Vpc', {
       maxAzs: props.environment === 'prod' ? props.config.vpc.maxAzs : 2,
-      natGateways: props.environment === 'prod' ? props.config.vpc.natGateways : 0,
+      natGateways: props.environment === 'prod' ? props.config.vpc.natGateways : 1,
       ipAddresses: ec2.IpAddresses.cidr(props.config.vpc.cidr),
       subnetConfiguration: [
         {
