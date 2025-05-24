@@ -2,6 +2,7 @@ import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as path from 'path';
 import { Provider } from 'aws-cdk-lib/custom-resources';
 import { Construct } from 'constructs';
@@ -20,15 +21,15 @@ export class VpcConstruct extends Construct {
     const region = cdk.Stack.of(this).region;
 
     // Lambda function to fetch Cognito service names
-    const serviceNameFetcherLambda = new lambda.Function(this, 'CognitoServiceNameFetcherLambda', {
+    const serviceNameFetcherLambda = new NodejsFunction(this, 'CognitoServiceNameFetcherLambda', {
       runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'index.handler',
-      code: lambda.Code.fromAsset(path.join(__dirname, '../../lambda/vpc-helper')),
+      handler: 'handler',
+      entry: path.join(__dirname, '../../lambda/vpc-helper/index.ts'),
       timeout: cdk.Duration.seconds(30),
       initialPolicy: [
         new iam.PolicyStatement({
           actions: ['ec2:DescribeVpcEndpointServices'],
-          resources: ['*'], // describeVpcEndpointServices does not support resource-level permissions
+          resources: ['*'],
         }),
       ],
     });
