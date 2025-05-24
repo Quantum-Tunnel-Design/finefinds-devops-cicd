@@ -191,8 +191,6 @@ jobs:
           SECRET_BASENAMES=(
             "redis-connection"
             "github-token"
-            "jwt-secret"
-            "smtp-secret"
             "cognito-config"
             "rds-connection"
           )
