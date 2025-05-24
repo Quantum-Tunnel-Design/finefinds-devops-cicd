@@ -160,7 +160,7 @@ export class VpcConstruct extends Construct {
     // Add Cognito endpoints
     new ec2.InterfaceVpcEndpoint(this, 'CognitoIdpEndpoint', {
       vpc: this.vpc,
-      service: new ec2.InterfaceVpcEndpointService('cognito-idp'),
+      service: new ec2.InterfaceVpcEndpointService(`com.amazonaws.${cdk.Stack.of(this).region}.cognito-idp`),
       subnets: { subnets: privateSubnets.subnets },
       privateDnsEnabled: true,
       securityGroups: [endpointSecurityGroup],
@@ -168,7 +168,7 @@ export class VpcConstruct extends Construct {
 
     new ec2.InterfaceVpcEndpoint(this, 'CognitoIdentityEndpoint', {
       vpc: this.vpc,
-      service: new ec2.InterfaceVpcEndpointService('cognito-identity'),
+      service: new ec2.InterfaceVpcEndpointService(`com.amazonaws.${cdk.Stack.of(this).region}.cognito-identity`),
       subnets: { subnets: privateSubnets.subnets },
       privateDnsEnabled: true,
       securityGroups: [endpointSecurityGroup],
