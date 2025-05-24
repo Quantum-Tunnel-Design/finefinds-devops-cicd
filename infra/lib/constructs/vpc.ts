@@ -18,37 +18,6 @@ export class VpcConstruct extends Construct {
 
   constructor(scope: Construct, id: string, props: VpcConstructProps) {
     super(scope, id);
-    const region = cdk.Stack.of(this).region;
-
-    // Lambda function to fetch Cognito service names
-    const serviceNameFetcherLambda = new NodejsFunction(this, 'CognitoServiceNameFetcherLambda', {
-      runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'handler',
-      entry: path.join(__dirname, '../../lambda/vpc-helper/index.ts'),
-      timeout: cdk.Duration.seconds(30),
-      initialPolicy: [
-        new iam.PolicyStatement({
-          actions: ['ec2:DescribeVpcEndpointServices'],
-          resources: ['*'],
-        }),
-      ],
-    });
-
-    // Custom Resource Provider
-    const serviceNameProvider = new Provider(this, 'CognitoServiceNameProvider', {
-      onEventHandler: serviceNameFetcherLambda,
-    });
-
-    // Custom Resource to get region-specific Cognito service names
-    const cognitoServiceNames = new cdk.CustomResource(this, 'CognitoServiceNamesCustomResource', {
-      serviceToken: serviceNameProvider.serviceToken,
-      properties: {
-        Region: region, // Pass region to the Lambda
-      },
-    });
-
-    const cognitoIdpServiceName = cognitoServiceNames.getAttString('CognitoIdpServiceName');
-    const cognitoIdentityServiceName = cognitoServiceNames.getAttString('CognitoIdentityServiceName');
 
     // Create VPC with public and private subnets
     this.vpc = new ec2.Vpc(this, 'Vpc', {
@@ -113,6 +82,7 @@ export class VpcConstruct extends Construct {
       // Add tags
       cdk.Tags.of(natInstance).add('Name', `finefinds-${props.environment}-nat`);
       cdk.Tags.of(natInstance).add('Environment', props.environment);
+      cdk.Tags.of(natInstance).add('RecreateTrigger', 'nat-recreate-' + Date.now().toString());
 
       // Update route tables for private subnets to use NAT Instance
       this.vpc.privateSubnets.forEach((subnet, index) => {
