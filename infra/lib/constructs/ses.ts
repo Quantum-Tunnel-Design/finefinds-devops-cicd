@@ -91,19 +91,6 @@ export class SesConstruct extends Construct {
       emailIdentity: props.fromEmail,
     });
 
-    // Add DKIM settings
-    new ses.CfnEmailIdentityDkimAttributes(this, 'DkimAttributes', {
-      emailIdentity: props.fromEmail,
-      signingEnabled: true,
-    });
-
-    // Add MAIL FROM domain
-    new ses.CfnEmailIdentityMailFromAttributes(this, 'MailFromAttributes', {
-      emailIdentity: props.fromEmail,
-      mailFromDomain: `mail.${props.domainName}`,
-      behaviorOnMxFailure: 'USE_DEFAULT_VALUE',
-    });
-
     // Output the configuration set name
     new cdk.CfnOutput(this, 'ConfigurationSetName', {
       value: this.configurationSet.name!,
