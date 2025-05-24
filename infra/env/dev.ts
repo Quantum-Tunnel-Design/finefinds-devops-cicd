@@ -185,4 +185,22 @@ export const devConfig: BaseConfig = {
   bastion: {
     keyName: 'finefinds-dev-bastion',
   },
+  ses: {
+    fromEmail: 'noreply@dev.finefindslk.com',
+    domainName: 'dev.finefindslk.com',
+    templates: {
+      welcome: {
+        subject: 'Welcome to FineFinds!',
+        templateName: 'FineFindsDevWelcome',
+      },
+      passwordReset: {
+        subject: 'Reset Your FineFinds Password',
+        templateName: 'FineFindsDevPasswordReset',
+      },
+      emailVerification: {
+        subject: 'Verify Your FineFinds Email',
+        templateName: 'FineFindsDevEmailVerification',
+      },
+    },
+  },
 }; 

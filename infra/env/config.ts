@@ -1,7 +1,7 @@
 import { BaseConfig } from './base-config';
 import { devConfig } from './dev';
 import { qaConfig } from './qa';
-import { stagingConfig } from './uat';
+import { uatConfig } from './uat';
 import { prodConfig } from './prod';
 
 export function getConfig(environment: string): BaseConfig {
@@ -11,7 +11,7 @@ export function getConfig(environment: string): BaseConfig {
     case 'qa':
       return qaConfig;
     case 'uat':
-      return stagingConfig;
+      return uatConfig;
     case 'prod':
       return prodConfig;
     default:

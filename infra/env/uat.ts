@@ -182,4 +182,22 @@ export const uatConfig: BaseConfig = {
     billingMode: 'PAY_PER_REQUEST',
     pointInTimeRecovery: true,
   },
+  ses: {
+    fromEmail: 'noreply@uat.finefindslk.com',
+    domainName: 'uat.finefindslk.com',
+    templates: {
+      welcome: {
+        subject: 'Welcome to FineFinds (UAT)!',
+        templateName: 'FineFindsUatWelcome',
+      },
+      passwordReset: {
+        subject: 'Reset Your FineFinds Password (UAT)',
+        templateName: 'FineFindsUatPasswordReset',
+      },
+      emailVerification: {
+        subject: 'Verify Your FineFinds Email (UAT)',
+        templateName: 'FineFindsUatEmailVerification',
+      },
+    },
+  },
 }; 

@@ -34,9 +34,9 @@ export async function handler(event: CdkCustomResourceEvent, context: CdkCustomR
 
     if (response.ServiceDetails) {
       for (const service of response.ServiceDetails as ServiceDetail[]) { // Added type assertion
-        if (service.ServiceName && service.ServiceTypeDetails) { // Changed ServiceType to ServiceTypeDetails
+        if (service.ServiceName && service.ServiceType) { // Changed ServiceType to ServiceTypeDetails
           // Check if ServiceTypeDetails array contains an object with ServiceType 'Interface'
-          if (service.ServiceTypeDetails.some((st: ServiceTypeDetail) => st.ServiceType === 'Interface')) { 
+          if (service.ServiceType.some((st: ServiceTypeDetail) => st.ServiceType === 'Interface')) {
             if (service.ServiceName.endsWith('.cognito-idp')) {
               cognitoIdpServiceName = service.ServiceName;
             }

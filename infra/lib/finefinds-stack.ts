@@ -18,6 +18,7 @@ import { RdsConstruct } from './constructs/rds';
 import { MigrationTaskConstruct } from './constructs/migration-task';
 import { AmplifyConstruct } from './constructs/amplify';
 import { BastionConstruct } from './constructs/bastion';
+import { SesConstruct } from './constructs/ses';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iamcdk from 'aws-cdk-lib/aws-iam';
@@ -84,7 +85,20 @@ export class FineFindsStack extends cdk.Stack {
       kmsKey: kms.key,
     });
 
+    // Policy from SecretsConstruct grants ECS Task Role access to all its managed secrets
     iam.ecsTaskRole.addToPolicy(secrets.taskRolePolicy);
+
+    // Add SES sending permissions to ECS Task Role
+    iam.ecsTaskRole.addToPrincipalPolicy(new iamcdk.PolicyStatement({
+      actions: ['ses:SendEmail', 'ses:SendRawEmail'],
+      resources: [
+        // ARN for the SES Identity (domain)
+        `arn:aws:ses:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:identity/${props.config.ses.domainName}`,
+        // ARN for the SES Configuration Set
+        `arn:aws:ses:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:configuration-set/*`, // Using wildcard as CFN created config set name might have suffix
+      ],
+      effect: iamcdk.Effect.ALLOW,
+    }));
 
     // Create RDS Database
     const rds = new RdsConstruct(this, 'Rds', {
@@ -106,180 +120,131 @@ export class FineFindsStack extends cdk.Stack {
       vpc: vpc.vpc,
       alarmTopic,
     });
-    
-    // Import the existing Redis connection secret
-    const redisConnectionSecret = secretsmanager.Secret.fromSecretNameV2(
-      this,
-      'RedisConnectionString',
-      `finefinds-${props.config.environment}-redis-connection`
-    );
 
-    // Update the database connection secret once the RDS instance is available
+    // Create SES Construct
+    const ses = new SesConstruct(this, 'Ses', {
+      config: props.config.ses,
+      envIdentifier: props.config.environment,
+    });
+
+    // Update the database connection secret (contents of secrets.databaseSecret)
+    // This custom resource updates the placeholder secret created by SecretsConstruct
+    // with the actual connection details from the RDS instance/cluster.
+    let rdsEndpointHost: string | undefined;
+    let rdsSecretForConnectionString: secretsmanager.ISecret | undefined;
+
     if (props.config.environment === 'prod' && rds.cluster && rds.cluster.secret) {
-      // For production, use the Aurora cluster
-      const updateDbSecret = new cdk.custom_resources.AwsCustomResource(this, 'UpdateDbConnectionSecretProd', {
-        onCreate: {
-          service: 'SecretsManager',
-          action: 'putSecretValue',
-          parameters: {
-            SecretId: secrets.databaseSecret.secretName, 
-            SecretString: cdk.Lazy.string({
-              produce: () => {
-                const rdsSecret = rds.cluster!.secret!;
-                const username = rdsSecret.secretValueFromJson('username').unsafeUnwrap();
-                const password = rdsSecret.secretValueFromJson('password').unsafeUnwrap();
-
-                return JSON.stringify({
-                  dbName: 'finefinds',
-                  engine: 'postgres',
-                  host: rds.cluster?.clusterEndpoint.hostname,
-                  port: 5432,
-                  username: username,
-                  password: password,
-                  connectionString: `postgresql://${username}:${password}@${rds.cluster?.clusterEndpoint.hostname}:5432/finefinds`,
-                });
-              }
-            }),
-          },
-          physicalResourceId: cdk.custom_resources.PhysicalResourceId.of('DbFixedSecretUpdateProd-' + Date.now().toString()),
-        },
-        onUpdate: {
-          service: 'SecretsManager',
-          action: 'putSecretValue',
-          parameters: {
-            SecretId: secrets.databaseSecret.secretName, 
-            SecretString: cdk.Lazy.string({
-              produce: () => {
-                const rdsSecret = rds.cluster!.secret!;
-                const username = rdsSecret.secretValueFromJson('username').unsafeUnwrap();
-                const password = rdsSecret.secretValueFromJson('password').unsafeUnwrap();
-
-                return JSON.stringify({
-                  dbName: 'finefinds',
-                  engine: 'postgres',
-                  host: rds.cluster?.clusterEndpoint.hostname,
-                  port: 5432,
-                  username: username,
-                  password: password,
-                  connectionString: `postgresql://${username}:${password}@${rds.cluster?.clusterEndpoint.hostname}:5432/finefinds`,
-                });
-              }
-            }),
-          },
-          physicalResourceId: cdk.custom_resources.PhysicalResourceId.of('DbFixedSecretUpdateProd-' + Date.now().toString()),
-        },
-        policy: cdk.custom_resources.AwsCustomResourcePolicy.fromStatements([
-          new iamcdk.PolicyStatement({
-            actions: ['secretsmanager:PutSecretValue', 'secretsmanager:DescribeSecret'],
-            resources: [
-              `arn:aws:secretsmanager:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:secret:${secrets.databaseSecret.secretName}-*`,
-            ],
-            effect: iamcdk.Effect.ALLOW,
-          }),
-          new iamcdk.PolicyStatement({
-            actions: ['secretsmanager:GetSecretValue', 'secretsmanager:DescribeSecret'],
-            resources: [
-              rds.cluster.secret.secretArn,
-            ],
-            effect: iamcdk.Effect.ALLOW,
-          })
-        ]),
-      });
-      
-      updateDbSecret.node.addDependency(rds.cluster);
-      if (rds.cluster.secret) {
-          updateDbSecret.node.addDependency(rds.cluster.secret);
-      }
-      updateDbSecret.node.addDependency(secrets.databaseSecret);
-      
-      secrets.databaseSecret.grantWrite(updateDbSecret.grantPrincipal);
+      rdsEndpointHost = rds.cluster.clusterEndpoint.hostname;
+      rdsSecretForConnectionString = rds.cluster.secret;
     } else if (rds.instance && rds.instance.secret) {
-      // For non-production, use single instance
-      const updateDbSecret = new cdk.custom_resources.AwsCustomResource(this, 'UpdateDbConnectionSecretNonProd', {
+      rdsEndpointHost = rds.instance.instanceEndpoint.hostname;
+      rdsSecretForConnectionString = rds.instance.secret;
+    }
+
+    if (rdsEndpointHost && rdsSecretForConnectionString) {
+      const updateDbSecret = new cdk.custom_resources.AwsCustomResource(this, 'UpdateDbConnectionSecret', {
         onCreate: {
           service: 'SecretsManager',
           action: 'putSecretValue',
           parameters: {
-            SecretId: secrets.databaseSecret.secretName, 
+            SecretId: secrets.databaseSecret.secretName,
             SecretString: cdk.Lazy.string({
               produce: () => {
-                const rdsSecret = rds.instance!.secret!;
-                const username = rdsSecret.secretValueFromJson('username').unsafeUnwrap();
-                const password = rdsSecret.secretValueFromJson('password').unsafeUnwrap();
-
+                const username = rdsSecretForConnectionString!.secretValueFromJson('username').unsafeUnwrap();
+                const password = rdsSecretForConnectionString!.secretValueFromJson('password').unsafeUnwrap();
                 return JSON.stringify({
-                  dbName: 'finefinds',
+                  dbName: 'finefinds', // Or your actual DB name
                   engine: 'postgres',
-                  host: rds.instance?.instanceEndpoint.hostname,
+                  host: rdsEndpointHost,
                   port: 5432,
                   username: username,
                   password: password,
-                  connectionString: `postgresql://${username}:${password}@${rds.instance?.instanceEndpoint.hostname}:5432/finefinds`,
+                  connectionString: `postgresql://${username}:${password}@${rdsEndpointHost}:5432/finefinds`,
                 });
               }
             }),
           },
-          physicalResourceId: cdk.custom_resources.PhysicalResourceId.of('DbFixedSecretUpdateNonProd-' + Date.now().toString()),
+          physicalResourceId: cdk.custom_resources.PhysicalResourceId.of('DbFixedSecretUpdate-' + Date.now().toString()),
         },
-        onUpdate: {
+        onUpdate: { // Also update if stack updates
           service: 'SecretsManager',
           action: 'putSecretValue',
           parameters: {
-            SecretId: secrets.databaseSecret.secretName, 
+            SecretId: secrets.databaseSecret.secretName,
             SecretString: cdk.Lazy.string({
               produce: () => {
-                const rdsSecret = rds.instance!.secret!;
-                const username = rdsSecret.secretValueFromJson('username').unsafeUnwrap();
-                const password = rdsSecret.secretValueFromJson('password').unsafeUnwrap();
-
+                const username = rdsSecretForConnectionString!.secretValueFromJson('username').unsafeUnwrap();
+                const password = rdsSecretForConnectionString!.secretValueFromJson('password').unsafeUnwrap();
                 return JSON.stringify({
                   dbName: 'finefinds',
                   engine: 'postgres',
-                  host: rds.instance?.instanceEndpoint.hostname,
+                  host: rdsEndpointHost,
                   port: 5432,
                   username: username,
                   password: password,
-                  connectionString: `postgresql://${username}:${password}@${rds.instance?.instanceEndpoint.hostname}:5432/finefinds`,
+                  connectionString: `postgresql://${username}:${password}@${rdsEndpointHost}:5432/finefinds`,
                 });
               }
             }),
           },
-          physicalResourceId: cdk.custom_resources.PhysicalResourceId.of('DbFixedSecretUpdateNonProd-' + Date.now().toString()),
+          physicalResourceId: cdk.custom_resources.PhysicalResourceId.of('DbFixedSecretUpdate-' + Date.now().toString()),
         },
         policy: cdk.custom_resources.AwsCustomResourcePolicy.fromStatements([
           new iamcdk.PolicyStatement({
             actions: ['secretsmanager:PutSecretValue', 'secretsmanager:DescribeSecret'],
-            resources: [
-              `arn:aws:secretsmanager:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:secret:${secrets.databaseSecret.secretName}-*`,
-            ],
+            resources: [secrets.databaseSecret.secretArn],
             effect: iamcdk.Effect.ALLOW,
           }),
           new iamcdk.PolicyStatement({
             actions: ['secretsmanager:GetSecretValue', 'secretsmanager:DescribeSecret'],
-            resources: [
-              rds.instance.secret.secretArn, 
-            ],
+            resources: [rdsSecretForConnectionString.secretArn],
             effect: iamcdk.Effect.ALLOW,
           })
         ]),
       });
-      
-      updateDbSecret.node.addDependency(rds.instance);
-      if (rds.instance.secret) {
-          updateDbSecret.node.addDependency(rds.instance.secret);
-      }
-      updateDbSecret.node.addDependency(secrets.databaseSecret);
-      
-      secrets.databaseSecret.grantWrite(updateDbSecret.grantPrincipal);
+      // Ensure this custom resource runs after RDS and its secret are available
+      if (props.config.environment === 'prod' && rds.cluster) updateDbSecret.node.addDependency(rds.cluster);
+      if (props.config.environment !== 'prod' && rds.instance) updateDbSecret.node.addDependency(rds.instance);
+      if (rdsSecretForConnectionString) updateDbSecret.node.addDependency(rdsSecretForConnectionString);
+      updateDbSecret.node.addDependency(secrets.databaseSecret); // Depends on the placeholder secret object
     }
 
     // Create ECS Cluster and Services
-    const ecs = new EcsConstruct(this, 'Ecs', {
+    const ecsService = new EcsConstruct(this, 'Ecs', {
       environment: props.config.environment,
-      config: props.config,
+      config: props.config, 
       vpc: vpc.vpc,
       taskRole: iam.ecsTaskRole,
       executionRole: iam.ecsExecutionRole,
+      secrets: { 
+        JWT_SECRET_VALUE: cdk.aws_ecs.Secret.fromSecretsManager(secrets.jwtSecret),
+        SMTP_SECRET_VALUE: cdk.aws_ecs.Secret.fromSecretsManager(secrets.smtpSecret),
+        // If Sentry/Session secrets were defined in this stack (e.g., sentryDsnSecret, sessionSecret):
+        // SENTRY_DSN_VALUE: cdk.aws_ecs.Secret.fromSecretsManager(sentryDsnSecret!),
+        // SESSION_SECRET_VALUE: cdk.aws_ecs.Secret.fromSecretsManager(sessionSecret!),
+      },
+      additionalEnvironment: { 
+        APP_ENV: props.config.environment,
+        REGION: props.config.region,
+        DB_SECRET_NAME: secrets.databaseSecret.secretName,
+        REDIS_SECRET_NAME: secrets.redisSecret.secretName,
+        SMTP_HOST: props.config.smtp.host, 
+        SMTP_PORT: props.config.smtp.port.toString(),
+        SMTP_USER: props.config.smtp.username,
+        // SMTP_PASS_SECRET_NAME is not needed if app uses SMTP_SECRET_VALUE
+        LOG_LEVEL: props.config.environment === 'prod' ? 'info' : 'debug',
+        OPENSEARCH_ENDPOINT: props.config.opensearch.endpoint,
+        CLIENT_URL: props.config.environment === 'prod' ? 'https://finefindslk.com' : `https://${props.config.environment}.finefindslk.com`,
+        ADMIN_URL: props.config.environment === 'prod' ? 'https://admin.finefindslk.com' : `https://admin-${props.config.environment}.finefindslk.com`,
+        SES_CONFIGURATION_SET_NAME: ses.configurationSetName,
+        SES_FROM_EMAIL: props.config.ses.fromEmail,
+        SES_WELCOME_TEMPLATE_NAME: props.config.ses.templates.welcome.templateName,
+        SES_WELCOME_TEMPLATE_SUBJECT: props.config.ses.templates.welcome.subject,
+        SES_PASSWORD_RESET_TEMPLATE_NAME: props.config.ses.templates.passwordReset.templateName,
+        SES_PASSWORD_RESET_TEMPLATE_SUBJECT: props.config.ses.templates.passwordReset.subject,
+        SES_EMAIL_VERIFICATION_TEMPLATE_NAME: props.config.ses.templates.emailVerification.templateName,
+        SES_EMAIL_VERIFICATION_TEMPLATE_SUBJECT: props.config.ses.templates.emailVerification.subject,
+      },
     });
 
     // Create migration task definition
@@ -287,20 +252,21 @@ export class FineFindsStack extends cdk.Stack {
       environment: props.config.environment,
       config: props.config,
       vpc: vpc.vpc,
-      taskRole: iam.ecsTaskRole,
-      executionRole: iam.ecsExecutionRole,
+      taskRole: iam.ecsTaskRole, // Pass the main task role
+      executionRole: iam.ecsExecutionRole, // Pass the main execution role
+      dbConnectionSecret: secrets.databaseSecret, // Pass the specific DB connection secret
     });
 
     // Add dependencies to ensure proper creation order
     if (props.config.environment === 'prod' && rds.cluster) {
-      ecs.service.node.addDependency(rds.cluster);
+      ecsService.service.node.addDependency(rds.cluster);
       migrationTask.taskDefinition.node.addDependency(rds.cluster);
     } else if (rds.instance) {
-      ecs.service.node.addDependency(rds.instance);
+      ecsService.service.node.addDependency(rds.instance);
       migrationTask.taskDefinition.node.addDependency(rds.instance);
     }
-    ecs.service.node.addDependency(redisConnectionSecret);
-    migrationTask.taskDefinition.node.addDependency(redisConnectionSecret);
+    ecsService.service.node.addDependency(secrets.redisSecret);
+    migrationTask.taskDefinition.node.addDependency(secrets.databaseSecret); // Migration depends on DB secret
 
     // Output subnet IDs for migration task
     const privateSubnets = vpc.vpc.selectSubnets({
@@ -320,14 +286,12 @@ export class FineFindsStack extends cdk.Stack {
       allowAllOutbound: true,
     });
 
-    // Allow inbound access from within the VPC
     migrationSecurityGroup.addIngressRule(
       ec2.Peer.ipv4(vpc.vpc.vpcCidrBlock),
       ec2.Port.allTcp(),
       'Allow all inbound from within VPC'
     );
 
-    // Allow inbound access from the security group to the database
     if (props.config.environment === 'prod' && rds.cluster) {
       rds.cluster.connections.allowDefaultPortFrom(
         migrationSecurityGroup,
@@ -340,47 +304,44 @@ export class FineFindsStack extends cdk.Stack {
       );
     }
 
-    // Output security group ID for migration task
     new cdk.CfnOutput(this, 'MigrationTaskSecurityGroupId', {
       value: migrationSecurityGroup.securityGroupId,
       description: 'Security group ID for migration task',
       exportName: `finefinds-${props.config.environment}-migration-task-sg-id`,
     });
 
-    // Configure database security groups to allow access from ECS services
     if (props.config.environment === 'prod' && rds.cluster) {
-      // For production with Aurora cluster
       rds.cluster.connections.allowDefaultPortFrom(
-        ecs.service, 
+        ecsService.service, 
         'Allow access from ECS service'
       );
     } else if (rds.instance) {
-      // For non-production with single instance
       rds.instance.connections.allowDefaultPortFrom(
-        ecs.service,
+        ecsService.service,
         'Allow access from ECS service'
       );
     }
 
-    // Create Cognito User Pools
     const cognito = new CognitoConstruct(this, 'Cognito', {
       environment: props.config.environment,
       config: props.config,
     });
-
+    
     // Custom Resource to populate the Cognito Config Secret
-    const cognitoSecretJson = {
+    const cognitoSecretJson: { [key: string]: string } = {
       clientUserPoolId: cognito.clientUserPool.userPoolId,
       clientUserPoolClientId: cognito.clientUserPoolClient.userPoolClientId,
       adminUserPoolId: cognito.adminUserPool.userPoolId,
       adminUserPoolClientId: cognito.adminUserPoolClient.userPoolClientId,
-      ...(props.config.environment === 'prod' && cognito.clientUserPoolClient.userPoolClientSecret && {
-        clientUserPoolClientSecret: cognito.clientUserPoolClient.userPoolClientSecret.unsafeUnwrap(),
-      }),
-      ...(props.config.environment === 'prod' && cognito.adminUserPoolClient.userPoolClientSecret && {
-        adminUserPoolClientSecret: cognito.adminUserPoolClient.userPoolClientSecret.unsafeUnwrap(),
-      }),
     };
+
+    if (props.config.environment === 'prod') {
+      // Only access userPoolClientSecret if we are in prod, where generateSecret is true
+      // The UserPoolClient construct in cognito.ts sets generateSecret based on isProd.
+      // So, these secrets should exist and be resolvable in prod.
+      cognitoSecretJson.clientUserPoolClientSecret = cognito.clientUserPoolClient.userPoolClientSecret!.unsafeUnwrap();
+      cognitoSecretJson.adminUserPoolClientSecret = cognito.adminUserPoolClient.userPoolClientSecret!.unsafeUnwrap();
+    }
 
     const updateCognitoConfigSecret = new cdk.custom_resources.AwsCustomResource(this, 'UpdateCognitoConfigSecret', {
       onCreate: {
@@ -404,122 +365,98 @@ export class FineFindsStack extends cdk.Stack {
       policy: cdk.custom_resources.AwsCustomResourcePolicy.fromStatements([
         new iamcdk.PolicyStatement({
           actions: ['secretsmanager:PutSecretValue', 'secretsmanager:DescribeSecret'],
-          resources: [
-            `arn:aws:secretsmanager:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:secret:${secrets.cognitoConfigSecret.secretName}-*`,
-          ],
+          resources: [secrets.cognitoConfigSecret.secretArn],
           effect: iamcdk.Effect.ALLOW, 
         }),
       ]),
     });
-    secrets.cognitoConfigSecret.grantWrite(updateCognitoConfigSecret.grantPrincipal);
+    updateCognitoConfigSecret.node.addDependency(cognito); // Depends on cognito resources
+    updateCognitoConfigSecret.node.addDependency(secrets.cognitoConfigSecret); // Depends on the placeholder secret object
 
-    updateCognitoConfigSecret.node.addDependency(cognito);
-    updateCognitoConfigSecret.node.addDependency(secrets.cognitoConfigSecret);
-
-    // Create Monitoring Resources
     const monitoring = new MonitoringConstruct(this, 'Monitoring', {
       environment: props.config.environment,
       config: props.config,
-      ecsCluster: ecs.cluster,
+      ecsCluster: ecsService.cluster,
       alarmTopic,
     });
 
-    // Create CloudFront Resources
+    const uploadsBucket = new cdk.aws_s3.Bucket(this, 'UploadsBucket', {
+      bucketName: `finefinds-${props.config.environment}-uploads`,
+      versioned: props.config.s3.versioned,
+      encryption: cdk.aws_s3.BucketEncryption.S3_MANAGED,
+      blockPublicAccess: cdk.aws_s3.BlockPublicAccess.BLOCK_ALL,
+      removalPolicy: props.config.environment === 'prod' 
+        ? cdk.RemovalPolicy.RETAIN 
+        : cdk.RemovalPolicy.DESTROY,
+    });
+
     const cloudfront = new CloudFrontConstruct(this, 'CloudFront', {
       environment: props.config.environment,
       config: props.config,
-      loadBalancer: ecs.loadBalancer,
-      uploadsBucket: new cdk.aws_s3.Bucket(this, 'UploadsBucket', {
-        bucketName: `finefinds-${props.config.environment}-uploads`,
-        versioned: props.config.s3.versioned,
-        encryption: cdk.aws_s3.BucketEncryption.S3_MANAGED,
-        blockPublicAccess: cdk.aws_s3.BlockPublicAccess.BLOCK_ALL,
-        removalPolicy: props.config.environment === 'prod' 
-          ? cdk.RemovalPolicy.RETAIN 
-          : cdk.RemovalPolicy.DESTROY,
-      }),
+      loadBalancer: ecsService.loadBalancer,
+      uploadsBucket: uploadsBucket,
     });
 
-    // Output CloudFront distribution domain name for manual DNS configuration in Dreamhost
     new cdk.CfnOutput(this, 'CloudFrontDomainName', {
       value: cloudfront.distribution.distributionDomainName,
       description: 'CloudFront distribution domain name for Dreamhost DNS configuration',
       exportName: `finefinds-${props.config.environment}-cf-domain-name`,
     });
 
-    // Output load balancer DNS name for manual DNS configuration in Dreamhost
     new cdk.CfnOutput(this, 'LoadBalancerDnsName', {
-      value: ecs.loadBalancer.loadBalancerDnsName,
+      value: ecsService.loadBalancer.loadBalancerDnsName,
       description: 'Load Balancer DNS name for Dreamhost DNS configuration',
       exportName: `finefinds-${props.config.environment}-lb-dns-name`,
     });
 
-    // Create Backup Resources (only for production)
     if (props.config.environment === 'prod') {
-      const backup = new BackupConstruct(this, 'Backup', {
+      new BackupConstruct(this, 'Backup', {
         environment: props.config.environment,
         config: props.config,
       });
-    }
-
-    // Create WAF Resources (only for production)
-    if (props.config.environment === 'prod') {
-      const waf = new WafConstruct(this, 'Waf', {
+      new WafConstruct(this, 'Waf', {
         environment: props.config.environment,
         config: props.config,
-        loadBalancer: ecs.loadBalancer,
+        loadBalancer: ecsService.loadBalancer,
       });
     }
 
-    // Create DynamoDB tables if needed
     if (props.config.environment === 'prod' || props.config.environment === 'uat') {
-      const dynamodb = new DynamoDBConstruct(this, 'DynamoDB', {
+      new DynamoDBConstruct(this, 'DynamoDB', {
         environment: props.config.environment,
         config: props.config,
         kmsKey: kms.key,
       });
     }
 
-    // Create Amplify apps for frontend applications
-    const amplify = new AmplifyConstruct(this, 'Amplify', {
+    new AmplifyConstruct(this, 'Amplify', {
       environment: props.config.environment,
       config: props.config,
     });
 
-    // Create bastion host for non-production environments
     if (['dev', 'sandbox', 'qa', 'uat'].includes(props.config.environment)) {
       const bastion = new BastionConstruct(this, 'Bastion', {
         environment: props.config.environment,
         config: props.config,
         vpc: vpc.vpc,
       });
-
-      // Allow bastion host to access the database
       if (props.config.environment === 'prod' && rds.cluster) {
-        rds.cluster.connections.allowDefaultPortFrom(
-          bastion.securityGroup,
-          'Allow access from bastion host'
-        );
+        rds.cluster.connections.allowDefaultPortFrom(bastion.securityGroup, 'Allow access from bastion host');
       } else if (rds.instance) {
-        rds.instance.connections.allowDefaultPortFrom(
-          bastion.securityGroup,
-          'Allow access from bastion host'
-        );
+        rds.instance.connections.allowDefaultPortFrom(bastion.securityGroup, 'Allow access from bastion host');
       }
     }
 
-    // Add tags to all resources
     cdk.Tags.of(this).add('Environment', props.config.environment);
     cdk.Tags.of(this).add('Project', 'finefinds');
     cdk.Tags.of(this).add('ManagedBy', 'CDK');
     
-    // Add auto-shutdown for non-production environments
     if (['dev', 'sandbox', 'qa'].includes(props.config.environment)) {
-      const autoShutdown = new AutoShutdownConstruct(this, 'AutoShutdown', {
+      new AutoShutdownConstruct(this, 'AutoShutdown', {
         environment: props.config.environment,
         config: props.config,
-        cluster: ecs.cluster,
-        service: ecs.service,
+        cluster: ecsService.cluster,
+        service: ecsService.service,
       });
     }
   }

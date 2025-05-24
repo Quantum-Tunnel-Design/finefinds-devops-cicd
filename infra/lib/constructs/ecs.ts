@@ -16,6 +16,7 @@ export interface EcsConstructProps {
   taskRole?: iam.IRole;
   executionRole?: iam.IRole;
   secrets?: { [key: string]: ecs.Secret };
+  additionalEnvironment?: { [key: string]: string };
 }
 
 export class EcsConstruct extends Construct {
@@ -92,6 +93,7 @@ export class EcsConstruct extends Construct {
       environment: {
         NODE_ENV: props.environment,
         PORT: props.config.ecs.containerPort.toString(),
+        ...props.additionalEnvironment,
       },
       secrets: {
         ...props.secrets,

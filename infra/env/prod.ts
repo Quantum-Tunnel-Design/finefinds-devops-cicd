@@ -182,4 +182,22 @@ export const prodConfig: BaseConfig = {
     billingMode: 'PAY_PER_REQUEST',
     pointInTimeRecovery: true,
   },
+  ses: {
+    fromEmail: 'noreply@finefindslk.com',
+    domainName: 'finefindslk.com',
+    templates: {
+      welcome: {
+        subject: 'Welcome to FineFinds!',
+        templateName: 'FineFindsProdWelcome',
+      },
+      passwordReset: {
+        subject: 'Reset Your FineFinds Password',
+        templateName: 'FineFindsProdPasswordReset',
+      },
+      emailVerification: {
+        subject: 'Verify Your FineFinds Email',
+        templateName: 'FineFindsProdEmailVerification',
+      },
+    },
+  },
 }; 

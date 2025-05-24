@@ -182,4 +182,22 @@ export const qaConfig: BaseConfig = {
     billingMode: 'PAY_PER_REQUEST',
     pointInTimeRecovery: true,
   },
+  ses: {
+    fromEmail: 'noreply@qa.finefindslk.com',
+    domainName: 'qa.finefindslk.com',
+    templates: {
+      welcome: {
+        subject: 'Welcome to FineFinds (QA)!',
+        templateName: 'FineFindsQaWelcome',
+      },
+      passwordReset: {
+        subject: 'Reset Your FineFinds Password (QA)',
+        templateName: 'FineFindsQaPasswordReset',
+      },
+      emailVerification: {
+        subject: 'Verify Your FineFinds Email (QA)',
+        templateName: 'FineFindsQaEmailVerification',
+      },
+    },
+  },
 }; 
