@@ -1,7 +1,9 @@
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import * as cr from 'aws-cdk-lib/custom-resources';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as path from 'path';
+import { Provider } from 'aws-cdk-lib/custom-resources';
 import { Construct } from 'constructs';
 import { BaseConfig } from '../../env/base-config';
 
@@ -17,47 +19,35 @@ export class VpcConstruct extends Construct {
     super(scope, id);
     const region = cdk.Stack.of(this).region;
 
-    // Custom Resource to get region-specific Cognito service names
-    const cognitoServiceNameFetcher = new cr.AwsCustomResource(this, 'CognitoServiceNameFetcher', {
-      onCreate: {
-        service: 'EC2',
-        action: 'describeVpcEndpointServices',
-        parameters: {
-          Filters: [
-            { Name: 'service-name', Values: [`com.amazonaws.${region}.cognito-idp`, `com.amazonaws.${region}.cognito-identity`] }
-          ]
-        },
-        physicalResourceId: cr.PhysicalResourceId.of('CognitoServiceNameFetcher-' + region),
-      },
-      onUpdate: { // Ensure it runs on updates too, though service names rarely change
-        service: 'EC2',
-        action: 'describeVpcEndpointServices',
-        parameters: {
-          Filters: [
-            { Name: 'service-name', Values: [`com.amazonaws.${region}.cognito-idp`, `com.amazonaws.${region}.cognito-identity`] }
-          ]
-        },
-      },
-      policy: cr.AwsCustomResourcePolicy.fromStatements([
+    // Lambda function to fetch Cognito service names
+    const serviceNameFetcherLambda = new lambda.Function(this, 'CognitoServiceNameFetcherLambda', {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      handler: 'index.handler',
+      code: lambda.Code.fromAsset(path.join(__dirname, '../../lambda/vpc-helper')),
+      timeout: cdk.Duration.seconds(30),
+      initialPolicy: [
         new iam.PolicyStatement({
           actions: ['ec2:DescribeVpcEndpointServices'],
           resources: ['*'], // describeVpcEndpointServices does not support resource-level permissions
         }),
-      ]),
-      installLatestAwsSdk: true, // Use the latest SDK for potentially newer service names
+      ],
     });
 
-    // Extract the service names from the custom resource response
-    // The response structure for describeVpcEndpointServices is an array of ServiceDetails.
-    // We need to find the one for cognito-idp and cognito-identity.
-    // This is a simplified way; a more robust way might involve looping or more specific filtering if many services match.
-    const cognitoIdpServiceName = cognitoServiceNameFetcher.getResponseField('ServiceDetails.0.ServiceName');
-    const cognitoIdentityServiceName = cognitoServiceNameFetcher.getResponseField('ServiceDetails.1.ServiceName');
-    // Note: The order (0 or 1) depends on the filter results. This needs to be made more robust if the order isn't guaranteed.
-    // A safer way is to ensure filter returns them in a specific order or iterate in the lambda if this was a lambda-backed CR.
-    // For now, assuming the filter `com.amazonaws.${region}.cognito-idp` would be the first if found, then `cognito-identity`.
-    // This assumption is weak. A better CR would fetch all and then use a custom lambda to find and return specific ones.
-    // However, if Values filter works as expected and returns only these two, this might be okay if one always comes first.
+    // Custom Resource Provider
+    const serviceNameProvider = new Provider(this, 'CognitoServiceNameProvider', {
+      onEventHandler: serviceNameFetcherLambda,
+    });
+
+    // Custom Resource to get region-specific Cognito service names
+    const cognitoServiceNames = new cdk.CustomResource(this, 'CognitoServiceNamesCustomResource', {
+      serviceToken: serviceNameProvider.serviceToken,
+      properties: {
+        Region: region, // Pass region to the Lambda
+      },
+    });
+
+    const cognitoIdpServiceName = cognitoServiceNames.getAttString('CognitoIdpServiceName');
+    const cognitoIdentityServiceName = cognitoServiceNames.getAttString('CognitoIdentityServiceName');
 
     // Create VPC with public and private subnets
     this.vpc = new ec2.Vpc(this, 'Vpc', {
