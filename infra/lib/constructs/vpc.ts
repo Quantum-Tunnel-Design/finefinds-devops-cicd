@@ -157,6 +157,23 @@ export class VpcConstruct extends Construct {
       });
     });
 
+    // Add Cognito endpoints
+    new ec2.InterfaceVpcEndpoint(this, 'CognitoIdpEndpoint', {
+      vpc: this.vpc,
+      service: new ec2.InterfaceVpcEndpointService('cognito-idp'),
+      subnets: { subnets: privateSubnets.subnets },
+      privateDnsEnabled: true,
+      securityGroups: [endpointSecurityGroup],
+    });
+
+    new ec2.InterfaceVpcEndpoint(this, 'CognitoIdentityEndpoint', {
+      vpc: this.vpc,
+      service: new ec2.InterfaceVpcEndpointService('cognito-identity'),
+      subnets: { subnets: privateSubnets.subnets },
+      privateDnsEnabled: true,
+      securityGroups: [endpointSecurityGroup],
+    });
+
     // Add RDS endpoint only if in prod
     if (props.environment === 'prod') {
       new ec2.InterfaceVpcEndpoint(this, 'RdsEndpoint', {
