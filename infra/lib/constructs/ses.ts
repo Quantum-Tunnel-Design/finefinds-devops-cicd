@@ -39,9 +39,6 @@ export class SesConstruct extends Construct {
       suppressionOptions: {
         suppressedReasons: ['BOUNCE', 'COMPLAINT'],
       },
-      trackingOptions: {
-        customRedirectDomain: `tracking.${props.config.domainName}`,
-      },
     });
 
     this.configurationSetName = configurationSet.name!;
