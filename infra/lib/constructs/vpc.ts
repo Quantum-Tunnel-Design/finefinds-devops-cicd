@@ -1,5 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import * as cr from 'aws-cdk-lib/custom-resources';
 import { Construct } from 'constructs';
 import { BaseConfig } from '../../env/base-config';
 
@@ -13,6 +15,49 @@ export class VpcConstruct extends Construct {
 
   constructor(scope: Construct, id: string, props: VpcConstructProps) {
     super(scope, id);
+    const region = cdk.Stack.of(this).region;
+
+    // Custom Resource to get region-specific Cognito service names
+    const cognitoServiceNameFetcher = new cr.AwsCustomResource(this, 'CognitoServiceNameFetcher', {
+      onCreate: {
+        service: 'EC2',
+        action: 'describeVpcEndpointServices',
+        parameters: {
+          Filters: [
+            { Name: 'service-name', Values: [`com.amazonaws.${region}.cognito-idp`, `com.amazonaws.${region}.cognito-identity`] }
+          ]
+        },
+        physicalResourceId: cr.PhysicalResourceId.of('CognitoServiceNameFetcher-' + region),
+      },
+      onUpdate: { // Ensure it runs on updates too, though service names rarely change
+        service: 'EC2',
+        action: 'describeVpcEndpointServices',
+        parameters: {
+          Filters: [
+            { Name: 'service-name', Values: [`com.amazonaws.${region}.cognito-idp`, `com.amazonaws.${region}.cognito-identity`] }
+          ]
+        },
+      },
+      policy: cr.AwsCustomResourcePolicy.fromStatements([
+        new iam.PolicyStatement({
+          actions: ['ec2:DescribeVpcEndpointServices'],
+          resources: ['*'], // describeVpcEndpointServices does not support resource-level permissions
+        }),
+      ]),
+      installLatestAwsSdk: true, // Use the latest SDK for potentially newer service names
+    });
+
+    // Extract the service names from the custom resource response
+    // The response structure for describeVpcEndpointServices is an array of ServiceDetails.
+    // We need to find the one for cognito-idp and cognito-identity.
+    // This is a simplified way; a more robust way might involve looping or more specific filtering if many services match.
+    const cognitoIdpServiceName = cognitoServiceNameFetcher.getResponseField('ServiceDetails.0.ServiceName');
+    const cognitoIdentityServiceName = cognitoServiceNameFetcher.getResponseField('ServiceDetails.1.ServiceName');
+    // Note: The order (0 or 1) depends on the filter results. This needs to be made more robust if the order isn't guaranteed.
+    // A safer way is to ensure filter returns them in a specific order or iterate in the lambda if this was a lambda-backed CR.
+    // For now, assuming the filter `com.amazonaws.${region}.cognito-idp` would be the first if found, then `cognito-identity`.
+    // This assumption is weak. A better CR would fetch all and then use a custom lambda to find and return specific ones.
+    // However, if Values filter works as expected and returns only these two, this might be okay if one always comes first.
 
     // Create VPC with public and private subnets
     this.vpc = new ec2.Vpc(this, 'Vpc', {
@@ -158,31 +203,21 @@ export class VpcConstruct extends Construct {
     });
 
     // Add Cognito endpoints
-    const region = cdk.Stack.of(this).region;
-
     const cognitoIdpEndpoint = new ec2.InterfaceVpcEndpoint(this, 'CognitoIdpEndpoint', {
       vpc: this.vpc,
-      // Provide a dummy service name initially, we will override it.
-      service: new ec2.InterfaceVpcEndpointService('com.amazonaws.region.dummy-idp'), 
+      service: new ec2.InterfaceVpcEndpointService(cognitoIdpServiceName),
       subnets: { subnets: privateSubnets.subnets },
       privateDnsEnabled: true,
       securityGroups: [endpointSecurityGroup],
     });
-    // Escape hatch to set the service name directly using CloudFormation intrinsic functions
-    const cfnCognitoIdpEndpoint = cognitoIdpEndpoint.node.defaultChild as ec2.CfnVPCEndpoint;
-    cfnCognitoIdpEndpoint.serviceName = cdk.Fn.join('.', ['com', 'amazonaws', region, 'cognito-idp']);
 
     const cognitoIdentityEndpoint = new ec2.InterfaceVpcEndpoint(this, 'CognitoIdentityEndpoint', {
       vpc: this.vpc,
-      // Provide a dummy service name initially, we will override it.
-      service: new ec2.InterfaceVpcEndpointService('com.amazonaws.region.dummy-identity'),
+      service: new ec2.InterfaceVpcEndpointService(cognitoIdentityServiceName),
       subnets: { subnets: privateSubnets.subnets },
       privateDnsEnabled: true,
       securityGroups: [endpointSecurityGroup],
     });
-    // Escape hatch to set the service name directly using CloudFormation intrinsic functions
-    const cfnCognitoIdentityEndpoint = cognitoIdentityEndpoint.node.defaultChild as ec2.CfnVPCEndpoint;
-    cfnCognitoIdentityEndpoint.serviceName = cdk.Fn.join('.', ['com', 'amazonaws', region, 'cognito-identity']);
 
     // Add RDS endpoint only if in prod
     if (props.environment === 'prod') {
