@@ -193,23 +193,6 @@ export class VpcConstruct extends Construct {
       });
     });
 
-    // Add Cognito endpoints
-    const cognitoIdpEndpoint = new ec2.InterfaceVpcEndpoint(this, 'CognitoIdpEndpoint', {
-      vpc: this.vpc,
-      service: new ec2.InterfaceVpcEndpointService(cognitoIdpServiceName),
-      subnets: { subnets: privateSubnets.subnets },
-      privateDnsEnabled: true,
-      securityGroups: [endpointSecurityGroup],
-    });
-
-    const cognitoIdentityEndpoint = new ec2.InterfaceVpcEndpoint(this, 'CognitoIdentityEndpoint', {
-      vpc: this.vpc,
-      service: new ec2.InterfaceVpcEndpointService(cognitoIdentityServiceName),
-      subnets: { subnets: privateSubnets.subnets },
-      privateDnsEnabled: true,
-      securityGroups: [endpointSecurityGroup],
-    });
-
     // Add RDS endpoint only if in prod
     if (props.environment === 'prod') {
       new ec2.InterfaceVpcEndpoint(this, 'RdsEndpoint', {
