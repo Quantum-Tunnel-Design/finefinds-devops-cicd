@@ -125,6 +125,48 @@ export class IamConstruct extends Construct {
       })
     );
 
+    // Add SES permissions for ECS Task Role
+    this.ecsTaskRole.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'ses:SendEmail',
+          'ses:SendRawEmail',
+          'ses:SendTemplatedEmail',
+          'ses:SendBulkTemplatedEmail',
+          'ses:GetTemplate',
+          'ses:ListTemplates',
+          'ses:CreateTemplate',
+          'ses:UpdateTemplate',
+          'ses:DeleteTemplate',
+          'ses:GetIdentityVerificationAttributes',
+          'ses:GetSendQuota',
+          'ses:GetSendStatistics',
+          'ses:ListIdentities',
+          'ses:ListVerifiedEmailAddresses',
+          'ses:VerifyEmailIdentity',
+          'ses:DeleteIdentity',
+          'ses:SetIdentityDkimEnabled',
+          'ses:SetIdentityFeedbackForwardingEnabled',
+          'ses:SetIdentityNotificationTopic',
+          'ses:SetIdentityHeadersInNotificationsEnabled',
+          'ses:SetIdentityMailFromDomain',
+          'ses:GetIdentityDkimAttributes',
+          'ses:GetIdentityMailFromDomainAttributes',
+          'ses:GetIdentityNotificationAttributes',
+          'ses:GetIdentityPolicies',
+          'ses:PutIdentityPolicy',
+          'ses:DeleteIdentityPolicy',
+          'ses:ListIdentityPolicies'
+        ],
+        resources: [
+          `arn:aws:ses:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:identity/*`,
+          `arn:aws:ses:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:template/*`,
+          `arn:aws:ses:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:configuration-set/*`
+        ],
+      })
+    );
+
     // Add specific ECR permissions with explicit cross-account access
     this.ecsTaskRole.addToPolicy(
       new iam.PolicyStatement({
