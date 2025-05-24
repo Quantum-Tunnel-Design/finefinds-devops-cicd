@@ -28,6 +28,42 @@ export const devConfig: BaseConfig = {
   monitoring: {
     alarmEmail: 'devops@finefindslk.com',
     slackChannel: '#devops-alerts',
+    dashboard: {
+      name: 'finefinds-dev-dashboard',
+      description: 'FineFinds Dev Environment Dashboard',
+    },
+    alarms: {
+      cpuUtilization: {
+        threshold: 80,
+        evaluationPeriods: 2,
+        period: 300,
+      },
+      memoryUtilization: {
+        threshold: 80,
+        evaluationPeriods: 2,
+        period: 300,
+      },
+      diskUtilization: {
+        threshold: 80,
+        evaluationPeriods: 2,
+        period: 300,
+      },
+      requestCount: {
+        threshold: 1000,
+        evaluationPeriods: 2,
+        period: 300,
+      },
+      errorRate: {
+        threshold: 5,
+        evaluationPeriods: 2,
+        period: 300,
+      },
+      latency: {
+        threshold: 5000,
+        evaluationPeriods: 2,
+        period: 300,
+      },
+    },
   },
   s3: {
     versioned: true,
@@ -121,6 +157,20 @@ export const devConfig: BaseConfig = {
     weeklyRetention: 4,
     monthlyRetention: 3,
     yearlyRetention: 1,
+    vault: {
+      name: 'finefinds-dev-vault',
+      description: 'FineFinds Dev Environment Backup Vault',
+    },
+    plan: {
+      name: 'finefinds-dev-plan',
+      description: 'FineFinds Dev Environment Backup Plan',
+    },
+    schedule: {
+      name: 'finefinds-dev-schedule',
+      description: 'FineFinds Dev Environment Backup Schedule',
+      startWindow: 60,
+      completionWindow: 120,
+    },
   },
   tags: {
     Environment: 'dev',
@@ -129,6 +179,22 @@ export const devConfig: BaseConfig = {
   },
   cloudfront: {
     allowedCountries: ['US', 'CA', 'GB', 'AU', 'NZ'],
+    priceClass: 'PriceClass_100',
+    viewerProtocolPolicy: 'redirect-to-https',
+    allowedMethods: ['GET', 'HEAD', 'OPTIONS'],
+    cachedMethods: ['GET', 'HEAD', 'OPTIONS'],
+    compress: true,
+    defaultTtl: 86400,
+    minTtl: 0,
+    maxTtl: 31536000,
+    forwardCookies: ['session'],
+    forwardHeaders: ['Authorization'],
+    forwardQueryStrings: true,
+    viewerCertificate: {
+      acmCertificateArn: '',
+      sslSupportMethod: 'sni-only',
+      minimumProtocolVersion: 'TLSv1.2_2021',
+    },
   },
   smtp: {
     host: 'smtp.gmail.com',
@@ -184,5 +250,14 @@ export const devConfig: BaseConfig = {
   },
   bastion: {
     keyName: 'finefinds-dev-bastion',
+  },
+  ses: {
+    domainName: 'dev.finefinds.com',
+    fromEmail: 'noreply@dev.finefinds.com',
+    templates: {
+      welcome: 'finefinds-dev-welcome-template',
+      passwordReset: 'finefinds-dev-password-reset-template',
+      emailVerification: 'finefinds-dev-email-verification-template',
+    },
   },
 }; 

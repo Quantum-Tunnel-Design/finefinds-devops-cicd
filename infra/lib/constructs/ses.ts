@@ -6,8 +6,15 @@ import { Construct } from 'constructs';
 
 export interface SesConstructProps {
   environment: string;
-  domainName: string;
-  fromEmail: string;
+  ses: {
+    domainName: string;
+    fromEmail: string;
+    templates: {
+      welcome: string;
+      passwordReset: string;
+      emailVerification: string;
+    };
+  };
 }
 
 export class SesConstruct extends Construct {
@@ -45,7 +52,7 @@ export class SesConstruct extends Construct {
         sendingEnabled: true,
       },
       trackingOptions: {
-        customRedirectDomain: props.domainName,
+        customRedirectDomain: props.ses.domainName,
       },
     });
 
@@ -88,7 +95,7 @@ export class SesConstruct extends Construct {
 
     // Create email identity
     const emailIdentity = new ses.CfnEmailIdentity(this, 'EmailIdentity', {
-      emailIdentity: props.fromEmail,
+      emailIdentity: props.ses.fromEmail,
     });
 
     // Output the configuration set name

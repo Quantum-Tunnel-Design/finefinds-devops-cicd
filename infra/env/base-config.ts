@@ -26,6 +26,42 @@ export interface BaseConfig {
   monitoring: {
     alarmEmail: string;
     slackChannel: string;
+    dashboard: {
+      name: string;
+      description: string;
+    };
+    alarms: {
+      cpuUtilization: {
+        threshold: number;
+        evaluationPeriods: number;
+        period: number;
+      };
+      memoryUtilization: {
+        threshold: number;
+        evaluationPeriods: number;
+        period: number;
+      };
+      diskUtilization: {
+        threshold: number;
+        evaluationPeriods: number;
+        period: number;
+      };
+      requestCount: {
+        threshold: number;
+        evaluationPeriods: number;
+        period: number;
+      };
+      errorRate: {
+        threshold: number;
+        evaluationPeriods: number;
+        period: number;
+      };
+      latency: {
+        threshold: number;
+        evaluationPeriods: number;
+        period: number;
+      };
+    };
   };
   s3: {
     versioned: boolean;
@@ -89,12 +125,42 @@ export interface BaseConfig {
     weeklyRetention: number;
     monthlyRetention: number;
     yearlyRetention: number;
+    vault: {
+      name: string;
+      description: string;
+    };
+    plan: {
+      name: string;
+      description: string;
+    };
+    schedule: {
+      name: string;
+      description: string;
+      startWindow: number;
+      completionWindow: number;
+    };
   };
   tags: {
     [key: string]: string;
   };
   cloudfront: {
     allowedCountries: string[];
+    priceClass: string;
+    viewerProtocolPolicy: string;
+    allowedMethods: string[];
+    cachedMethods: string[];
+    compress: boolean;
+    defaultTtl: number;
+    minTtl: number;
+    maxTtl: number;
+    forwardCookies: string[];
+    forwardHeaders: string[];
+    forwardQueryStrings: boolean;
+    viewerCertificate: {
+      acmCertificateArn: string;
+      sslSupportMethod: string;
+      minimumProtocolVersion: string;
+    };
   };
   smtp: {
     host: string;
@@ -146,8 +212,8 @@ export interface BaseConfig {
     keyName?: string;
   };
   ses: {
-    fromEmail: string;
     domainName: string;
+    fromEmail: string;
     templates: {
       welcome: string;
       passwordReset: string;

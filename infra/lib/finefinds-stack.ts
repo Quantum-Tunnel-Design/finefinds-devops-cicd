@@ -277,8 +277,7 @@ export class FineFindsStack extends cdk.Stack {
     // Create SES configuration
     const ses = new SesConstruct(this, 'Ses', {
       environment: props.config.environment,
-      domainName: props.config.ses.domainName,
-      fromEmail: props.config.ses.fromEmail,
+      ses: props.config.ses,
     });
 
     // Create ECS Cluster and Services
