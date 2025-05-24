@@ -22,7 +22,7 @@ export class VpcConstruct extends Construct {
     // Create VPC with public and private subnets
     this.vpc = new ec2.Vpc(this, 'Vpc', {
       maxAzs: props.environment === 'prod' ? props.config.vpc.maxAzs : 2,
-      natGateways: props.environment === 'prod' ? props.config.vpc.natGateways : 0, // Only use NAT Gateways in prod
+      natGateways: props.environment === 'prod' ? props.config.vpc.natGateways : 1,
       ipAddresses: ec2.IpAddresses.cidr(props.config.vpc.cidr),
       subnetConfiguration: [
         {
@@ -40,60 +40,6 @@ export class VpcConstruct extends Construct {
       enableDnsHostnames: true,
       enableDnsSupport: true,
     });
-
-    // For non-prod environments, create a NAT Instance instead of using NAT Gateway
-    if (props.environment !== 'prod') {
-      // Create security group for NAT Instance
-      const natSecurityGroup = new ec2.SecurityGroup(this, 'NatSecurityGroup', {
-        vpc: this.vpc,
-        description: 'Security group for NAT Instance',
-        allowAllOutbound: true,
-      });
-
-      // Allow inbound traffic from private subnets
-      natSecurityGroup.addIngressRule(
-        ec2.Peer.ipv4(this.vpc.vpcCidrBlock),
-        ec2.Port.allTraffic(),
-        'Allow all inbound from VPC'
-      );
-
-      // Create NAT Instance
-      const natInstance = new ec2.Instance(this, 'NatInstance', {
-        vpc: this.vpc,
-        vpcSubnets: {
-          subnetType: ec2.SubnetType.PUBLIC,
-        },
-        instanceType: ec2.InstanceType.of(
-          ec2.InstanceClass.T3,
-          ec2.InstanceSize.NANO
-        ),
-        machineImage: ec2.MachineImage.latestAmazonLinux2023(),
-        securityGroup: natSecurityGroup,
-        sourceDestCheck: false, // Required for NAT
-        userData: ec2.UserData.forLinux(),
-      });
-
-      // Add NAT configuration to user data
-      natInstance.userData.addCommands(
-        'sysctl -w net.ipv4.ip_forward=1',
-        '/sbin/iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE'
-      );
-
-      // Add tags
-      cdk.Tags.of(natInstance).add('Name', `finefinds-${props.environment}-nat`);
-      cdk.Tags.of(natInstance).add('Environment', props.environment);
-      cdk.Tags.of(natInstance).add('RecreateTrigger', 'nat-recreate-' + Date.now().toString());
-
-      // Update route tables for private subnets to use NAT Instance
-      this.vpc.privateSubnets.forEach((subnet, index) => {
-        const routeTable = subnet.routeTable;
-        new ec2.CfnRoute(this, `NatRoute${index}`, {
-          routeTableId: routeTable.routeTableId,
-          instanceId: natInstance.instanceId,
-          destinationCidrBlock: '0.0.0.0/0',
-        });
-      });
-    }
 
     // Add VPC Flow Logs
     this.vpc.addFlowLog('FlowLog');

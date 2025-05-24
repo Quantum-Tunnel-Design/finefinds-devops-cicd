@@ -75,7 +75,7 @@ jobs:
           format('{0}-{1}', github.run_number, github.sha)
         }}
       CONNECT_AMPLIFY_TO_REPO_CONTEXT: >-
-        ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.connect_amplify_to_repo == true) && 'true' || 'false' }}
+        ${{ (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.connect_amplify_to_repo == true)) && 'true' || 'false' }}
 
     steps:
       - name: Checkout
