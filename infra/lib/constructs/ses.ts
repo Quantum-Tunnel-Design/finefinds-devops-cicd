@@ -28,9 +28,6 @@ export class SesConstruct extends Construct {
     // SES Configuration Set
     const configurationSet = new ses.CfnConfigurationSet(this, 'ConfigurationSet', {
       name: uniqueName('FineFindsConfigSet'),
-      deliveryOptions: {
-        // tlspolicy: 'REQUIRE', // Optional: Enforce TLS
-      },
       reputationOptions: {
         reputationMetricsEnabled: true,
       },
