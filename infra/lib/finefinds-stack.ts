@@ -18,7 +18,6 @@ import { RdsConstruct } from './constructs/rds';
 import { MigrationTaskConstruct } from './constructs/migration-task';
 import { AmplifyConstruct } from './constructs/amplify';
 import { BastionConstruct } from './constructs/bastion';
-import { SesConstruct } from './constructs/ses';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iamcdk from 'aws-cdk-lib/aws-iam';
@@ -274,12 +273,6 @@ export class FineFindsStack extends cdk.Stack {
       secrets.databaseSecret.grantWrite(updateDbSecret.grantPrincipal);
     }
 
-    // Create SES configuration
-    const ses = new SesConstruct(this, 'Ses', {
-      environment: props.config.environment,
-      ses: props.config.ses,
-    });
-
     // Create ECS Cluster and Services
     const ecs = new EcsConstruct(this, 'Ecs', {
       environment: props.config.environment,
@@ -288,16 +281,6 @@ export class FineFindsStack extends cdk.Stack {
       taskRole: iam.ecsTaskRole,
       executionRole: iam.ecsExecutionRole,
     });
-
-    // Add SES configuration to the existing container
-    const container = ecs.service.taskDefinition.defaultContainer;
-    if (container) {
-      container.addEnvironment('SES_CONFIGURATION_SET', ses.configurationSet.name!);
-      container.addEnvironment('SES_FROM_EMAIL', props.config.ses.fromEmail);
-      container.addEnvironment('SES_TEMPLATES_WELCOME', props.config.ses.templates.welcome);
-      container.addEnvironment('SES_TEMPLATES_PASSWORD_RESET', props.config.ses.templates.passwordReset);
-      container.addEnvironment('SES_TEMPLATES_EMAIL_VERIFICATION', props.config.ses.templates.emailVerification);
-    }
 
     // Create migration task definition
     const migrationTask = new MigrationTaskConstruct(this, 'MigrationTask', {

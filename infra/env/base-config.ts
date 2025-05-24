@@ -211,13 +211,4 @@ export interface BaseConfig {
   bastion?: {
     keyName?: string;
   };
-  ses: {
-    domainName: string;
-    fromEmail: string;
-    templates: {
-      welcome: string;
-      passwordReset: string;
-      emailVerification: string;
-    };
-  };
 } 
