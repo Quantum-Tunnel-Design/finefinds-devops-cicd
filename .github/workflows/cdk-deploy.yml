@@ -8,7 +8,7 @@ on:
       connect_amplify_to_repo:
         description: 'Connect Amplify apps to GitHub repositories? (true/false)'
         required: true
-        default: false
+        default: true
         type: boolean
 
 permissions:
