@@ -76,6 +76,20 @@ export class IamConstruct extends Construct {
       })
     );
 
+    // Add Cognito config secret permissions for ECS Task Role
+    this.ecsTaskRole.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'secretsmanager:GetSecretValue',
+          'secretsmanager:DescribeSecret',
+        ],
+        resources: [
+          `arn:aws:secretsmanager:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:secret:finefinds-${props.environment}-cognito-config-*`,
+        ],
+      })
+    );
+
     // Add Cognito permissions for ECS Task Role
     this.ecsTaskRole.addToPolicy(
       new iam.PolicyStatement({
