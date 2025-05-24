@@ -87,6 +87,8 @@ export class FineFindsStack extends cdk.Stack {
 
     // Policy from SecretsConstruct grants ECS Task Role access to all its managed secrets
     iam.ecsTaskRole.addToPolicy(secrets.taskRolePolicy);
+    // Also grant the same permissions to the ECS Task Execution Role
+    iam.ecsExecutionRole.addToPolicy(secrets.taskRolePolicy);
 
     // Add SES sending permissions to ECS Task Role
     iam.ecsTaskRole.addToPrincipalPolicy(new iamcdk.PolicyStatement({
