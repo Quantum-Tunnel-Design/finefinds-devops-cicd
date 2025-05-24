@@ -159,21 +159,30 @@ export class VpcConstruct extends Construct {
 
     // Add Cognito endpoints
     const region = cdk.Stack.of(this).region;
-    new ec2.InterfaceVpcEndpoint(this, 'CognitoIdpEndpoint', {
-      vpc: this.vpc,
-      service: new ec2.InterfaceVpcEndpointService(cdk.Fn.join('.', ['com', 'amazonaws', region, 'cognito-idp'])),
-      subnets: { subnets: privateSubnets.subnets },
-      privateDnsEnabled: true,
-      securityGroups: [endpointSecurityGroup],
-    });
 
-    new ec2.InterfaceVpcEndpoint(this, 'CognitoIdentityEndpoint', {
+    const cognitoIdpEndpoint = new ec2.InterfaceVpcEndpoint(this, 'CognitoIdpEndpoint', {
       vpc: this.vpc,
-      service: new ec2.InterfaceVpcEndpointService(cdk.Fn.join('.', ['com', 'amazonaws', region, 'cognito-identity'])),
+      // Provide a dummy service name initially, we will override it.
+      service: new ec2.InterfaceVpcEndpointService('com.amazonaws.region.dummy-idp'), 
       subnets: { subnets: privateSubnets.subnets },
       privateDnsEnabled: true,
       securityGroups: [endpointSecurityGroup],
     });
+    // Escape hatch to set the service name directly using CloudFormation intrinsic functions
+    const cfnCognitoIdpEndpoint = cognitoIdpEndpoint.node.defaultChild as ec2.CfnVPCEndpoint;
+    cfnCognitoIdpEndpoint.serviceName = cdk.Fn.join('.', ['com', 'amazonaws', region, 'cognito-idp']);
+
+    const cognitoIdentityEndpoint = new ec2.InterfaceVpcEndpoint(this, 'CognitoIdentityEndpoint', {
+      vpc: this.vpc,
+      // Provide a dummy service name initially, we will override it.
+      service: new ec2.InterfaceVpcEndpointService('com.amazonaws.region.dummy-identity'),
+      subnets: { subnets: privateSubnets.subnets },
+      privateDnsEnabled: true,
+      securityGroups: [endpointSecurityGroup],
+    });
+    // Escape hatch to set the service name directly using CloudFormation intrinsic functions
+    const cfnCognitoIdentityEndpoint = cognitoIdentityEndpoint.node.defaultChild as ec2.CfnVPCEndpoint;
+    cfnCognitoIdentityEndpoint.serviceName = cdk.Fn.join('.', ['com', 'amazonaws', region, 'cognito-identity']);
 
     // Add RDS endpoint only if in prod
     if (props.environment === 'prod') {
