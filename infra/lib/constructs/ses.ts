@@ -30,7 +30,6 @@ export class SesConstruct extends Construct {
       name: uniqueName('FineFindsConfigSet'),
       deliveryOptions: {
         // tlspolicy: 'REQUIRE', // Optional: Enforce TLS
-        sendingPoolName: uniqueName('FineFindsSendingPool'), // Using a sending pool name
       },
       reputationOptions: {
         reputationMetricsEnabled: true,
