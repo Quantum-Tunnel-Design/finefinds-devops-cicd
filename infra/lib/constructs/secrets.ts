@@ -23,38 +23,57 @@ export class SecretsConstruct extends Construct {
   constructor(scope: Construct, id: string, props: SecretsConstructProps) {
     super(scope, id);
 
-    // Create database secret
+    const removalPolicy = props.environment === 'prod' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY;
+
+    // Secrets for existing resources (placeholders to be populated or existing names)
     this.databaseSecret = secretsmanager.Secret.fromSecretNameV2(this, 'DatabaseSecret', `finefinds-${props.environment}-rds-connection`);
-
-    // Create Redis secret
     this.redisSecret = secretsmanager.Secret.fromSecretNameV2(this, 'RedisSecret', `finefinds-${props.environment}-redis-connection`);
+    this.cognitoConfigSecret = secretsmanager.Secret.fromSecretNameV2(this, 'CognitoConfigSecret', `finefinds-${props.environment}-cognito-config`);
 
-    // Create OpenSearch secret only for prod environment
     if (props.environment === 'prod') {
       this.opensearchSecret = secretsmanager.Secret.fromSecretNameV2(this, 'OpenSearchSecret', `finefinds-${props.environment}-opensearch-admin-password`);
     }
 
-    // Create JWT secret
-    this.jwtSecret = secretsmanager.Secret.fromSecretNameV2(this, 'JwtSecret', `finefinds-${props.environment}-jwt-secret`);
+    // Secrets created and managed by this CDK stack
+    this.jwtSecret = new secretsmanager.Secret(this, 'JwtSecret', {
+      secretName: `finefinds-${props.environment}-jwt-secret`,
+      description: `JWT secret for FineFinds ${props.environment}`,
+      generateSecretString: {
+        secretStringTemplate: JSON.stringify({ secret: "please-replace-this-jwt-secret-in-secrets-manager" }),
+        generateStringKey: "placeholderKey", // Required by type, but template is used
+      },
+      encryptionKey: props.kmsKey,
+      removalPolicy: removalPolicy,
+    });
 
-    // Create SMTP secret
-    this.smtpSecret = secretsmanager.Secret.fromSecretNameV2(this, 'SmtpSecret', `finefinds-${props.environment}-smtp-secret`);
+    this.smtpSecret = new secretsmanager.Secret(this, 'SmtpSecret', {
+      secretName: `finefinds-${props.environment}-smtp-secret`,
+      description: `SMTP secret for FineFinds ${props.environment}`,
+      generateSecretString: { // Placeholder for SMTP credentials if managed here
+        secretStringTemplate: JSON.stringify({
+          host: "smtp.example.com",
+          port: 587,
+          username: "user@example.com",
+          password: "replace-smtp-password"
+        }),
+        generateStringKey: "placeholderKey",
+      },
+      encryptionKey: props.kmsKey,
+      removalPolicy: removalPolicy,
+    });
 
-    // Import Cognito Config Secret
-    this.cognitoConfigSecret = secretsmanager.Secret.fromSecretNameV2(this, 'CognitoConfigSecret', `finefinds-${props.environment}-cognito-config`);
-
-    // Create IAM policy for ECS tasks to access secrets
-    const baseArn = `arn:aws:secretsmanager:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:secret`;
-
-    const secretArnPatterns = [
-      `${baseArn}:${this.databaseSecret.secretName}-*`,
-      `${baseArn}:${this.redisSecret.secretName}-*`,
-      // Conditionally add opensearch secret ARN pattern
-      ...(props.environment === 'prod' && this.opensearchSecret ? [`${baseArn}:${this.opensearchSecret.secretName}-*`] : []),
-      `${baseArn}:${this.jwtSecret.secretName}-*`,
-      `${baseArn}:${this.smtpSecret.secretName}-*`,
-      `${baseArn}:${this.cognitoConfigSecret.secretName}-*`,
+    // IAM policy for ECS tasks to access secrets
+    const secretArns = [
+      this.databaseSecret.secretArn,
+      this.redisSecret.secretArn,
+      this.jwtSecret.secretArn,
+      this.smtpSecret.secretArn,
+      this.cognitoConfigSecret.secretArn,
     ];
+
+    if (this.opensearchSecret) { // Check if opensearchSecret is defined
+      secretArns.push(this.opensearchSecret.secretArn);
+    }
 
     this.taskRolePolicy = new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
@@ -62,7 +81,7 @@ export class SecretsConstruct extends Construct {
         'secretsmanager:GetSecretValue',
         'secretsmanager:DescribeSecret',
       ],
-      resources: secretArnPatterns, // Use the ARN patterns
+      resources: secretArns,
     });
   }
 } 

@@ -219,7 +219,7 @@ export class FineFindsStack extends cdk.Stack {
       taskRole: iam.ecsTaskRole,
       executionRole: iam.ecsExecutionRole,
       secrets: { 
-        JWT_SECRET_VALUE: cdk.aws_ecs.Secret.fromSecretsManager(secrets.jwtSecret),
+        JWT_SECRET_VALUE: cdk.aws_ecs.Secret.fromSecretsManager(secrets.jwtSecret, 'secret'),
         SMTP_SECRET_VALUE: cdk.aws_ecs.Secret.fromSecretsManager(secrets.smtpSecret),
         // If Sentry/Session secrets were defined in this stack (e.g., sentryDsnSecret, sessionSecret):
         // SENTRY_DSN_VALUE: cdk.aws_ecs.Secret.fromSecretsManager(sentryDsnSecret!),
